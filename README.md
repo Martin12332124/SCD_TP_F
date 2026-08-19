@@ -68,7 +68,11 @@ Al ejecutar el comando, Vite te mostrará una dirección local en la terminal.
 ## CÓMO USAR LA SIMULACIÓN
 Una vez que entres a la página web:
 * **Indicador de Servidor:** Si el Backend está encendido, verás un letrero verde que dice **"Conectado ✔"**. Si el Backend está apagado, dirá **"Desconectado ✖"** en rojo.
+<<<<<<< HEAD
 * **Botones Interactivos:** Presiona los botones de **Tomar Pedido 📝**, **Empezar Cocina 🍳**, **Pedido Listo 🍽️**. Cada vez que hagas clic en uno, la pantalla le enviará la orden en tiempo real al servidor para actualizar el estado del mapa.
+=======
+* **Botones Interactivos:** Presiona los botones de **Tráfico Alto**, **Medio** o **Bajo**. Cada vez que hagas clic en uno, la pantalla le enviará la orden en tiempo real al servidor para actualizar el estado del pedido en el restaurante.
+>>>>>>> 0bad2ae (Modificación del README (Sección simulación))
 
 ---
 
