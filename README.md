@@ -69,7 +69,7 @@ Al ejecutar el comando, Vite te mostrará una dirección local en la terminal.
 Una vez que entres a la página web:
 * **Indicador de Servidor:** Si el Backend está encendido, verás un letrero verde que dice **"Conectado ✔"**. Si el Backend está apagado, dirá **"Desconectado ✖"** en rojo.
 
-* **Botones Interactivos:** Presiona los botones de **Tráfico Alto**, **Medio** o **Bajo**. Cada vez que hagas clic en uno, la pantalla le enviará la orden en tiempo real al servidor para actualizar el estado del pedido en el restaurante.
+* **Botones Interactivos:** Presiona los botones de **Tomar Pedido**, **Empezar Cocina** o **Pedido Listo**. Cada vez que hagas clic en uno, la pantalla le enviará la orden en tiempo real al servidor para actualizar el estado del pedido en el restaurante.
 
 
 ---
