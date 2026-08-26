@@ -63,13 +63,30 @@ function App() {
     return `${minutos.toString().padStart(2, '0')}:${segundosRestantes.toString().padStart(2, '0')}`;
   };
 
+  // Función para manejar el cambio en el input de la mesa de forma controlada
+  const manejarCambioMesa = (valor) => {
+    // Si el usuario borra el input, permitimos el string vacío
+    if (valor === '') {
+      setMesa('');
+      return;
+    }
+
+    // Convertir a número entero
+    const numero = parseInt(valor, 10);
+
+    // Solo actualiza el estado si es un número válido mayor estricto que 0
+    if (!isNaN(numero) && numero > 0) {
+      setMesa(numero.toString());
+    }
+  };
+
   // Función para simular el envío o actualización de un pedido
   const actualizarPedido = (nuevoEstado) => {
     setErrorValidacion(''); // Limpiar errores previos
 
-    // 1. VALIDACIÓN: Verificar que se haya ingresado una mesa
-    if (!mesa || mesa.trim() === '') {
-      setErrorValidacion('⚠️ Por favor, ingresa un número de mesa antes de enviar.');
+    // 1. VALIDACIÓN: Verificar que se haya ingresado una mesa válida
+    if (!mesa || mesa.trim() === '' || parseInt(mesa, 10) <= 0) {
+      setErrorValidacion('⚠️ Por favor, ingresa un número de mesa válido (mayor a 0) antes de enviar.');
       return; // Frena el envío por socket
     }
 
@@ -133,9 +150,11 @@ function App() {
           <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Número de Mesa:</label>
           <input 
             type="number" 
+            min="1"
+            step="1"
             placeholder="Ej: 5" 
             value={mesa} 
-            onChange={(e) => setMesa(e.target.value)} 
+            onChange={(e) => manejarCambioMesa(e.target.value)} 
             disabled={!conectado} 
             style={{ padding: '8px', width: '80px', textAlign: 'center', fontSize: '16px' }} 
           />
