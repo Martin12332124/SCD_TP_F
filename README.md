@@ -171,3 +171,9 @@ R= Fue el esperado, a pesar de haber olvidado solicitar ciertas cosas en especí
 
 3)¿Cómo se sintió no poder corregir?
 R= Fue frustrante y angustiante cuando enviamos el prompt,y notamos que habíamos olvidado algo, fue mucha presión y los errores no se pueden corregir, por lo que no había más que hacer después de enviarlo.
+
+## Respuesta tarea de fundamentos de ingieneria
+
+**Historia de usuario**
+como estudiante quiero reservar libros mas fácil
+para poder obtenerlos de manera mas coordinada y eficaz. dado la alta demanda de estos mismos se dificulta el proceso de adquisición. con un sistema de reserva entonces se mitigaría el problema.
