@@ -6,6 +6,15 @@ A continuación, tienes las instrucciones exactas y masticadas para descargar, i
 
 ---
 
+## PARA EL EQUIPO
+
+Se requiere al nuestro equipo la implementación de un formato el código después de terminar de modificarlo
+```bash
+npm run format
+```
+
+---
+
 ## REQUISITOS PREVIOS
 
 Para que esta pantalla funcione, la computadora externa necesita cumplir con dos condiciones:
@@ -44,7 +53,6 @@ cd SCD_TP_F
 Ejecuta el siguiente comando para descargar de internet todas las herramientas visuales y de conexión necesarias:
 ```bash
 npm install
-npm run format
 ```
 *Espera un momento a que se complete la barra de carga. Sabrás que terminó cuando la terminal te permita escribir comandos otra vez.*
 
