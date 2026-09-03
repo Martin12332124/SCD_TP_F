@@ -16,6 +16,9 @@ function App() {
   // NUEVO: Estado para el contador de tiempo en segundos
   const [segundos, setSegundos] = useState(0);
 
+  // NUEVO: Estado para el estado de las mesas en tiempo real
+  const [mesas, setMesas] = useState([]);
+
   useEffect(() => {
     socket.on('connect', () => setConectado(true));
     socket.on('disconnect', () => setConectado(false));
@@ -27,10 +30,14 @@ function App() {
       setSegundos(0); // NUEVO: Resetea el reloj a 0 con cada cambio de estado
     });
 
+    // NUEVO: escuchar el evento de estado de mesas que ya emite el backend
+    socket.on('estado_mesas', (datos) => setMesas(datos));
+
     return () => {
       socket.off('connect');
       socket.off('disconnect');
       socket.off('cambio_estado_pedido');
+      socket.off('estado_mesas');
     };
   }, []);
 
@@ -222,6 +229,27 @@ function App() {
         <button disabled={!conectado} onClick={() => actualizarPedido('Listo 🍽️')} style={btnStyle}>
           Pedido Listo 🍽️
         </button>
+      </div>
+
+      {/* NUEVO: Estado de Mesas en tiempo real */}
+      <div style={{ marginTop: '20px' }}>
+        <h3>Estado de Mesas</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+          {mesas.map((m) => (
+            <span
+              key={m.id}
+              style={{
+                padding: '6px 10px',
+                borderRadius: '6px',
+                fontSize: '13px',
+                color: 'white',
+                background: m.estado === 'libre' ? '#28a745' : '#dc3545'
+              }}
+            >
+              Mesa {m.numero}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );
