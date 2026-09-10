@@ -185,3 +185,12 @@ R= Fue frustrante y angustiante cuando enviamos el prompt,y notamos que habíamo
 **Historia de usuario**
 como estudiante quiero reservar libros mas fácil
 para poder obtenerlos de manera mas coordinada y eficaz. dado la alta demanda de estos mismos se dificulta el proceso de adquisición. con un sistema de reserva entonces se mitigaría el problema.
+
+**Actividad parte 1**
+
+| Área del Proceso | Grado | Evidencia que lo Respalda |
+| :--- | :---: | :--- |
+| **Gestión de Requisitos** | P | Existen historias de usuario, aunque solo algunas cuentan con criterios de aceptación definidos. |
+| **Planificación del Proyecto** | L | Se tiene planificada la duración de los sprints; sin embargo, no se utilizan los datos históricos del sprint anterior para iniciar el nuevo. |
+| **Gestión de la Configuración** | N | No existe un estándar o consistencia en los comentarios del código/repositorio, lo que dificulta la legibilidad para terceros. |
+| Verificacion      | Celda 5      | Celda 6      |
