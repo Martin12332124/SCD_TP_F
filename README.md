@@ -1,12 +1,80 @@
-# Interfaz Visual (Frontend)
+# Sistema de Pedidos para Restaurante (POS + KDS)
 
-Este proyecto es una prueba de  interfaz gráfica de usuario (Frontend) para el monitor de tráfico en tiempo real. Está construido con React, Vite y se conecta mediante Sockets al servidor central.
+## Descripción del sistema
+
+El Sistema de Pedidos para Restaurante (POS + KDS) resuelve el problema de coordinación entre la toma de pedidos en el salón y su preparación en cocina. En muchos restaurantes ese proceso depende de comandas en papel o de sistemas que no se actualizan en tiempo real, lo que provoca pedidos traspapelados, platos que se preparan mal o que llegan tarde a la mesa. El sistema conecta un Punto de Venta (POS), donde el mesero toma la comanda, con una Pantalla de Cocina (KDS), donde el personal de cocina la recibe y actualiza su estado a medida que avanza la preparación, todo sincronizado en tiempo real dentro de la red local del restaurante.
+
+Un elemento central del diseño es el paso de validación obligatoria de la comanda con el cliente antes de enviarla a cocina: el mesero confirma cada ítem, cantidad y modificador con el comensal antes de que el pedido salga hacia la cocina, para eliminar el error humano en el origen del proceso en vez de corregirlo después, cuando ya es más costoso hacerlo.
+
+El sistema sirve a cuatro roles dentro del restaurante: el Mesero, que toma los pedidos, gestiona las mesas y cierra las cuentas; el Cocinero, que recibe y prepara las comandas desde el KDS; el JefeDeCocina, que supervisa la cocina y el inventario de ingredientes; y el Administrador, que gestiona el catálogo de menú, los usuarios del sistema y el registro de ventas del local.
+
+## Historias de Usuario
+
+Todas las historias están registradas como GitHub Issues en el repositorio frontend.
+
+| ID | Nombre | Issue |
+|----|--------|-------|
+| US-01 | Selector de variantes-bebida | #22 |
+| US-02 | Descripción compacta del pedido | #23 |
+| US-03 | Agregacion de notas a los pedidos | #24 |
+| US-04 | Disponibilidad en los menus | #32 |
+| US-05 | Posibilidad de cambio de clientes-mesas | #33 |
+| US-06 | Actualización de pedidos en la cocina | #25 |
+| US-07 | Registrar precio al crear o editar | #26 |
+| US-08 | Ver mapa de mesas | #27 |
+| US-09 | Abrir o cerrar una mesa | #28 |
+| US-10 | Limpieza al servir un pedido | #30 |
+
+## Requisitos Extrafuncionales
+
+Ver: [ReqExtrafuncionales.md](./ReqExtrafuncionales.md) — 16 requisitos clasificados, 5 de prioridad Alta.
+
+## Entidades del Dominio
+
+Ver: [DominioEntidades.md](./DominioEntidades.md) — 10 entidades, diagrama ER y máquina de estados del Pedido.
+
+## Mockups
+
+<!-- TODO: reemplazar por las rutas reales una vez subidas las imágenes -->
+
+| Mockup | Historia de usuario relacionada |
+|--------|----------------------------------|
+| `docs/mockups/us-01.png` | US-01 |
+| `docs/mockups/us-02.png` | US-02 |
+| `docs/mockups/us-03.png` | US-03 |
+| `docs/mockups/us-04.png` | US-04 |
+| `docs/mockups/us-05.png` | US-05 |
+| `docs/mockups/us-06.png` | US-06 |
+| `docs/mockups/us-07.png` | US-07 |
+| `docs/mockups/us-08.png` | US-08 |
+| `docs/mockups/us-09.png` | US-09 |
+| `docs/mockups/us-10.png` | US-10 |
+
+## Diseño Arquitectónico
+
+Ver: [Arquitectura.md](./Arquitectura.md) — estilo, diagrama, descomposición modular y decisiones de diseño (ADR).
+
+## Responsabilidades del Equipo
+
+<!-- TODO: obligatorio completar antes de entregar, afecta la nota individual -->
+
+| Integrante | Rol | Ítems de la rúbrica a cargo |
+|------------|-----|------------------------------|
+| Martín Saldívar | | |
+| Martín Carvallo | | |
+| Claudia Medina | | |
+| Francisca Hernández | | |
+| Diego Urbano | | |
+
+## Instalación y ejecución
+
+Este proyecto es la interfaz gráfica de usuario (Frontend) del Sistema de Pedidos para Restaurante (POS + KDS). Está construido con React, Vite y se conecta mediante Sockets al servidor backend.
 
 A continuación, tienes las instrucciones exactas y masticadas para descargar, instalar y ejecutar esta pantalla en cualquier computadora.
 
 ---
 
-## PARA EL EQUIPO
+### PARA EL EQUIPO
 
 Se requiere al nuestro equipo la implementación de un formato el código después de terminar de modificarlo
 ```bash
@@ -15,7 +83,7 @@ npm run format
 
 ---
 
-## REQUISITOS PREVIOS
+### REQUISITOS PREVIOS
 
 Para que esta pantalla funcione, la computadora externa necesita cumplir con dos condiciones:
 1. Tener **Node.js** instalado (versión LTS recomendada).
@@ -23,33 +91,33 @@ Para que esta pantalla funcione, la computadora externa necesita cumplir con dos
 
 ---
 
-## PASO A PASO PARA INSTALAR LA PANTALLA
+### PASO A PASO PARA INSTALAR LA PANTALLA
 
 Sigue estos pasos en orden estricto sin saltarte ninguno:
 
-### Paso 1: Abrir la Terminal
+#### Paso 1: Abrir la Terminal
 * En **Windows**: Presiona la tecla `Windows`, escribe **PowerShell** y ábrelo.
 * En **Mac**: Presiona `Cmd + Espacio`, escribe **Terminal** y ábrela.
 
-### Paso 2: Ir a la carpeta de descargas
+#### Paso 2: Ir a la carpeta de descargas
 Múevete a la carpeta donde quieras clonar el proyecto (por ejemplo, Descargas):
 ```bash
 cd Downloads
 ```
 
-### Paso 3: Descargar el código del Frontend
+#### Paso 3: Descargar el código del Frontend
 Copia, pega este comando en tu terminal y presiona `Enter`:
 ```bash
 git clone https://github.com/Martin12332124/SCD_TP_F.git
 ```
 *(Esto creará la carpeta llamada `SCD_TP_F` en tus descargas).*
 
-### Paso 4: Entrar a la carpeta descargada
+#### Paso 4: Entrar a la carpeta descargada
 ```bash
 cd SCD_TP_F
 ```
 
-### Paso 5: Instalar los paquetes del diseño
+#### Paso 5: Instalar los paquetes del diseño
 Ejecuta el siguiente comando para descargar de internet todas las herramientas visuales y de conexión necesarias:
 ```bash
 npm install
@@ -58,14 +126,14 @@ npm install
 
 ---
 
-## CÓMO ENCENDER LA INTERFAZ VISUAL
+### CÓMO ENCENDER LA INTERFAZ VISUAL
 
 Una vez instalado todo, pon a correr la pantalla con este comando:
 ```bash
 npm run dev
 ```
 
-### ¿Cómo abrir la aplicación?
+#### ¿Cómo abrir la aplicación?
 Al ejecutar el comando, Vite te mostrará una dirección local en la terminal. 
 1. Abre tu navegador web (Google Chrome, Edge, etc.).
 2. En la barra de direcciones de arriba, escribe exactamente:
@@ -74,7 +142,7 @@ Al ejecutar el comando, Vite te mostrará una dirección local en la terminal.
 
 ---
 
-## CÓMO USAR LA SIMULACIÓN
+### CÓMO USAR LA SIMULACIÓN
 Una vez que entres a la página web:
 * **Indicador de Servidor:** Si el Backend está encendido, verás un letrero verde que dice **"Conectado ✔"**. Si el Backend está apagado, dirá **"Desconectado ✖"** en rojo.
 
@@ -83,114 +151,10 @@ Una vez que entres a la página web:
 
 ---
 
-## CÓMO APAGAR LA PANTALLA
+### CÓMO APAGAR LA PANTALLA
 Cuando quieras cerrar el entorno de desarrollo:
 1. Ve a la terminal donde ejecutaste el comando.
 2. Presiona las teclas **`Ctrl + C`** al mismo tiempo.
 3. Si te pregunta *"¿Desea terminar el trabajo por lotes (S/N)?"*, escribe **`S`** y presiona `Enter`.
 
-
---------------------------------------------------------
-
-## Actividad 24 agosto, trabajo con claude
-
-Resultado:
-
-<img width="772" height="780" alt="Captura de pantalla 2026-08-24 a la(s) 10 00 38 a m" src="https://github.com/user-attachments/assets/2835311e-c2b6-4109-b0bf-855207ff19c5" />
-
-Respuesta claude:
-## Paso 1: Alcance y arquitectura general
-
-Antes de entrar en el detalle, conviene fijar la arquitectura de fondo, porque todo lo demás (automatización, monitoreo, reducción de errores) se apoya en ella. Voy a asumir que el sistema se despliega en varios puntos a la vez —tablets para meseros, pantallas fijas en cocina, un dashboard de administración— y que todos comparten un mismo backend central. Si la idea es otra (por ejemplo, todo corriendo solo en local sin servidor central), dime y ajusto.
-
-La arquitectura tendría estas piezas:
-
-- **Capa de captura**: app de mesero (tablet/celular) y, opcionalmente, autopedido por QR en la mesa.
-- **Backend/API central**: valida pedidos, aplica reglas de negocio, gestiona el estado de cada orden y dispara los temporizadores.
-- **Capa en tiempo real**: un canal de eventos (WebSockets o similar) que empuja cada cambio de estado instantáneamente a todas las pantallas conectadas, sin que nadie tenga que refrescar nada.
-- **KDS**: pantallas en cocina, una por estación (parrilla, fría, postres, etc.) o una general.
-- **Módulo de monitoreo**: agrega los tiempos de cada pedido y expone métricas y alertas.
-- **Base de datos**: pedidos, menú, mesas, estaciones, historial de tiempos.
-
-## Paso 2: El flujo del pedido (el corazón del sistema)
-
-Todo lo que pediste —automatizar al mesero, reducir errores, medir tiempos— pasa por el ciclo de vida de un pedido. Este es el eje sobre el que se diseña todo lo demás:Cada transición de este flujo es un punto donde el sistema puede automatizar, validar o medir. Vamos por partes.
-
-## Paso 3: Automatizar al mesero, no reemplazarlo
-
-La idea no es eliminar al mesero, sino sacarle el trabajo mecánico y propenso a error:
-
-- **Toma de pedido guiada**: menú digital con modificadores predefinidos (sin cebolla, término medio, etc.) en vez de campos de texto libre — elimina la ambigüedad que hoy se resuelve "a mano" en cocina.
-- **Validación en el momento**: si un plato no tiene stock de un ingrediente clave, el sistema lo bloquea antes de que el mesero lo ofrezca.
-- **Enrutamiento automático**: el pedido se separa solo por estación (parrilla, bar, postres) sin que el mesero tenga que decidir a quién avisar.
-- **Autopedido opcional (QR en mesa)**: reduce aún más la intervención humana en la captura, y libera al mesero para atención en sala.
-- **Cálculo automático de cuenta**, división de mesa, y notificación automática cuando el pedido está listo para servir (así el mesero no tiene que estar preguntando en cocina).
-
-## Paso 4: KDS y reducción de errores de cocina
-
-- Pantallas por estación, no una sola pantalla genérica — cada cocinero ve solo lo suyo.
-- Cada ítem con su tiempo de preparación estimado y un cronómetro visible; cambio de color cuando se acerca o supera el umbral.
-- Modificadores y alergias resaltados visualmente (no como texto perdido entre otros datos).
-- Confirmación explícita de "listo" por ítem y por pedido completo — esto genera trazabilidad: quién preparó, cuándo, y si hubo reimpresión o reclamo.
-- Historial de reimpresiones/anulaciones por estación, útil para detectar patrones de error recurrentes (por ejemplo, una estación que sistemáticamente se atrasa o repite el mismo error).
-
-## Paso 5: Monitoreo del tiempo de espera
-
-Esto se construye sobre el mismo flujo del diagrama: cada transición de estado queda con timestamp. Con eso puedes calcular:
-
-- Tiempo de captura → cocina, cocina → listo, listo → entregado (para saber si el cuello de botella está en cocina o en el mesero).
-- Tiempo promedio por plato y por estación, para detectar quién se está atrasando.
-- Alertas configurables (ej. "alertar si un pedido lleva más de 15 min en preparación").
-- Dashboard con vista en vivo (pedidos activos y su tiempo transcurrido) y vista histórica (tendencias por día/turno).
-
-## Paso 6: Patrones de diseño y stack sugerido
-
-Ya que trabajas con patrones de diseño en Java (como en SIRPM), varios calzan naturalmente acá:
-
-- **State**: el ciclo de vida del pedido (tomado → validado → en preparación → listo → entregado) es un caso de libro para este patrón.
-- **Observer/pub-sub**: para la actualización en tiempo real hacia KDS y dashboard sin acoplar el backend a cada pantalla.
-- **Strategy**: para reglas de precio, descuentos o promociones que puedan variar sin tocar el core.
-- **Factory**: para la creación de pedidos según canal de origen (mesero, autopedido, delivery).
-
-Como stack, dado tu manejo de Java y Android, una combinación razonable sería:
-
-- **Backend**: Java + Spring Boot (API REST + WebSockets para el canal en tiempo real).
-- **App de mesero**: Android nativo (o Kotlin), aprovechando lo que ya conoces.
-- **KDS y dashboard**: aplicación web (React), ya que van en pantallas fijas/TV en cocina y admin.
-- **Base de datos**: PostgreSQL (relacional, fuerte en integridad para pedidos y transacciones).
-
-## Paso 7: Plan de desarrollo por fases
-
-1. **MVP**: captura de pedido básica (app mesero), envío a una sola pantalla KDS, estados manuales (sin automatización todavía).
-2. **Iteración 1**: validaciones automáticas, enrutamiento por estación, cronómetros y alertas de tiempo.
-3. **Iteración 2**: autopedido QR, dashboard de métricas históricas, reglas de negocio más avanzadas (Strategy para precios/promos).
-4. **Iteración 3**: analítica más fina (detección de cuellos de botella recurrentes, reportes por turno/estación).
-
-Si quieres, puedo profundizar en el modelo de datos (entidades y relaciones), en el diseño de la máquina de estados del pedido, o armar un mockup de cómo se vería la pantalla del KDS.
-
----
-
-Preguntas y respuestas de la actividad:
-1)¿Cuánto tardaron en acordar antes de enviar?
-R= El tiempo total dispuesto, los 10 minutos discutiendo y describiendoe el prompt
-
-2)¿El resultado fue el esperado? ¿Qué cambiarían?
-R= Fue el esperado, a pesar de haber olvidado solicitar ciertas cosas en específico, pero fue bastante completo coincidiendo con lo que esperabamos, cambiaríamos ciertos detalles para pedirle que fuera más descriptivo y ordenado.
-
-3)¿Cómo se sintió no poder corregir?
-R= Fue frustrante y angustiante cuando enviamos el prompt,y notamos que habíamos olvidado algo, fue mucha presión y los errores no se pueden corregir, por lo que no había más que hacer después de enviarlo.
-
-## Respuesta tarea de fundamentos de ingieneria
-
-**Historia de usuario**
-como estudiante quiero reservar libros mas fácil
-para poder obtenerlos de manera mas coordinada y eficaz. dado la alta demanda de estos mismos se dificulta el proceso de adquisición. con un sistema de reserva entonces se mitigaría el problema.
-
-**Actividad parte 1**
-
-| Área del Proceso | Grado | Evidencia que lo Respalda |
-| :--- | :---: | :--- |
-| **Gestión de Requisitos** | P | Existen historias de usuario, aunque solo algunas cuentan con criterios de aceptación definidos. |
-| **Planificación del Proyecto** | L | Se tiene planificada la duración de los sprints; sin embargo, no se utilizan los datos históricos del sprint anterior para iniciar el nuevo. |
-| **Gestión de la Configuración** | N | No existe un estándar o consistencia en los comentarios del código/repositorio, lo que dificulta la legibilidad para terceros. |
-| Verificacion      | Celda 5      | Celda 6      |
+Actividades de clase previas: ver [docs/actividades-clase.md](./docs/actividades-clase.md).
