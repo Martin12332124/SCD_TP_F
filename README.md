@@ -60,11 +60,11 @@ Ver: [Arquitectura.md](./Arquitectura.md) — estilo, diagrama, descomposición 
 
 | Integrante | Rol | Ítems de la rúbrica a cargo |
 |------------|-----|------------------------------|
-| Martín Saldívar | | |
-| Martín Carvallo | | |
-| Claudia Medina | | |
-| Francisca Hernández | | |
-| Diego Urbano | | |
+| Martín Saldívar | Desarrollador | 2.1 Diseño Arquitectónico |
+| Martín Carvallo | Desarrollador y Historias | 1.1 Historias de Usuario, 2.4 Entidades del dominio |
+| Claudia Medina | Diseñadora y concepto del sistema.| 2.3 Mockups, 2.2 Diagrama de Arquitectura|
+| Francisca Hernández | Historias y Análisis de requisitos | 1.1 Historias de Usuario |
+| Diego Urbano | Coordinador | 1.2 Requisitos Extrafuncionales, 2.1 Diseño Arquitectónico |
 
 ## Instalación y ejecución
 
