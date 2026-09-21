@@ -102,5 +102,16 @@ para poder obtenerlos de manera mas coordinada y eficaz. dado la alta demanda de
 | **Planificación del Proyecto** | L | Se tiene planificada la duración de los sprints; sin embargo, no se utilizan los datos históricos del sprint anterior para iniciar el nuevo. |
 | **Gestión de la Configuración** | F | No existe un estándar o consistencia en los comentarios del código/repositorio, lo que dificulta la legibilidad para terceros. |
 | **Verificacion** | F | No existen registros de las pruebas que se realizaron |
+
 ¿En que nivel de madurez ubicarias al equipo Aurora?
 Respuesta: Ubicariamos el nivel de madurez del equipo entre 2 y 3 ya que no hay una organizacion clara y no se realizan los registros adecuados, sin embargo han llegado a realizar pruebas de cada demo.
+
+**Actividad parte 2**
+
+| Campo | Accion 1 | Accion 2 |
+| :--- | :---: | :--- |
+| **Brecha** | Ausencia de registros sobre lo que se probo en cada prueba manual | No existe una convencion de mensaje ni etiquetas de version |
+| **Accion** | Establecer que cada prueba manual deba tener un registro o respaldo sobre lo que se probo y como se probo | Definir el formato que debe tener cada version |
+| **Responsable y plazo** | QA, con plazo inmediato desde que se realice una prueba manual | El lider, con plazo de 2 dias |
+| **Evidencia esperada** | Un documento relativo a cada prueba manual | El formato a seguir esta explicito en el README |
+| **Indicador** | Existencia de trazabilidad en el area de testeo | Disminucion del 100% de versiones que no respeten el formato establecido |
