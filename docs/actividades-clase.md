@@ -101,4 +101,4 @@ para poder obtenerlos de manera mas coordinada y eficaz. dado la alta demanda de
 | **Gestión de Requisitos** | P | Existen historias de usuario, aunque solo algunas cuentan con criterios de aceptación definidos. |
 | **Planificación del Proyecto** | L | Se tiene planificada la duración de los sprints; sin embargo, no se utilizan los datos históricos del sprint anterior para iniciar el nuevo. |
 | **Gestión de la Configuración** | N | No existe un estándar o consistencia en los comentarios del código/repositorio, lo que dificulta la legibilidad para terceros. |
-| Verificacion      | Celda 5      | Celda 6      |
+| **Verificacion** | F | No existen registros de las pruebas que se realizaron |
