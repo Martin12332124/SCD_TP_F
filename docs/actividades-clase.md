@@ -100,5 +100,7 @@ para poder obtenerlos de manera mas coordinada y eficaz. dado la alta demanda de
 | :--- | :---: | :--- |
 | **Gestión de Requisitos** | P | Existen historias de usuario, aunque solo algunas cuentan con criterios de aceptación definidos. |
 | **Planificación del Proyecto** | L | Se tiene planificada la duración de los sprints; sin embargo, no se utilizan los datos históricos del sprint anterior para iniciar el nuevo. |
-| **Gestión de la Configuración** | N | No existe un estándar o consistencia en los comentarios del código/repositorio, lo que dificulta la legibilidad para terceros. |
-| Verificacion      | Celda 5      | Celda 6      |
+| **Gestión de la Configuración** | F | No existe un estándar o consistencia en los comentarios del código/repositorio, lo que dificulta la legibilidad para terceros. |
+| **Verificacion** | F | No existen registros de las pruebas que se realizaron |
+¿En que nivel de madurez ubicarias al equipo Aurora?
+Respuesta: Ubicariamos el nivel de madurez del equipo entre 2 y 3 ya que no hay una organizacion clara y no se realizan los registros adecuados, sin embargo han llegado a realizar pruebas de cada demo.
