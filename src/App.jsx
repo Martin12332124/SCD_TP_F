@@ -33,11 +33,22 @@ function App() {
     // NUEVO: escuchar el evento de estado de mesas que ya emite el backend
     socket.on('estado_mesas', (datos) => setMesas(datos));
 
+    // Escuchar respuesta estructurada del backend (validación defensiva)
+    socket.on('respuesta_pedido', (resultado) => {
+      if (!resultado.ok) {
+        setErrorValidacion(
+          `⚠️ [${resultado.tipo}] ${resultado.error}` +
+            (resultado.esperado ? ` — Esperado: ${resultado.esperado}` : '')
+        );
+      }
+    });
+
     return () => {
       socket.off('connect');
       socket.off('disconnect');
       socket.off('cambio_estado_pedido');
       socket.off('estado_mesas');
+      socket.off('respuesta_pedido');
     };
   }, []);
 
