@@ -20,6 +20,11 @@ function App() {
   // NUEVO: Estado para el estado de las mesas en tiempo real
   const [mesas, setMesas] = useState([]);
 
+  // Operación 3 (US-05): estados para el traslado de mesa
+  const [mesaOrigen, setMesaOrigen] = useState('');
+  const [mesaDestino, setMesaDestino] = useState('');
+  const [mensajeTraslado, setMensajeTraslado] = useState('');
+
   useEffect(() => {
     socket.on('connect', () => setConectado(true));
     socket.on('disconnect', () => setConectado(false));
@@ -44,12 +49,29 @@ function App() {
       }
     });
 
+    // Operación 3 (US-05): escuchar respuesta del traslado de mesa
+    socket.on('respuesta_traslado', (resultado) => {
+      if (resultado.ok) {
+        setMensajeTraslado(
+          `✅ Pedido trasladado: ${resultado.origen} → ${resultado.destino} (${resultado.estado})`
+        );
+        setMesaOrigen('');
+        setMesaDestino('');
+      } else {
+        setMensajeTraslado(
+          `⚠️ [${resultado.tipo}] ${resultado.error}` +
+            (resultado.esperado ? ` — Esperado: ${resultado.esperado}` : '')
+        );
+      }
+    });
+
     return () => {
       socket.off('connect');
       socket.off('disconnect');
       socket.off('cambio_estado_pedido');
       socket.off('estado_mesas');
       socket.off('respuesta_pedido');
+      socket.off('respuesta_traslado');
     };
   }, []);
 
@@ -127,6 +149,41 @@ function App() {
     // 3. Envío seguro al backend si pasa las validaciones
     console.log(`Enviando actualización válida para Mesa ${resultadoMesa.numero}: ${nuevoEstado}`);
     socket.emit('actualizar_pedido', { mesa: `Mesa ${resultadoMesa.numero}`, estado: nuevoEstado });
+  };
+
+  // Operación 3 (US-05): Traslada el pedido activo de una mesa a otra
+  const trasladarPedido = () => {
+    setMensajeTraslado(''); // Limpiar mensajes previos
+
+    // 1. VALIDACIÓN DEFENSIVA: verificar mesa origen
+    const resOrigen = validarNumeroMesa(mesaOrigen);
+    if (!resOrigen.esValido) {
+      setMensajeTraslado(
+        resOrigen.mensajeError || '⚠️ Mesa origen inválida (debe ser entero mayor a 0).'
+      );
+      return;
+    }
+
+    // 2. VALIDACIÓN DEFENSIVA: verificar mesa destino
+    const resDestino = validarNumeroMesa(mesaDestino);
+    if (!resDestino.esValido) {
+      setMensajeTraslado(
+        resDestino.mensajeError || '⚠️ Mesa destino inválida (debe ser entero mayor a 0).'
+      );
+      return;
+    }
+
+    // 3. VALIDACIÓN: origen y destino deben ser distintos (primera barrera cliente)
+    if (resOrigen.numero === resDestino.numero) {
+      setMensajeTraslado('⚠️ [ENTRADA_INVALIDA] origen y destino deben ser mesas distintas.');
+      return;
+    }
+
+    // 4. Envío seguro al backend
+    console.log(
+      `Enviando traslado: Mesa ${resOrigen.numero} → Mesa ${resDestino.numero}`
+    );
+    socket.emit('trasladar_pedido', { origen: resOrigen.numero, destino: resDestino.numero });
   };
 
   return (
@@ -266,6 +323,89 @@ function App() {
               Mesa {m.numero}
             </span>
           ))}
+        </div>
+      </div>
+
+      {/* Operación 3 (US-05): Traslado de Mesa */}
+      <div
+        style={{
+          marginTop: '20px',
+          backgroundColor: '#f0f0f0',
+          padding: '20px',
+          borderRadius: '8px'
+        }}
+      >
+        <h3>🔄 Traslado de Mesa (US-05)</h3>
+
+        {/* Banner de resultado del traslado */}
+        {mensajeTraslado && (
+          <div
+            style={{
+              color: mensajeTraslado.startsWith('✅') ? 'green' : 'red',
+              fontWeight: 'bold',
+              marginBottom: '12px',
+              backgroundColor: mensajeTraslado.startsWith('✅') ? '#e6ffe6' : '#ffe6e6',
+              padding: '10px',
+              borderRadius: '5px'
+            }}
+          >
+            {mensajeTraslado}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+              Mesa Origen:
+            </label>
+            <input
+              id="input-mesa-origen"
+              type="number"
+              step="1"
+              placeholder="Ej: 2"
+              value={mesaOrigen}
+              onChange={(e) => {
+                setMesaOrigen(e.target.value);
+                setMensajeTraslado('');
+              }}
+              disabled={!conectado}
+              style={{ padding: '8px', width: '80px', textAlign: 'center', fontSize: '16px' }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+              Mesa Destino:
+            </label>
+            <input
+              id="input-mesa-destino"
+              type="number"
+              step="1"
+              placeholder="Ej: 6"
+              value={mesaDestino}
+              onChange={(e) => {
+                setMesaDestino(e.target.value);
+                setMensajeTraslado('');
+              }}
+              disabled={!conectado}
+              style={{ padding: '8px', width: '80px', textAlign: 'center', fontSize: '16px' }}
+            />
+          </div>
+        </div>
+
+        <div style={{ marginTop: '12px' }}>
+          <button
+            disabled={!conectado}
+            onClick={trasladarPedido}
+            style={{
+              ...btnStyle,
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px'
+            }}
+          >
+            🔄 Trasladar Mesa
+          </button>
         </div>
       </div>
     </div>
