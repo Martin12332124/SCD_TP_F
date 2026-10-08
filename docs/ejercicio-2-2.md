@@ -37,22 +37,19 @@
 
 ## Ficha de operación 3
 
-> ⚠️ **Pendiente** — A completar por otro compañero del equipo.
-
 | Elemento | Registro del equipo |
 |---|---|
-| **Funcionalidad y operación** | Funcionalidad o necesidad: _____ |
-| | Clase, módulo y firma o ruta: _____ |
-| **Propósito** | Resultado observable que obtiene quien usa esta operación: _____ |
-| **Precondiciones** | 1. _____ |
-| | 2. _____ |
-| **Postcondiciones** | 1. _____ |
-| | 2. _____ |
-| **Invariante** | Regla que debe seguir siendo verdadera después de la operación: _____ |
-| **Validación defensiva** | Entrada inválida 1: _____ → Respuesta: _____ |
-| | Entrada inválida 2: _____ → Respuesta: _____ |
-| **Dependencia explícita** | Colaborador y forma en que se inyecta: _____ |
-| **Evidencia de ejecución** | Caso válido y dos inválidos ejecutados: _____ |
+| **Funcionalidad y operación** | **Funcionalidad o necesidad:** Posibilidad de cambio de clientes entre mesas (US-05): trasladar la cuenta y el pedido activo de una mesa a otra.<br>**Clase, módulo y firma o ruta:** `SCD_TP_B · src/dominio/mesa.service.js` → `MesaService.trasladarPedido({ origen, destino })`; evento Socket.io `"trasladar_pedido"` (`src/app.js`). Cliente: `trasladarPedido()` en `SCD_TP_F/src/App.jsx`. |
+| **Propósito** | **Resultado observable que obtiene quien usa esta operación:** el mesero mueve a los comensales a otra mesa sin perder el pedido: la mesa de origen queda libre, la de destino ocupada y las pantallas muestran el cambio. |
+| **Precondiciones** | 1. `"origen"` y `"destino"` son enteros positivos distintos y ambas mesas existen. |
+| | 2. La mesa de origen está `"ocupada"` con un pedido vigente y la de destino está `"libre"` y sin pedido. |
+| **Postcondiciones** | 1. El pedido pasa a la mesa destino con su mismo estado; el origen queda `"libre"` y el destino `"ocupada"`; no se crea ni se pierde ningún pedido. |
+| | 2. Los clientes reciben `"pedido_trasladado"` `{ origen, destino, estado }` y `"estado_mesas"`; quien llamó recibe `{ ok: true, origen, destino, estado }`. |
+| **Invariante** | **Regla que debe seguir siendo verdadera después de la operación:** La misma de la operación 1 (mesa ocupada ⇔ exactamente un pedido vigente) y el total de pedidos no cambia con el traslado (`verificarConsistenciaMesasPedidos`, `src/dominio/consistencia.js`). |
+| **Validación defensiva** | **Entrada inválida 1:** `{ origen: 4, destino: 4 }` → **Respuesta:** `ENTRADA_INVALIDA` — `"origen y destino deben ser mesas distintas."`. |
+| | **Entrada inválida 2:** `{ origen: 5, destino: 9 }` con la mesa 5 libre → **Respuesta:** `ESTADO_NO_PERMITIDO` — `"La mesa 5 no tiene un pedido que trasladar."`. Además: destino ocupado → `ESTADO_NO_PERMITIDO`; mesa `99` → `NO_ENCONTRADO`; `"1"` (texto) en vez de `1` → `ENTRADA_INVALIDA`. |
+| **Dependencia explícita** | **Colaborador y forma en que se inyecta (constructor, parámetro o interfaz):** `pedidos`, `mesas` y `notificador`, por constructor: `new MesaService({ pedidos, mesas, notificador })`. Si el almacenamiento falla a mitad del traslado, la operación se deshace y lanza `DependenciaError` conservando la causa (prueba con `MesasQueFallan` en `test/doubles.js`). |
+| **Evidencia de ejecución** | **Caso válido y dos inválidos ejecutados.** `SCD_TP_B`: `npm run evidencia` (sección Operación 3, en `docs/evidencia-ejercicio-2-2.txt`) y `npm test` (`test/mesa.service.test.js`, **23 pruebas correctas**). |
 
 ---
 
@@ -211,13 +208,16 @@ Ran all test suites.
 
 ## Identificación de la dependencia explícita
 
-La dependencia hecha explícita en el sistema comprende dos dimensiones:
+La dependencia hecha explícita en el sistema comprende tres dimensiones:
 - **Operación 1 (Backend - Notificador y Repositorios):**
   - Se inyectan `pedidos`, `mesas` y `notificador` por constructor en `PedidoService`.
   - Permite sustituir `SocketNotificador` por dobles de prueba (`NotificadorEspia`, `NotificadorCaido`).
 - **Operación 2 (Frontend - Validador Modular y Socket):**
   - Se desacopla la validación defensiva en el módulo colaborativo `src/validaciones.js` (`validarNumeroMesa`), inyectado en `App.jsx`.
   - La comunicación bidireccional utiliza el colaborador `socket` de Socket.io, recibiendo las respuestas estructuradas emitidas por el backend.
+- **Operación 3 (Backend - MesaService con rollback):**
+  - Se inyectan `pedidos`, `mesas` y `notificador` por constructor en `MesaService`.
+  - Si las mesas fallan al `ocupar()` o `liberar()`, se puede sustituir por `MesasQueFallan` (`test/doubles.js`) para verificar que la operación deshace lo ejecutado y lanza `DependenciaError` conservando la causa original.
 
 ---
 
@@ -232,18 +232,20 @@ SCD_TP_B/
 ├── src/
 │   ├── app.js                        # Factory de la app e inyección de dependencias
 │   ├── dominio/
-│   │   ├── pedido.service.js         # Lógica central con contrato y validación defensiva
+│   │   ├── pedido.service.js         # Lógica central con contrato y validación defensiva (Op. 1)
+│   │   ├── mesa.service.js           # Traslado de pedido entre mesas con rollback (Op. 3)
 │   │   └── consistencia.js           # Verificación de invariante mesa <-> pedido
 │   └── infraestructura/
 │       ├── repositorios.js           # PedidosEnMemoria, MesasEnMemoria
 │       └── notificador.js            # SocketNotificador (adaptador Socket.io)
 ├── test/
-│   ├── doubles.js                    # NotificadorEspia, PedidosQueFallan, NotificadorCaido
+│   ├── doubles.js                    # NotificadorEspia, PedidosQueFallan, NotificadorCaido, MesasQueFallan
 │   ├── pedido.service.test.js        # 23 tests unitarios (Operación 1)
 │   ├── integracion.test.js           # 4 tests de integración
-│   └── operacion-2.test.js           # 6 tests unitarios y de contrato (Operación 2)
+│   ├── operacion-2.test.js           # 6 tests unitarios y de contrato (Operación 2)
+│   └── mesa.service.test.js          # 23 tests unitarios (Operación 3)
 ├── scripts/
-│   └── evidencia.js                  # Script de ejecución para evidencia (Operación 1 y 2)
+│   └── evidencia.js                  # Script de ejecución para evidencia (Operaciones 1, 2 y 3)
 └── docs/
     ├── ejercicio-2-2.md              # Documento oficial con fichas y evidencias
     └── evidencia-ejercicio-2-2.txt   # Registro de consola generado
@@ -256,8 +258,8 @@ SCD_TP_F/
 ├── package.json                      # Script test: node test-verificacion.js
 ├── test-verificacion.js              # Suite de pruebas automatizadas (unitarias + integración)
 ├── docs/
-│   └── ejercicio-2-2.md              # Documentación oficial con Fichas 1 y 2
+│   └── ejercicio-2-2.md              # Documentación oficial con Fichas 1, 2 y 3
 └── src/
     ├── validaciones.js               # Validador defensivo de número de mesa (Operación 2)
-    └── App.jsx                       # Interfaz POS/KDS con captura controlada y escucha de respuesta_pedido
+    └── App.jsx                       # Interfaz POS/KDS con pedidos, traslado de mesa (Op. 3) y escucha de respuesta_traslado
 ```
