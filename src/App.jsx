@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
+import { validarNumeroMesa } from './validaciones';
 
 // Conexión directa al servidor Backend (Puerto 3000)
 const socket = io('http://localhost:3000');
@@ -84,18 +85,21 @@ function App() {
 
   // Función para manejar el cambio en el input de la mesa de forma controlada
   const manejarCambioMesa = (valor) => {
-    // Si el usuario borra el input, permitimos el string vacío
-    if (valor === '') {
-      setMesa('');
+    // 1. Conservar siempre la entrada en el estado para que el campo no se borre silenciosamente
+    setMesa(valor);
+
+    // 2. Si el usuario vacía el input, limpiamos los mensajes de error
+    if (valor.trim() === '') {
+      setErrorValidacion('');
       return;
     }
 
-    // Convertir a número entero
-    const numero = parseInt(valor, 10);
-
-    // Solo actualiza el estado si es un número válido mayor estricto que 0
-    if (!isNaN(numero) && numero > 0) {
-      setMesa(numero.toString());
+    // 3. Validación defensiva en la frontera de entrada del componente
+    const resultado = validarNumeroMesa(valor);
+    if (!resultado.esValido) {
+      setErrorValidacion(resultado.mensajeError);
+    } else {
+      setErrorValidacion('');
     }
   };
 
@@ -103,10 +107,12 @@ function App() {
   const actualizarPedido = (nuevoEstado) => {
     setErrorValidacion(''); // Limpiar errores previos
 
-    // 1. VALIDACIÓN: Verificar que se haya ingresado una mesa válida
-    if (!mesa || mesa.trim() === '' || parseInt(mesa, 10) <= 0) {
+    // 1. VALIDACIÓN DEFENSIVA: Verificar que se haya ingresado una mesa válida
+    const resultadoMesa = validarNumeroMesa(mesa);
+    if (!resultadoMesa.esValido) {
       setErrorValidacion(
-        '⚠️ Por favor, ingresa un número de mesa válido (mayor a 0) antes de enviar.'
+        resultadoMesa.mensajeError ||
+          '⚠️ Por favor, ingresa un número de mesa válido (mayor a 0) antes de enviar.'
       );
       return; // Frena el envío por socket
     }
@@ -119,8 +125,8 @@ function App() {
     }
 
     // 3. Envío seguro al backend si pasa las validaciones
-    console.log(`Enviando actualización válida para Mesa ${mesa}: ${nuevoEstado}`);
-    socket.emit('actualizar_pedido', { mesa: `Mesa ${mesa}`, estado: nuevoEstado });
+    console.log(`Enviando actualización válida para Mesa ${resultadoMesa.numero}: ${nuevoEstado}`);
+    socket.emit('actualizar_pedido', { mesa: `Mesa ${resultadoMesa.numero}`, estado: nuevoEstado });
   };
 
   return (
@@ -210,8 +216,8 @@ function App() {
             Número de Mesa:
           </label>
           <input
+            id="input-mesa"
             type="number"
-            min="1"
             step="1"
             placeholder="Ej: 5"
             value={mesa}
