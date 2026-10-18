@@ -1,0 +1,47 @@
+{
+    "clientName": "Thunder Client",
+    "collectionName": "API-Mesas-US09",
+    "collectionId": "94b73ab5-bb7e-4e31-9e48-c7fec2140577",
+    "dateExported": "2026-10-18T20:31:59.817Z",
+    "version": "1.4",
+    "folders": [],
+    "requests": [
+        {
+            "_id": "8c88ff36-6f26-4948-b423-7bcf20a2b266",
+            "colId": "94b73ab5-bb7e-4e31-9e48-c7fec2140577",
+            "containerId": "",
+            "name": " Grupo A: Clases de Equivalencia - Entradas Inválidas (Errores 400)",
+            "url": "http://localhost:3000/api/mesas/0/abrir",
+            "method": "POST",
+            "sortNum": 80000,
+            "created": "2026-10-18T20:29:09.630Z",
+            "modified": "2026-10-18T20:29:09.630Z",
+            "headers": []
+        },
+        {
+            "_id": "99c2cbfd-e177-41c8-8cfd-f44c6c529412",
+            "colId": "94b73ab5-bb7e-4e31-9e48-c7fec2140577",
+            "containerId": "",
+            "name": "Grupo B: Valores Límite - Ciclos Limpios (Éxitos 200 y Errores 404)",
+            "url": "http://localhost:3000/api/mesas/11/abrir",
+            "method": "POST",
+            "sortNum": 90000,
+            "created": "2026-10-18T20:29:39.590Z",
+            "modified": "2026-10-18T20:29:39.590Z",
+            "headers": []
+        },
+        {
+            "_id": "d5e309f2-9625-47ee-b164-916dfd77ba6b",
+            "colId": "94b73ab5-bb7e-4e31-9e48-c7fec2140577",
+            "containerId": "",
+            "name": "Grupo C: Lógica de Negocio y Conflictos (Errores 409 y Cierre Final)",
+            "url": "http://localhost:3000/api/mesas/5/cerrar",
+            "method": "POST",
+            "sortNum": 100000,
+            "created": "2026-10-18T20:30:36.364Z",
+            "modified": "2026-10-18T20:30:36.364Z",
+            "headers": []
+        }
+    ],
+    "ref": "1lBLn0cOlTWTy8K9ElBp14Pd84wdQqSMFqZdC7d4yvCLP5dhUqnFQ-j--lQ0PbTQBMOVb4dEsIqUXKIdd7Glbw"
+}
