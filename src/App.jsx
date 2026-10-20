@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import { validarNumeroMesa } from './validaciones';
+import MapaMesas from './MapaMesas';
+import DetalleMesa from './DetalleMesa';
 
 // Conexión directa al servidor Backend (Puerto 3000)
 const socket = io('http://localhost:3000');
@@ -25,6 +27,9 @@ function App() {
   const [mesaDestino, setMesaDestino] = useState('');
   const [mensajeTraslado, setMensajeTraslado] = useState('');
 
+  // US-08: mesa seleccionada para mostrar el panel lateral de detalle
+  const [mesaSeleccionada, setMesaSeleccionada] = useState(null);
+
   useEffect(() => {
     socket.on('connect', () => setConectado(true));
     socket.on('disconnect', () => setConectado(false));
@@ -37,7 +42,16 @@ function App() {
     });
 
     // NUEVO: escuchar el evento de estado de mesas que ya emite el backend
-    socket.on('estado_mesas', (datos) => setMesas(datos));
+    // US-08 CA3: reflejar cambios en tiempo real también en la mesa seleccionada
+    socket.on('estado_mesas', (datos) => {
+      setMesas(datos);
+      // Sincronizar el estado de la mesa seleccionada si cambió
+      setMesaSeleccionada((prev) => {
+        if (!prev) return null;
+        const actualizada = datos.find((m) => m.id === prev.id);
+        return actualizada ?? null;
+      });
+    });
 
     // Escuchar respuesta estructurada del backend (validación defensiva)
     socket.on('respuesta_pedido', (resultado) => {
@@ -73,6 +87,19 @@ function App() {
       socket.off('respuesta_pedido');
       socket.off('respuesta_traslado');
     };
+  }, []);
+
+  // US-08: carga inicial de mesas vía REST para no depender solo del socket
+  useEffect(() => {
+    fetch('http://localhost:3000/api/mesas')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ok) setMesas(data.mesas);
+      })
+      .catch(() => {
+        // Si falla el fetch inicial, el socket completará la carga al conectar
+        console.warn('[US-08] No se pudo cargar las mesas por REST; se usará el socket.');
+      });
   }, []);
 
   // NUEVO: useEffect encargado de controlar el avance del tiempo y el límite de desbordamiento
@@ -305,26 +332,18 @@ function App() {
         </button>
       </div>
 
-      {/* NUEVO: Estado de Mesas en tiempo real */}
-      <div style={{ marginTop: '20px' }}>
-        <h3>Estado de Mesas</h3>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
-          {mesas.map((m) => (
-            <span
-              key={m.id}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                fontSize: '13px',
-                color: 'white',
-                background: m.estado === 'libre' ? '#28a745' : '#dc3545'
-              }}
-            >
-              Mesa {m.numero}
-            </span>
-          ))}
-        </div>
-      </div>
+      {/* US-08: Mapa interactivo de mesas con panel lateral de detalle */}
+      <MapaMesas
+        mesas={mesas}
+        mesaSeleccionada={mesaSeleccionada}
+        onSeleccionar={(m) => setMesaSeleccionada(m)}
+      />
+
+      {/* US-08 CA5: Panel lateral deslizable con el detalle de la mesa seleccionada */}
+      <DetalleMesa
+        mesa={mesaSeleccionada}
+        onCerrar={() => setMesaSeleccionada(null)}
+      />
 
       {/* Operación 3 (US-05): Traslado de Mesa */}
       <div
