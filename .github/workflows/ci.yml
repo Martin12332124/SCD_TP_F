@@ -1,0 +1,44 @@
+name: CI - SCD_TP_F
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del frontend
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias del frontend
+        run: npm ci
+
+      - name: Verificar lint
+        run: npm run lint
+
+      - name: Verificar build
+        run: npm run build
+
+      - name: Checkout del backend de referencia
+        uses: actions/checkout@v4
+        with:
+          repository: Martin12332124/SCD_TP_B
+          path: SCD_TP_B
+
+      - name: Instalar dependencias del backend
+        working-directory: SCD_TP_B
+        run: npm ci
+
+      - name: Ejecutar pruebas con backend real
+        run: npm run test:ci
+        env:
+          BACKEND_DIRECTORY: SCD_TP_B
