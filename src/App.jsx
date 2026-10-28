@@ -339,9 +339,10 @@ function App() {
         onSeleccionar={(m) => setMesaSeleccionada(m)}
       />
 
-      {/* US-08 CA5: Panel lateral deslizable con el detalle de la mesa seleccionada */}
+      {/* US-08 CA5 / US-09: Panel lateral deslizable con el detalle de la mesa seleccionada */}
       <DetalleMesa
         mesa={mesaSeleccionada}
+        conectado={conectado}
         onCerrar={() => setMesaSeleccionada(null)}
       />
 
