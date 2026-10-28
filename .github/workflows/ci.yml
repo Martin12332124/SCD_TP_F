@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Martin12332124/SCD_TP_B
-          path: ../SCD_TP_B
+          path: SCD_TP_B
 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
@@ -29,7 +29,7 @@ jobs:
         run: npm ci
 
       - name: Instalar dependencias del backend
-        working-directory: ../SCD_TP_B
+        working-directory: SCD_TP_B
         run: npm ci
 
       - name: Verificar lint
@@ -40,3 +40,5 @@ jobs:
 
       - name: Ejecutar pruebas con backend real
         run: npm run test:ci
+        env:
+          BACKEND_DIRECTORY: SCD_TP_B

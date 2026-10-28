@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
-const backendPath = path.resolve(repoRoot, '..', 'SCD_TP_B', 'index.js');
+const backendDirectory = process.env.BACKEND_DIRECTORY ?? path.resolve(repoRoot, '..', 'SCD_TP_B');
+const backendPath = path.resolve(repoRoot, backendDirectory, 'index.js');
 
 async function waitForServer(url, timeoutMs = 30000) {
   const started = Date.now();
