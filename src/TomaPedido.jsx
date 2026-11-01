@@ -1,8 +1,9 @@
 // src/TomaPedido.jsx
-// Vista de toma de pedido — Paso 1: lista de productos de solo lectura.
+// Vista de toma de pedido — Paso 2: carrito local (agregar / quitar productos).
 //
 // Muestra todos los ítems del menú obtenidos de GET /api/menu-items.
-// No incluye carrito, notas ni envío al backend (eso viene en pasos siguientes).
+// Permite agregar/quitar ítems en un carrito local con subtotales y total en CLP.
+// No incluye disponibilidad bloqueante, notas ni envío al backend (eso viene en pasos siguientes).
 //
 // Props:
 //   mesa      {object} - Mesa seleccionada { id, numero, estado }
@@ -18,6 +19,11 @@ function TomaPedido({ mesa, onCerrar }) {
   // cargando empieza en true: la petición se lanza al montar, antes de cualquier render
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
+
+  // ── Paso 2: estado del carrito ────────────────────────────────────────────────
+  // Estructura: { [itemId]: { item, cantidad } }
+  // Usamos un objeto indexado por id para O(1) en lecturas/actualizaciones.
+  const [carrito, setCarrito] = useState({});
 
   // Carga los ítems del menú al montar el componente.
   // No se llama setState en el cuerpo del efecto; los cambios de estado
@@ -47,8 +53,65 @@ function TomaPedido({ mesa, onCerrar }) {
   const formatearPrecio = (precio) =>
     precio.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
 
+  // ── Paso 2: lógica del carrito ────────────────────────────────────────────────
+
+  /** Agrega un ítem al carrito; si ya existe, incrementa su cantidad. */
+  const agregarAlCarrito = (item) => {
+    setCarrito((prev) => {
+      const entrada = prev[item.id];
+      return {
+        ...prev,
+        [item.id]: {
+          item,
+          cantidad: entrada ? entrada.cantidad + 1 : 1
+        }
+      };
+    });
+  };
+
+  /** Incrementa la cantidad de un ítem ya en el carrito. */
+  const incrementarCantidad = (itemId) => {
+    setCarrito((prev) => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], cantidad: prev[itemId].cantidad + 1 }
+    }));
+  };
+
+  /** Decrementa la cantidad; si llega a 0, elimina el ítem del carrito. */
+  const decrementarCantidad = (itemId) => {
+    setCarrito((prev) => {
+      const entrada = prev[itemId];
+      if (!entrada) return prev;
+      if (entrada.cantidad <= 1) {
+        // quitar el ítem del carrito
+        const { [itemId]: _, ...resto } = prev;
+        return resto;
+      }
+      return { ...prev, [itemId]: { ...entrada, cantidad: entrada.cantidad - 1 } };
+    });
+  };
+
+  /** Elimina completamente un ítem del carrito. */
+  const quitarDelCarrito = (itemId) => {
+    setCarrito((prev) => {
+      const { [itemId]: _, ...resto } = prev;
+      return resto;
+    });
+  };
+
+  // Entradas del carrito como array para renderizar el panel
+  const entradasCarrito = Object.values(carrito);
+
+  // Total del carrito en pesos CLP
+  const totalCarrito = entradasCarrito.reduce(
+    (acc, { item, cantidad }) => acc + item.precioBase * cantidad,
+    0
+  );
+
+  const carritoVacio = entradasCarrito.length === 0;
+
   return (
-    // Pantalla completa sobre el resto de la UI
+    // Pantalla completa sobre el resto de la UI, dividida en dos columnas
     <div style={estilos.overlay}>
       {/* Encabezado con identificación de mesa y botón de cierre */}
       <div style={estilos.encabezado}>
@@ -66,66 +129,154 @@ function TomaPedido({ mesa, onCerrar }) {
         </button>
       </div>
 
-      {/* Cuerpo principal: lista de productos */}
+      {/* Cuerpo principal: columna de productos + panel de carrito */}
       <div style={estilos.cuerpo}>
-        {/* Estado de carga */}
-        {cargando && (
-          <p style={estilos.mensaje}>⏳ Cargando menú...</p>
-        )}
 
-        {/* Error al cargar */}
-        {!cargando && error && (
-          <div style={estilos.errorBox}>
-            <p>{error}</p>
-          </div>
-        )}
+        {/* ── Columna izquierda: lista de productos ─────────────────────── */}
+        <div style={estilos.columnaProductos}>
 
-        {/* Menú vacío */}
-        {!cargando && !error && items.length === 0 && (
-          <p style={estilos.mensaje}>
-            El menú no tiene ítems registrados. Un administrador puede agregarlos desde la API.
-          </p>
-        )}
+          {/* Estado de carga */}
+          {cargando && (
+            <p style={estilos.mensaje}>⏳ Cargando menú...</p>
+          )}
+
+                    {/* Error al cargar */}
+                    {!cargando && error && (
+                      <div style={estilos.errorBox}>
+                        <p>{error}</p>
+                      </div>
+                    )}
+
+                    {/* Menú vacío */}
+                    {!cargando && !error && items.length === 0 && (
+                      <p style={estilos.mensaje}>
+                        El menú no tiene ítems registrados. Un administrador puede agregarlos desde la API.
+                      </p>
+                    )}
 
         {/* Grilla de tarjetas de productos */}
         {!cargando && !error && items.length > 0 && (
           <>
             <p style={estilos.conteo}>{items.length} producto{items.length !== 1 ? 's' : ''} disponible{items.length !== 1 ? 's' : ''}</p>
             <div style={estilos.grilla}>
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  id={`producto-${item.id}`}
-                  style={estilos.tarjeta}
-                >
-                  {/* Nombre del producto */}
-                  <p style={estilos.nombreProducto}>{item.nombre}</p>
-
-                  {/* Precio base */}
-                  <p style={estilos.precio}>{formatearPrecio(item.precioBase)}</p>
-
-                  {/* Indicador de disponibilidad — base para US-04 (Paso 3) */}
-                  <span
+              {items.map((item) => {
+                const enCarrito = carrito[item.id];
+                return (
+                  <div
+                    key={item.id}
+                    id={`producto-${item.id}`}
                     style={{
-                      ...estilos.badge,
-                      background: item.disponible ? '#d4edda' : '#f8d7da',
-                      color: item.disponible ? '#155724' : '#721c24'
+                      ...estilos.tarjeta,
+                      border: enCarrito
+                        ? '2px solid #007bff'
+                        : '1px solid #e0e0e0'
                     }}
                   >
-                    {item.disponible ? '✅ Disponible' : '🚫 Agotado'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+                    {/* Nombre del producto */}
+                    <p style={estilos.nombreProducto}>{item.nombre}</p>
 
-      {/* Pie: nota informativa sobre los próximos pasos */}
-      <div style={estilos.pie}>
-        <p style={estilos.notaPie}>
-          💡 Próximamente: seleccionar productos, ver el total y confirmar el pedido.
-        </p>
+                      {/* Precio base */}
+                      <p style={estilos.precio}>{formatearPrecio(item.precioBase)}</p>
+
+                      {/* Indicador de disponibilidad — base para US-04 (Paso 3) */}
+                      <span
+                        style={{
+                          ...estilos.badge,
+                          background: item.disponible ? '#d4edda' : '#f8d7da',
+                          color: item.disponible ? '#155724' : '#721c24'
+                        }}
+                      >
+                        {item.disponible ? '✅ Disponible' : '🚫 Agotado'}
+                      </span>
+
+                      {/* Paso 2: botón "+ Agregar" */}
+                      <button
+                        id={`btn-agregar-${item.id}`}
+                        onClick={() => agregarAlCarrito(item)}
+                        style={estilos.btnAgregar}
+                        title={`Agregar ${item.nombre} al pedido`}
+                      >
+                        + Agregar
+                      </button>
+                    </div>
+                    );
+                })}
+                  </div>
+            </>
+          )}
+          </div>
+
+        {/* ── Panel lateral derecho: carrito ────────────────────────────── */}
+        <div style={estilos.panelCarrito}>
+          <h3 style={estilos.tituloCarrito}>🛒 Pedido</h3>
+
+          {carritoVacio ? (
+            <p style={estilos.carritoVacio}>
+              Seleccioná productos del menú para armar el pedido.
+            </p>
+          ) : (
+            <>
+              {/* Lista de ítems en el carrito */}
+              <ul style={estilos.listaCarrito}>
+                {entradasCarrito.map(({ item, cantidad }) => (
+                  <li key={item.id} id={`carrito-item-${item.id}`} style={estilos.itemCarrito}>
+                    {/* Nombre e información */}
+                    <div style={estilos.itemInfo}>
+                      <span style={estilos.itemNombre}>{item.nombre}</span>
+                      <span style={estilos.itemSubtotal}>
+                        {formatearPrecio(item.precioBase * cantidad)}
+                      </span>
+                    </div>
+
+                    {/* Controles de cantidad */}
+                    <div style={estilos.controlesQty}>
+                      <button
+                        id={`btn-decrementar-${item.id}`}
+                        onClick={() => decrementarCantidad(item.id)}
+                        style={estilos.btnQty}
+                        title="Reducir cantidad"
+                      >
+                        −
+                      </button>
+                      <span id={`cantidad-${item.id}`} style={estilos.cantidad}>
+                        {cantidad}
+                      </span>
+                      <button
+                        id={`btn-incrementar-${item.id}`}
+                        onClick={() => incrementarCantidad(item.id)}
+                        style={estilos.btnQty}
+                        title="Aumentar cantidad"
+                      >
+                        +
+                      </button>
+                      <button
+                        id={`btn-quitar-${item.id}`}
+                        onClick={() => quitarDelCarrito(item.id)}
+                        style={estilos.btnQuitar}
+                        title={`Quitar ${item.nombre} del pedido`}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Separador y total */}
+              <div style={estilos.totalBox}>
+                <span style={estilos.totalLabel}>Total:</span>
+                <span id="total-carrito" style={estilos.totalValor}>
+                  {formatearPrecio(totalCarrito)}
+                </span>
+              </div>
+
+              {/* Nota: botón Confirmar pedido vendrá en Paso 4 */}
+              <p style={estilos.notaConfirmar}>
+                💡 La confirmación del pedido estará disponible en el próximo paso.
+              </p>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -174,12 +325,19 @@ const estilos = {
     cursor: 'pointer',
     fontWeight: 'bold'
   },
+  // Cuerpo dividido en dos columnas: productos | carrito
   cuerpo: {
     flex: 1,
+    display: 'flex',
+    gap: '0',
+    overflow: 'hidden',
+    height: '100%'
+  },
+  // ── Columna de productos
+  columnaProductos: {
+    flex: 1,
     padding: '24px',
-    maxWidth: '900px',
-    margin: '0 auto',
-    width: '100%',
+    overflowY: 'auto',
     boxSizing: 'border-box'
   },
   mensaje: {
@@ -209,14 +367,14 @@ const estilos = {
   },
   tarjeta: {
     background: '#fff',
-    border: '1px solid #e0e0e0',
     borderRadius: '10px',
     padding: '16px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'flex-start',
     gap: '8px',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
+    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+    transition: 'border 0.15s ease'
   },
   nombreProducto: {
     margin: 0,
@@ -236,17 +394,140 @@ const estilos = {
     padding: '3px 8px',
     borderRadius: '12px'
   },
-  pie: {
-    background: '#fff',
-    borderTop: '1px solid #e0e0e0',
-    padding: '12px 24px',
-    textAlign: 'center'
-  },
-  notaPie: {
-    margin: 0,
-    color: '#888',
-    fontSize: '13px'
-  }
-};
+    btnAgregar: {
+      marginTop: '4px',
+      padding: '6px 14px',
+      background: '#007bff',
+      color: 'white',
+      border: 'none',
+      borderRadius: '6px',
+      fontSize: '13px',
+      fontWeight: 'bold',
+      cursor: 'pointer',
+      width: '100%'
+    },
+    // ── Panel carrito
+    panelCarrito: {
+      width: '300px',
+      minWidth: '260px',
+      background: '#fff',
+    borderLeft: '2px solid #e0e0e0',
+      padding: '24px 16px',
+      overflowY: 'auto',
+      boxSizing: 'border-box',
+      display: 'flex',
+      flexDirection: 'column'
+    },
+      tituloCarrito: {
+        margin: '0 0 16px 0',
+        fontSize: '18px',
+        color: '#333'
+      },
+      carritoVacio: {
+        color: '#aaa',
+        fontSize: '14px',
+        fontStyle: 'italic',
+        textAlign: 'center',
+        marginTop: '24px'
+      },
+      listaCarrito: {
+        listStyle: 'none',
+        margin: 0,
+    padding: 0,
+        flex: 1
+      },
+      itemCarrito: {
+        borderBottom: '1px solid #f0f0f0',
+        paddingBottom: '12px',
+        marginBottom: '12px'
+      },
+      itemInfo: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: '6px'
+      },
+      itemNombre: {
+        fontSize: '13px',
+        fontWeight: 'bold',
+        color: '#333',
+        flex: 1,
+        marginRight: '8px'
+      },
+      itemSubtotal: {
+        fontSize: '13px',
+        fontWeight: 'bold',
+        color: '#007bff',
+        whiteSpace: 'nowrap'
+      },
+      controlesQty: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px'
+      },
+      btnQty: {
+        width: '28px',
+        height: '28px',
+        border: '1px solid #ddd',
+        borderRadius: '4px',
+        background: '#f8f8f8',
+        fontSize: '16px',
+        fontWeight: 'bold',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        lineHeight: 1,
+        padding: 0
+      },
+      cantidad: {
+        minWidth: '24px',
+        textAlign: 'center',
+        fontWeight: 'bold',
+        fontSize: '15px',
+        color: '#333'
+      },
+      btnQuitar: {
+        marginLeft: '4px',
+        width: '24px',
+        height: '24px',
+        border: 'none',
+        borderRadius: '50%',
+        background: '#f8d7da',
+        color: '#721c24',
+        fontSize: '12px',
+        fontWeight: 'bold',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 0
+      },
+      totalBox: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderTop: '2px solid #e0e0e0',
+        paddingTop: '12px',
+        marginTop: '8px'
+      },
+      totalLabel: {
+        fontSize: '16px',
+        fontWeight: 'bold',
+        color: '#333'
+      },
+      totalValor: {
+        fontSize: '20px',
+        fontWeight: 'bold',
+        color: '#28a745'
+      },
+      notaConfirmar: {
+        marginTop: '16px',
+        fontSize: '12px',
+        color: '#aaa',
+        fontStyle: 'italic',
+        textAlign: 'center'
+      }
+    };
 
-export default TomaPedido;
+    export default TomaPedido;
