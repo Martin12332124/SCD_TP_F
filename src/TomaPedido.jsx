@@ -1,9 +1,10 @@
 // src/TomaPedido.jsx
-// Vista de toma de pedido — Paso 2: carrito local (agregar / quitar productos).
+// Vista de toma de pedido — Paso 3: carrito local + indicador de disponibilidad (US-04 CA1/CA2).
 //
 // Muestra todos los ítems del menú obtenidos de GET /api/menu-items.
 // Permite agregar/quitar ítems en un carrito local con subtotales y total en CLP.
-// No incluye disponibilidad bloqueante, notas ni envío al backend (eso viene en pasos siguientes).
+// Los productos agotados muestran la etiqueta "Agotado" y no se pueden agregar.
+// No incluye notas ni envío al backend (eso viene en pasos siguientes).
 //
 // Props:
 //   mesa      {object} - Mesa seleccionada { id, numero, estado }
@@ -38,11 +39,11 @@ function TomaPedido({ mesa, onCerrar }) {
         if (data.ok) {
           setItems(data.items);
         } else {
-          setError('No se pudo cargar el menú. Intentá de nuevo.');
+          setError('No se pudo cargar el menú. Intenta de nuevo.');
         }
       })
       .catch(() => {
-        setError('Error de red al cargar el menú. Verificá que el servidor esté activo.');
+        setError('Error de red al cargar el menú. Verifica que el servidor esté activo.');
       })
       .finally(() => {
         setCargando(false);
@@ -57,6 +58,8 @@ function TomaPedido({ mesa, onCerrar }) {
 
   /** Agrega un ítem al carrito; si ya existe, incrementa su cantidad. */
   const agregarAlCarrito = (item) => {
+    // Paso 3 (US-04 CA2): un producto agotado no se puede agregar
+    if (!item.disponible) return;
     setCarrito((prev) => {
       const entrada = prev[item.id];
       return {
@@ -157,7 +160,7 @@ function TomaPedido({ mesa, onCerrar }) {
         {/* Grilla de tarjetas de productos */}
         {!cargando && !error && items.length > 0 && (
           <>
-            <p style={estilos.conteo}>{items.length} producto{items.length !== 1 ? 's' : ''} disponible{items.length !== 1 ? 's' : ''}</p>
+            <p style={estilos.conteo}>{items.length} producto{items.length !== 1 ? 's' : ''} en el menú ({items.filter((i) => i.disponible).length} disponible{items.filter((i) => i.disponible).length !== 1 ? 's' : ''})</p>
             <div style={estilos.grilla}>
               {items.map((item) => {
                 const enCarrito = carrito[item.id];
@@ -193,10 +196,18 @@ function TomaPedido({ mesa, onCerrar }) {
                       <button
                         id={`btn-agregar-${item.id}`}
                         onClick={() => agregarAlCarrito(item)}
-                        style={estilos.btnAgregar}
-                        title={`Agregar ${item.nombre} al pedido`}
+                        disabled={!item.disponible}
+                        style={{
+                          ...estilos.btnAgregar,
+                          ...(item.disponible ? {} : estilos.btnAgregarDeshabilitado)
+                        }}
+                        title={
+                          item.disponible
+                            ? `Agregar ${item.nombre} al pedido`
+                            : `${item.nombre} está agotado`
+                        }
                       >
-                        + Agregar
+                        {item.disponible ? '+ Agregar' : 'Agotado'}
                       </button>
                     </div>
                     );
@@ -212,7 +223,7 @@ function TomaPedido({ mesa, onCerrar }) {
 
           {carritoVacio ? (
             <p style={estilos.carritoVacio}>
-              Seleccioná productos del menú para armar el pedido.
+              Selecciona productos del menú para armar el pedido.
             </p>
           ) : (
             <>
@@ -405,6 +416,11 @@ const estilos = {
       fontWeight: 'bold',
       cursor: 'pointer',
       width: '100%'
+    },
+    btnAgregarDeshabilitado: {
+      background: '#ccc',
+      color: '#777',
+      cursor: 'not-allowed'
     },
     // ── Panel carrito
     panelCarrito: {
