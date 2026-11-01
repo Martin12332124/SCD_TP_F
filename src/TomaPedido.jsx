@@ -15,6 +15,7 @@
 //   conectado {boolean}  - true si el socket está conectado al backend
 
 import { useState, useEffect } from 'react';
+import { validarCantidad } from './validaciones';
 
 const BASE_URL = 'http://localhost:3000';
 
@@ -33,6 +34,8 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
   // ── Paso 4: estado del envío ──────────────────────────────────────────────────
   const [enviando, setEnviando] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState('');
+  // Error de validación de cantidad (entero de 1 a 99 por producto)
+  const [errorCantidad, setErrorCantidad] = useState('');
 
   // Escucha la respuesta del backend mientras la vista está montada.
   useEffect(() => {
@@ -84,6 +87,12 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
   const confirmarPedido = () => {
     if (enviando || !conectado) return;
     setErrorEnvio('');
+    // Segunda barrera: ninguna cantidad inválida llega al backend
+    const invalida = entradasCarrito.find(({ cantidad }) => !validarCantidad(cantidad).esValido);
+    if (invalida) {
+      setErrorEnvio(validarCantidad(invalida.cantidad).mensajeError);
+      return;
+    }
     setEnviando(true);
     // Atajo: el backend registra el pedido y lo envía directo a cocina
     // Se envían solo id y cantidad: el backend toma nombre y precio del menú
@@ -97,6 +106,13 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
   const agregarAlCarrito = (item) => {
     // Paso 3 (US-04 CA2): un producto agotado no se puede agregar
     if (!item.disponible) return;
+    const siguiente = (carrito[item.id]?.cantidad ?? 0) + 1;
+    const validacion = validarCantidad(siguiente);
+    if (!validacion.esValido) {
+      setErrorCantidad(validacion.mensajeError);
+      return;
+    }
+    setErrorCantidad('');
     setCarrito((prev) => {
       const entrada = prev[item.id];
       return {
@@ -111,6 +127,13 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
 
   /** Incrementa la cantidad de un ítem ya en el carrito. */
   const incrementarCantidad = (itemId) => {
+    // US-13 CA3: no se permite superar el máximo por producto
+    const validacion = validarCantidad(carrito[itemId].cantidad + 1);
+    if (!validacion.esValido) {
+      setErrorCantidad(validacion.mensajeError);
+      return;
+    }
+    setErrorCantidad('');
     setCarrito((prev) => ({
       ...prev,
       [itemId]: { ...prev[itemId], cantidad: prev[itemId].cantidad + 1 }
@@ -317,6 +340,10 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
                   {formatearPrecio(totalCarrito)}
                 </span>
               </div>
+
+              {errorCantidad && (
+                <div id="error-cantidad" style={estilos.errorEnvio}>{errorCantidad}</div>
+              )}
 
               {/* Paso 4: confirmar pedido */}
               {errorEnvio && (

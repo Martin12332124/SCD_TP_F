@@ -53,3 +53,26 @@ export const validarNumeroMesa = (valor) => {
     mensajeError: null
   };
 };
+
+/** Límites de cantidad por producto (US-13 CA2 y CA3). */
+export const CANTIDAD_MINIMA = 1;
+export const CANTIDAD_MAXIMA = 99;
+
+/**
+ * Validador defensivo de la cantidad de un producto en el pedido:
+ * - Precondición: recibe una entrada externa `valor` (number, string, etc.).
+ * - Validación defensiva: rechaza vacíos, no numéricos, decimales, negativos, 0 y mayores a 99.
+ * - Invariante: una cantidad válida es un entero entre CANTIDAD_MINIMA y CANTIDAD_MAXIMA.
+ * - Postcondición: retorna { esValido: boolean, cantidad: number | null, mensajeError: string | null }.
+ */
+export const validarCantidad = (valor) => {
+  const mensajeError = `⚠️ La cantidad debe ser un número entero de ${CANTIDAD_MINIMA} a ${CANTIDAD_MAXIMA}.`;
+  const invalido = { esValido: false, cantidad: null, mensajeError };
+
+  if (valor === undefined || valor === null || String(valor).trim() === '') return invalido;
+
+  const num = Number(String(valor).trim());
+  if (!Number.isInteger(num) || num < CANTIDAD_MINIMA || num > CANTIDAD_MAXIMA) return invalido;
+
+  return { esValido: true, cantidad: num, mensajeError: null };
+};

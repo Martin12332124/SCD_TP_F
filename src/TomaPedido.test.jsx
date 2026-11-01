@@ -1,7 +1,7 @@
 // Pruebas de TomaPedido (US-04): carrito local, disponibilidad y confirmación.
 // El menú se sustituye por un fetch simulado y el socket por un doble con emit/on/off.
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TomaPedido from './TomaPedido';
 
@@ -221,5 +221,56 @@ describe('TomaPedido: confirmación', () => {
     );
     unmount();
     expect(socket.off).toHaveBeenCalledWith('respuesta_pedido', expect.any(Function));
+  });
+});
+
+describe('TomaPedido: límite de cantidad 1 a 99 (US-13 CA2-CA3)', () => {
+  /** Llega a la cantidad indicada pulsando "+" (fireEvent: evita 98 interacciones lentas). */
+  async function llegarA(cantidad) {
+    const { socket } = await renderizar();
+    await screen.findByText('Pizza Margarita');
+    await agregar(1);
+    for (let i = 1; i < cantidad; i += 1) {
+      fireEvent.click(document.getElementById('btn-incrementar-1'));
+    }
+    return socket;
+  }
+
+  test('límite: se puede llegar a 99 unidades sin error', async () => {
+    await llegarA(99);
+    expect(document.getElementById('cantidad-1')).toHaveTextContent('99');
+    expect(document.getElementById('error-cantidad')).toBeNull();
+  });
+
+  test('límite: la unidad 100 se rechaza, conserva 99 y explica la regla', async () => {
+    await llegarA(99);
+    fireEvent.click(document.getElementById('btn-incrementar-1'));
+    expect(document.getElementById('cantidad-1')).toHaveTextContent('99');
+    expect(document.getElementById('error-cantidad')).toHaveTextContent(/entero de 1 a 99/);
+  });
+
+  test('agregar desde el menú con 99 unidades también se rechaza', async () => {
+    await llegarA(99);
+    await agregar(1);
+    expect(document.getElementById('cantidad-1')).toHaveTextContent('99');
+    expect(document.getElementById('error-cantidad')).toBeInTheDocument();
+  });
+
+  test('el error desaparece al volver a una cantidad válida', async () => {
+    await llegarA(99);
+    fireEvent.click(document.getElementById('btn-incrementar-1'));
+    fireEvent.click(document.getElementById('btn-decrementar-1'));
+    fireEvent.click(document.getElementById('btn-incrementar-1'));
+    expect(document.getElementById('error-cantidad')).toBeNull();
+    expect(document.getElementById('cantidad-1')).toHaveTextContent('99');
+  });
+
+  test('con 99 unidades el pedido se confirma enviando esa cantidad', async () => {
+    const socket = await llegarA(99);
+    await userEvent.click(document.getElementById('btn-confirmar-pedido'));
+    expect(socket.emit).toHaveBeenCalledWith('confirmar_pedido', {
+      mesa: 'Mesa 3',
+      items: [{ id: 1, cantidad: 99 }]
+    });
   });
 });
