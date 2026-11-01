@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { validarNumeroMesa } from './validaciones';
 import MapaMesas from './MapaMesas';
 import DetalleMesa from './DetalleMesa';
+import TomaPedido from './TomaPedido';
 
 // Conexión directa al servidor Backend (Puerto 3000)
 const socket = io('http://localhost:3000');
@@ -29,6 +30,13 @@ function App() {
 
   // US-08: mesa seleccionada para mostrar el panel lateral de detalle
   const [mesaSeleccionada, setMesaSeleccionada] = useState(null);
+
+  // Vista "Tomar pedido" (Paso 1): mesa para la que se está tomando el pedido
+  // null = vista cerrada; objeto mesa = vista abierta para esa mesa
+  const [mesaTomandoPedido, setMesaTomandoPedido] = useState(null);
+
+  // Referencia estable: TomaPedido la usa como dependencia de su efecto de socket
+  const cerrarTomaPedido = useCallback(() => setMesaTomandoPedido(null), []);
 
   useEffect(() => {
     socket.on('connect', () => setConectado(true));
@@ -344,7 +352,18 @@ function App() {
         mesa={mesaSeleccionada}
         conectado={conectado}
         onCerrar={() => setMesaSeleccionada(null)}
+        onTomarPedido={(m) => setMesaTomandoPedido(m)}
       />
+
+      {/* Vista "Tomar pedido" — se muestra encima de todo cuando hay una mesa activa */}
+      {mesaTomandoPedido && (
+        <TomaPedido
+          mesa={mesaTomandoPedido}
+          socket={socket}
+          conectado={conectado}
+          onCerrar={cerrarTomaPedido}
+        />
+      )}
 
       {/* Operación 3 (US-05): Traslado de Mesa */}
       <div
