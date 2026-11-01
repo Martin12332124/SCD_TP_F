@@ -36,6 +36,9 @@ function App() {
   const [mesaTomandoPedido, setMesaTomandoPedido] = useState(null);
 
   // Referencia estable: TomaPedido la usa como dependencia de su efecto de socket
+  // Se incrementa cada vez que cambia el contenido de algún pedido (para refrescar el resumen)
+  const [versionPedidos, setVersionPedidos] = useState(0);
+
   const cerrarTomaPedido = useCallback(() => setMesaTomandoPedido(null), []);
 
   useEffect(() => {
@@ -60,6 +63,8 @@ function App() {
         return actualizada ?? null;
       });
     });
+
+    socket.on('pedido_items_actualizado', () => setVersionPedidos((v) => v + 1));
 
     // Escuchar respuesta estructurada del backend (validación defensiva)
     socket.on('respuesta_pedido', (resultado) => {
@@ -92,6 +97,7 @@ function App() {
       socket.off('disconnect');
       socket.off('cambio_estado_pedido');
       socket.off('estado_mesas');
+      socket.off('pedido_items_actualizado');
       socket.off('respuesta_pedido');
       socket.off('respuesta_traslado');
     };
@@ -231,7 +237,17 @@ function App() {
         margin: '0 auto'
       }}
     >
-      <h1>🍔 Monitor de Pedidos en Tiempo Real</h1>
+      <h1
+        style={{
+          fontSize: '28px',
+          fontWeight: 600,
+          lineHeight: 1.3,
+          letterSpacing: 'normal',
+          margin: '24px 0 8px'
+        }}
+      >
+        Monitor de Pedidos en Tiempo Real
+      </h1>
 
       <div style={{ margin: '20px 0' }}>
         <span>Control de Conexión: </span>
@@ -351,6 +367,7 @@ function App() {
       <DetalleMesa
         mesa={mesaSeleccionada}
         conectado={conectado}
+        versionPedidos={versionPedidos}
         onCerrar={() => setMesaSeleccionada(null)}
         onTomarPedido={(m) => setMesaTomandoPedido(m)}
       />

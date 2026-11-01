@@ -4,7 +4,7 @@
 // Muestra todos los ítems del menú obtenidos de GET /api/menu-items.
 // Permite agregar/quitar ítems en un carrito local con subtotales y total en CLP.
 // Los productos agotados muestran la etiqueta "Agotado" y no se pueden agregar.
-// Al confirmar emite 'actualizar_pedido' { mesa: "Mesa N", estado: "Recibido 📝" } y
+// Al confirmar emite 'confirmar_pedido' { mesa: "Mesa N", items } (queda directo En Cocina) y
 // espera la 'respuesta_pedido' del backend: si es ok cierra la vista; si no, muestra el error.
 // No incluye notas por ítem (US-03).
 //
@@ -85,7 +85,12 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
     if (enviando || !conectado) return;
     setErrorEnvio('');
     setEnviando(true);
-    socket.emit('actualizar_pedido', { mesa: mesa.id, estado: 'Recibido 📝' });
+    // Atajo: el backend registra el pedido y lo envía directo a cocina
+    // Se envían solo id y cantidad: el backend toma nombre y precio del menú
+    socket.emit('confirmar_pedido', {
+      mesa: mesa.id,
+      items: entradasCarrito.map(({ item, cantidad }) => ({ id: item.id, cantidad }))
+    });
   };
 
   /** Agrega un ítem al carrito; si ya existe, incrementa su cantidad. */
@@ -349,7 +354,10 @@ const estilos = {
     display: 'flex',
     flexDirection: 'column',
     fontFamily: 'Arial, sans-serif',
-    overflowY: 'auto'
+    overflowY: 'auto',
+    color: '#333',
+    lineHeight: 1.6,
+    letterSpacing: 'normal'
   },
   encabezado: {
     display: 'flex',
@@ -365,10 +373,11 @@ const estilos = {
   titulo: {
     margin: 0,
     fontSize: '22px',
-    color: '#333'
+    color: '#333',
+    letterSpacing: 'normal'
   },
   subtitulo: {
-    margin: '4px 0 0 0',
+    margin: '6px 0 0 0',
     fontSize: '14px',
     color: '#666'
   },
@@ -413,23 +422,23 @@ const estilos = {
     marginTop: '24px'
   },
   conteo: {
-    color: '#888',
-    fontSize: '13px',
-    marginBottom: '16px'
+    color: '#777',
+    fontSize: '14px',
+    marginBottom: '20px'
   },
   grilla: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-    gap: '16px'
+    gap: '20px'
   },
   tarjeta: {
     background: '#fff',
     borderRadius: '10px',
-    padding: '16px',
+    padding: '20px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'flex-start',
-    gap: '8px',
+    gap: '12px',
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
     transition: 'border 0.15s ease'
   },
@@ -500,14 +509,15 @@ const estilos = {
       },
       itemCarrito: {
         borderBottom: '1px solid #f0f0f0',
-        paddingBottom: '12px',
-        marginBottom: '12px'
+        paddingBottom: '16px',
+        marginBottom: '16px'
       },
       itemInfo: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: '6px'
+        marginBottom: '10px',
+        gap: '8px'
       },
       itemNombre: {
         fontSize: '13px',
@@ -533,6 +543,7 @@ const estilos = {
         border: '1px solid #ddd',
         borderRadius: '4px',
         background: '#f8f8f8',
+        color: '#333',
         fontSize: '16px',
         fontWeight: 'bold',
         cursor: 'pointer',
@@ -585,7 +596,8 @@ const estilos = {
       },
       errorEnvio: {
         marginTop: '12px',
-        padding: '8px 10px',
+        padding: '10px 12px',
+        lineHeight: 1.5,
         background: '#f8d7da',
         color: '#721c24',
         borderRadius: '6px',
