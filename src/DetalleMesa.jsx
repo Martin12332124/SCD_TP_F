@@ -4,15 +4,16 @@
 // US-09:     botones para abrir (marcar ocupada) o liberar (marcar libre) la mesa.
 //
 // Props:
-//   mesa       {object|null} - Mesa seleccionada { id, numero, estado } o null
-//   conectado  {boolean}     - Estado de conexión con el backend
-//   onCerrar   {Function}    - Callback para cerrar el panel
+//   mesa              {object|null} - Mesa seleccionada { id, numero, estado } o null
+//   conectado         {boolean}     - Estado de conexión con el backend
+//   onCerrar          {Function}    - Callback para cerrar el panel
+//   onTomarPedido     {Function}    - Callback para abrir la vista "Tomar pedido" con la mesa
 
 import { useState } from 'react';
 
 const BASE_URL = 'http://localhost:3000';
 
-function DetalleMesa({ mesa, conectado, onCerrar }) {
+function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido }) {
   const estaOcupada = mesa?.estado === 'ocupada';
 
   // US-09: estado local para mostrar el resultado de abrir/liberar
@@ -158,6 +159,25 @@ function DetalleMesa({ mesa, conectado, onCerrar }) {
                   }}
                 >
                   {cargando ? 'Procesando...' : '🔴 Liberar mesa'}
+                </button>
+              )}
+
+              {/* Botón "Tomar pedido" — visible solo si la mesa está ocupada */}
+              {estaOcupada && (
+                <button
+                  id={`btn-tomar-pedido-${mesa.numero}`}
+                  onClick={() => {
+                    onCerrar();          // cierra el panel lateral
+                    onTomarPedido(mesa); // abre la vista de toma de pedido
+                  }}
+                  disabled={!conectado}
+                  style={{
+                    ...estilos.btnAccion,
+                    backgroundColor: conectado ? '#007bff' : '#aaa',
+                    marginTop: '8px'
+                  }}
+                >
+                  📝 Tomar pedido
                 </button>
               )}
 
