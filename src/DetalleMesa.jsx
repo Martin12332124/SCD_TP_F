@@ -8,17 +8,50 @@
 //   conectado         {boolean}     - Estado de conexión con el backend
 //   onCerrar          {Function}    - Callback para cerrar el panel
 //   onTomarPedido     {Function}    - Callback para abrir la vista "Tomar pedido" con la mesa
+//   versionPedidos    {number}      - Cambia cuando se actualiza algún pedido (refresca el resumen)
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const BASE_URL = 'http://localhost:3000';
 
-function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido }) {
+function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos = 0 }) {
   const estaOcupada = mesa?.estado === 'ocupada';
 
   // US-09: estado local para mostrar el resultado de abrir/liberar
   const [mensajeAccion, setMensajeAccion] = useState('');
   const [cargando, setCargando] = useState(false);
+
+  // Resumen de lo pedido por la mesa (ítems acumulados y total)
+  const [resumen, setResumen] = useState(null);
+  const [errorResumen, setErrorResumen] = useState('');
+  const numeroMesa = mesa?.numero;
+  const estadoMesa = mesa?.estado;
+
+  // Carga el resumen al seleccionar la mesa y cada vez que cambia un pedido o el estado de la mesa
+  useEffect(() => {
+    if (numeroMesa === undefined) return undefined;
+    let cancelado = false;
+    fetch(`${BASE_URL}/api/mesas/${numeroMesa}/pedido`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelado) return;
+        if (data.ok) {
+          setResumen(data);
+          setErrorResumen('');
+        } else {
+          setErrorResumen(data.error || 'No se pudo cargar el resumen del pedido.');
+        }
+      })
+      .catch(() => {
+        if (!cancelado) setErrorResumen('Error de red al cargar el resumen del pedido.');
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [numeroMesa, estadoMesa, versionPedidos]);
+
+  const formatearPrecio = (precio) =>
+    precio.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
 
   // ── US-09 CA1: Marcar una mesa libre como ocupada ───────────────────────────
   const abrirMesa = async () => {
@@ -182,7 +215,7 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido }) {
               )}
 
               {/* CA2: aclaración explícita: abrir la mesa no crea una cuenta */}
-              <p style={{ ...estilos.textoInfo, marginTop: '8px', fontStyle: 'italic' }}>
+              <p style={{ ...estilos.textoInfo, marginTop: '16px', fontStyle: 'italic' }}>
                 Nota: abrir la mesa no crea una cuenta. La cuenta se gestiona por separado (US-12).
               </p>
             </div>
@@ -190,10 +223,52 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido }) {
             {/* US-08 CA5: cuenta abierta si la tiene */}
             <div style={estilos.seccion}>
               <h4 style={estilos.subtitulo}>📋 Cuenta</h4>
-              {estaOcupada ? (
-                <p style={estilos.textoInfo}>
-                  Esta mesa tiene actividad. La gestión de cuentas estará disponible en US-12.
-                </p>
+              {errorResumen && <p style={{ color: '#721c24' }}>⚠️ {errorResumen}</p>}
+              {estaOcupada && resumen && resumen.items.length > 0 ? (
+                <div id="resumen-pedido">
+                  <p style={estilos.textoInfo}>
+                    <strong>Estado del pedido:</strong> {resumen.estado}
+                  </p>
+                  <ul style={{ listStyle: 'none', margin: '12px 0', padding: 0 }}>
+                    {resumen.items.map((i) => (
+                      <li
+                        key={i.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          gap: '8px',
+                          fontSize: '14px',
+                          color: '#333',
+                          padding: '10px 0',
+                          borderBottom: '1px solid #f0f0f0'
+                        }}
+                      >
+                        <span>
+                          {i.cantidad} × {i.nombre}
+                        </span>
+                        <span>{formatearPrecio(i.precioBase * i.cantidad)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p
+                    id="resumen-total"
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontWeight: 'bold',
+                      color: '#28a745',
+                      margin: '14px 0 0',
+                      paddingTop: '10px',
+                      borderTop: '2px solid #e0e0e0',
+                      fontSize: '16px'
+                    }}
+                  >
+                    <span>Total acumulado</span>
+                    <span>{formatearPrecio(resumen.total)}</span>
+                  </p>
+                </div>
+              ) : estaOcupada ? (
+                <p style={estilos.textoInfo}>Aún no se ha pedido nada en esta mesa.</p>
               ) : (
                 <p style={{ color: '#888', fontStyle: 'italic' }}>
                   Sin cuenta abierta.
@@ -241,7 +316,11 @@ const estilos = {
     boxSizing: 'border-box',
     transition: 'transform 0.3s ease',
     overflowY: 'auto',
-    fontFamily: 'Arial, sans-serif'
+    fontFamily: 'Arial, sans-serif',
+    color: '#333',
+    lineHeight: 1.6,
+    letterSpacing: 'normal',
+    textAlign: 'left'
   },
   cabecera: {
     display: 'flex',
@@ -251,7 +330,9 @@ const estilos = {
   },
   titulo: {
     margin: 0,
-    fontSize: '22px'
+    fontSize: '22px',
+    color: '#222',
+    letterSpacing: 'normal'
   },
   btnCerrar: {
     background: 'none',
@@ -276,15 +357,16 @@ const estilos = {
     borderRadius: '6px',
     fontSize: '13px',
     fontWeight: 'bold',
-    marginBottom: '16px'
+    marginBottom: '16px',
+    lineHeight: 1.5
   },
   seccion: {
     borderTop: '1px solid #eee',
-    paddingTop: '16px',
-    marginBottom: '16px'
+    paddingTop: '18px',
+    marginBottom: '20px'
   },
   subtitulo: {
-    margin: '0 0 8px 0',
+    margin: '0 0 12px 0',
     fontSize: '15px',
     color: '#333'
   },
@@ -300,8 +382,9 @@ const estilos = {
     marginBottom: '8px'
   },
   textoInfo: {
-    margin: '4px 0',
+    margin: '8px 0',
     fontSize: '14px',
+    lineHeight: 1.6,
     color: '#555'
   }
 };
