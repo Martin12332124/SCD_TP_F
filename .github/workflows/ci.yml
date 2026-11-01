@@ -2,7 +2,7 @@ name: CI - SCD_TP_F
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, dev ]
   pull_request:
 
 jobs:
@@ -16,7 +16,7 @@ jobs:
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Instalar dependencias del frontend
@@ -28,17 +28,30 @@ jobs:
       - name: Verificar build
         run: npm run build
 
+      # Pruebas unitarias y de componentes con dobles (sin backend real) + umbrales de cobertura.
+      - name: Ejecutar pruebas con cobertura
+        run: npm run test:ci
+
+      - name: Guardar reporte de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-frontend
+          path: coverage/
+
+      # Prueba de integración de extremo a extremo contra el backend real (rama dev).
       - name: Checkout del backend de referencia
         uses: actions/checkout@v4
         with:
           repository: Martin12332124/SCD_TP_B
+          ref: dev
           path: SCD_TP_B
 
       - name: Instalar dependencias del backend
         working-directory: SCD_TP_B
         run: npm ci
 
-      - name: Ejecutar pruebas con backend real
-        run: npm run test:ci
+      - name: Ejecutar prueba de integración con backend real
+        run: npm run test:integracion
         env:
           BACKEND_DIRECTORY: SCD_TP_B
