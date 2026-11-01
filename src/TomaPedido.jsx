@@ -1,20 +1,24 @@
 // src/TomaPedido.jsx
-// Vista de toma de pedido — Paso 3: carrito local + indicador de disponibilidad (US-04 CA1/CA2).
+// Vista de toma de pedido — Paso 4: confirmar el pedido y enviarlo al backend por socket.
 //
 // Muestra todos los ítems del menú obtenidos de GET /api/menu-items.
 // Permite agregar/quitar ítems en un carrito local con subtotales y total en CLP.
 // Los productos agotados muestran la etiqueta "Agotado" y no se pueden agregar.
-// No incluye notas ni envío al backend (eso viene en pasos siguientes).
+// Al confirmar emite 'actualizar_pedido' { mesa: "Mesa N", estado: "Recibido 📝" } y
+// espera la 'respuesta_pedido' del backend: si es ok cierra la vista; si no, muestra el error.
+// No incluye notas por ítem (US-03).
 //
 // Props:
 //   mesa      {object} - Mesa seleccionada { id, numero, estado }
 //   onCerrar  {Function} - Callback para cerrar la vista y volver al mapa
+//   socket    {object}   - Conexión socket.io compartida con App
+//   conectado {boolean}  - true si el socket está conectado al backend
 
 import { useState, useEffect } from 'react';
 
 const BASE_URL = 'http://localhost:3000';
 
-function TomaPedido({ mesa, onCerrar }) {
+function TomaPedido({ mesa, onCerrar, socket, conectado }) {
   // Lista de ítems del menú cargados desde el backend
   const [items, setItems] = useState([]);
   // cargando empieza en true: la petición se lanza al montar, antes de cualquier render
@@ -25,6 +29,26 @@ function TomaPedido({ mesa, onCerrar }) {
   // Estructura: { [itemId]: { item, cantidad } }
   // Usamos un objeto indexado por id para O(1) en lecturas/actualizaciones.
   const [carrito, setCarrito] = useState({});
+
+  // ── Paso 4: estado del envío ──────────────────────────────────────────────────
+  const [enviando, setEnviando] = useState(false);
+  const [errorEnvio, setErrorEnvio] = useState('');
+
+  // Escucha la respuesta del backend mientras la vista está montada.
+  useEffect(() => {
+    const alResponder = (resultado) => {
+      setEnviando(false);
+      if (resultado.ok) {
+        onCerrar();
+      } else {
+        setErrorEnvio(
+          `⚠️ ${resultado.error}` + (resultado.esperado ? ` (Esperado: ${resultado.esperado})` : '')
+        );
+      }
+    };
+    socket.on('respuesta_pedido', alResponder);
+    return () => socket.off('respuesta_pedido', alResponder);
+  }, [socket, onCerrar]);
 
   // Carga los ítems del menú al montar el componente.
   // No se llama setState en el cuerpo del efecto; los cambios de estado
@@ -55,6 +79,14 @@ function TomaPedido({ mesa, onCerrar }) {
     precio.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
 
   // ── Paso 2: lógica del carrito ────────────────────────────────────────────────
+
+  /** Paso 4: envía el pedido al backend. El resultado llega por 'respuesta_pedido'. */
+  const confirmarPedido = () => {
+    if (enviando || !conectado) return;
+    setErrorEnvio('');
+    setEnviando(true);
+    socket.emit('actualizar_pedido', { mesa: mesa.id, estado: 'Recibido 📝' });
+  };
 
   /** Agrega un ítem al carrito; si ya existe, incrementa su cantidad. */
   const agregarAlCarrito = (item) => {
@@ -281,10 +313,24 @@ function TomaPedido({ mesa, onCerrar }) {
                 </span>
               </div>
 
-              {/* Nota: botón Confirmar pedido vendrá en Paso 4 */}
-              <p style={estilos.notaConfirmar}>
-                💡 La confirmación del pedido estará disponible en el próximo paso.
-              </p>
+              {/* Paso 4: confirmar pedido */}
+              {errorEnvio && (
+                <div id="error-envio" style={estilos.errorEnvio}>{errorEnvio}</div>
+              )}
+              <button
+                id="btn-confirmar-pedido"
+                onClick={confirmarPedido}
+                disabled={enviando || !conectado}
+                style={{
+                  ...estilos.btnConfirmar,
+                  ...(enviando || !conectado ? estilos.btnConfirmarDeshabilitado : {})
+                }}
+              >
+                {enviando ? 'Enviando...' : '✅ Confirmar pedido'}
+              </button>
+              {!conectado && (
+                <p style={estilos.notaConfirmar}>Sin conexión con el servidor.</p>
+              )}
             </>
           )}
         </div>
@@ -536,6 +582,31 @@ const estilos = {
         fontSize: '20px',
         fontWeight: 'bold',
         color: '#28a745'
+      },
+      errorEnvio: {
+        marginTop: '12px',
+        padding: '8px 10px',
+        background: '#f8d7da',
+        color: '#721c24',
+        borderRadius: '6px',
+        fontSize: '13px'
+      },
+      btnConfirmar: {
+        marginTop: '16px',
+        padding: '12px',
+        background: '#28a745',
+        color: 'white',
+        border: 'none',
+        borderRadius: '8px',
+        fontSize: '15px',
+        fontWeight: 'bold',
+        cursor: 'pointer',
+        width: '100%'
+      },
+      btnConfirmarDeshabilitado: {
+        background: '#ccc',
+        color: '#777',
+        cursor: 'not-allowed'
       },
       notaConfirmar: {
         marginTop: '16px',

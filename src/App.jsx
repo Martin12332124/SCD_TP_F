@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { validarNumeroMesa } from './validaciones';
 import MapaMesas from './MapaMesas';
@@ -34,6 +34,9 @@ function App() {
   // Vista "Tomar pedido" (Paso 1): mesa para la que se está tomando el pedido
   // null = vista cerrada; objeto mesa = vista abierta para esa mesa
   const [mesaTomandoPedido, setMesaTomandoPedido] = useState(null);
+
+  // Referencia estable: TomaPedido la usa como dependencia de su efecto de socket
+  const cerrarTomaPedido = useCallback(() => setMesaTomandoPedido(null), []);
 
   useEffect(() => {
     socket.on('connect', () => setConectado(true));
@@ -356,7 +359,9 @@ function App() {
       {mesaTomandoPedido && (
         <TomaPedido
           mesa={mesaTomandoPedido}
-          onCerrar={() => setMesaTomandoPedido(null)}
+          socket={socket}
+          conectado={conectado}
+          onCerrar={cerrarTomaPedido}
         />
       )}
 
