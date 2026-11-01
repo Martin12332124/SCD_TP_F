@@ -92,6 +92,26 @@ npm run format
 ```
 
 ---
+## Hito 2 — Funcionalidades evaluadas
+
+| # | Funcionalidad | Historia | Backend (SCD_TP_B) | Frontend (SCD_TP_F) | Pruebas |
+|---|---|---|---|---|---|
+| 1 | Abrir y liberar mesa | US-09 | `src/dominio/mesa-estado.service.js`, `src/presentacion/mesas.router.js` | `src/DetalleMesa.jsx` | `test/mesa-estado.service.test.js`, `test/api.test.js` |
+| 2 | Mapa de mesas en tiempo real | US-08 | `GET /api/mesas`, evento `estado_mesas` en `src/app.js` | `src/MapaMesas.jsx`, `src/App.jsx` | `test/api.test.js`, `test/socket.test.js` |
+| 3 | Traslado de pedido entre mesas | US-05 | `src/dominio/mesa.service.js`, evento `trasladar_pedido` | formulario de traslado en `src/App.jsx` | `test/mesa.service.test.js`, `test/socket.test.js` |
+| 4 | Precio base de productos (crear/editar) | US-07 | `src/dominio/menu-item.service.js`, `src/presentacion/menu-items.router.js` | — | `test/menu-item.service.test.js`, `test/api.test.js` |
+| 5 | Toma de pedido, confirmación y disponibilidad | US-04 (parcial) | `src/dominio/pedido.service.js` (`confirmarPedido`), `PATCH /api/menu-items/:id` | `src/TomaPedido.jsx` | `test/pedido.service.test.js`, `test/socket.test.js` |
+
+### Cómo ejecutar
+``` bash 
+npm ci
+npm run dev               # http://localhost:5173 (requiere el backend en :3000)
+npm run lint
+npm run build
+npm run test:coverage
+```
+
+
 
 ### REQUISITOS PREVIOS
 
