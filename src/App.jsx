@@ -226,6 +226,8 @@ function App() {
     socket.emit('trasladar_pedido', { origen: resOrigen.numero, destino: resDestino.numero });
   };
 
+  const tonoEstado = TONOS_ESTADO[ultimoPedido.estado] ?? TONO_NEUTRO;
+
   return (
     <div style={estilos.app}>
       {/* Encabezado: identidad del local e indicador de conexión con el backend */}
@@ -266,125 +268,179 @@ function App() {
         </div>
       </header>
 
-      <main
-        style={{
-          padding: '40px',
-          textAlign: 'center',
-          maxWidth: '500px',
-          width: '100%',
-          margin: '0 auto'
-        }}
-      >
+      <main style={estilos.contenido}>
         {/* Pantalla central que muestra el último movimiento con el contador compacto integrado */}
-        <div
-          style={{
-            padding: '20px',
-            background: '#f9f9f9',
-            borderRadius: '8px',
-            border: '1px solid #ddd',
-            margin: '20px 0'
-          }}
-        >
-          <p style={{ margin: '5px 0', color: '#666' }}>Última Actualización:</p>
-          <div
-            style={{
-              fontSize: '20px',
-              fontWeight: 'bold',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: '12px'
-            }}
-          >
-            <span>
-              {ultimoPedido.mesa} ➡️ <span style={{ color: '#007bff' }}>{ultimoPedido.estado}</span>
-            </span>
-
-            {/* Visualización del contador compacto */}
-            {ultimoPedido.estado !== 'Sin Pedidos' && (
+        <section style={estilos.destacado} aria-live="polite">
+          <span aria-hidden="true" style={estilos.iconoDestacado}>
+            🛎️
+          </span>
+          <div style={estilos.destacadoTexto}>
+            <p style={estilos.etiqueta}>Última actualización</p>
+            <div style={estilos.ultimoPedido}>
+              <span style={estilos.ultimaMesa}>{ultimoPedido.mesa}</span>
+              <span aria-hidden="true" style={estilos.flecha}>
+                →
+              </span>
               <span
                 style={{
-                  fontSize: '13px',
-                  padding: '2px 6px',
-                  borderRadius: '12px',
-                  background: segundos > 900 ? '#ffe6e6' : '#e6f7ff',
-                  color: segundos > 900 ? 'red' : '#007bff',
-                  fontFamily: 'monospace',
-                  border: `1px solid ${segundos > 900 ? 'red' : '#007bff'}`
+                  ...estilos.pildoraEstado,
+                  background: tonoEstado.fondo,
+                  color: tonoEstado.texto,
+                  borderColor: tonoEstado.borde
                 }}
               >
-                ⏱️ {formatearTiempo(segundos)}
+                {ultimoPedido.estado}
               </span>
-            )}
+            </div>
           </div>
-        </div>
+
+          {/* Visualización del contador compacto */}
+          {ultimoPedido.estado !== 'Sin Pedidos' && (
+            <span
+              title="Tiempo en el estado actual"
+              style={{
+                ...estilos.contador,
+                background:
+                  segundos > 900 ? 'var(--color-peligro-suave)' : 'var(--color-superficie-alt)',
+                color: segundos > 900 ? 'var(--color-peligro-texto)' : 'var(--color-acento-texto)',
+                borderColor: segundos > 900 ? 'var(--color-peligro)' : 'var(--color-azafran)'
+              }}
+            >
+              ⏱️ {formatearTiempo(segundos)}
+            </span>
+          )}
+        </section>
 
         {/* Alerta de validación del Frontend */}
         {errorValidacion && (
-          <div
-            style={{
-              color: 'red',
-              fontWeight: 'bold',
-              marginBottom: '15px',
-              backgroundColor: '#ffe6e6',
-              padding: '10px',
-              borderRadius: '5px'
-            }}
-          >
+          <div role="alert" style={{ ...estilos.aviso, ...estilos.avisoError }}>
             {errorValidacion}
           </div>
         )}
 
-        {/* Formulario de Simulación */}
-        <div style={{ backgroundColor: '#f0f0f0', padding: '20px', borderRadius: '8px' }}>
-          <h3>Panel de Control del Mozo / Cocina</h3>
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Número de Mesa:
-            </label>
-            <input
-              id="input-mesa"
-              type="number"
-              step="1"
-              placeholder="Ej: 5"
-              value={mesa}
-              onChange={(e) => manejarCambioMesa(e.target.value)}
-              disabled={!conectado}
-              style={{ padding: '8px', width: '80px', textAlign: 'center', fontSize: '16px' }}
+        <div style={estilos.columnas}>
+          {/* US-08: Mapa interactivo de mesas con panel lateral de detalle */}
+          <section style={{ ...estilos.tarjeta, ...estilos.columnaPrincipal }}>
+            <MapaMesas
+              mesas={mesas}
+              mesaSeleccionada={mesaSeleccionada}
+              onSeleccionar={(m) => setMesaSeleccionada(m)}
             />
-          </div>
+          </section>
 
-          <p style={{ marginBottom: '5px', fontWeight: 'bold' }}>Cambiar Estado a:</p>
-          {/* Los botones se deshabilitan automáticamente si el servidor cae */}
-          <button
-            disabled={!conectado}
-            onClick={() => actualizarPedido('Recibido 📝')}
-            style={btnStyle}
-          >
-            Tomar Pedido 📝
-          </button>
-          <button
-            disabled={!conectado}
-            onClick={() => actualizarPedido('En Cocina 🍳')}
-            style={btnStyle}
-          >
-            Empezar Cocina 🍳
-          </button>
-          <button
-            disabled={!conectado}
-            onClick={() => actualizarPedido('Listo 🍽️')}
-            style={btnStyle}
-          >
-            Pedido Listo 🍽️
-          </button>
+          <aside style={estilos.columnaLateral}>
+            {/* Formulario de Simulación */}
+            <section style={estilos.tarjeta}>
+              <p style={estilos.etiqueta}>Mozo · Cocina</p>
+              <h3 style={estilos.tituloTarjeta}>Panel de control</h3>
+
+              <label htmlFor="input-mesa" style={estilos.rotulo}>
+                Número de mesa
+              </label>
+              <input
+                id="input-mesa"
+                type="number"
+                step="1"
+                placeholder="Ej: 5"
+                value={mesa}
+                onChange={(e) => manejarCambioMesa(e.target.value)}
+                disabled={!conectado}
+                style={estilos.campo}
+              />
+
+              <p style={{ ...estilos.rotulo, marginTop: '18px' }}>Cambiar estado a</p>
+              {/* Los botones se deshabilitan automáticamente si el servidor cae */}
+              <div style={estilos.grupoEstados}>
+                <button
+                  disabled={!conectado}
+                  onClick={() => actualizarPedido('Recibido 📝')}
+                  style={{ ...estilos.botonEstado, borderLeftColor: 'var(--color-azafran)' }}
+                >
+                  Tomar Pedido 📝
+                </button>
+                <button
+                  disabled={!conectado}
+                  onClick={() => actualizarPedido('En Cocina 🍳')}
+                  style={{ ...estilos.botonEstado, borderLeftColor: 'var(--color-acento)' }}
+                >
+                  Empezar Cocina 🍳
+                </button>
+                <button
+                  disabled={!conectado}
+                  onClick={() => actualizarPedido('Listo 🍽️')}
+                  style={{ ...estilos.botonEstado, borderLeftColor: 'var(--color-exito)' }}
+                >
+                  Pedido Listo 🍽️
+                </button>
+              </div>
+            </section>
+
+            {/* Operación 3 (US-05): Traslado de Mesa */}
+            <section style={estilos.tarjeta}>
+              <p style={estilos.etiqueta}>Sala</p>
+              <h3 style={estilos.tituloTarjeta}>Traslado de mesa</h3>
+
+              {/* Banner de resultado del traslado */}
+              {mensajeTraslado && (
+                <div
+                  role="status"
+                  style={{
+                    ...estilos.aviso,
+                    ...(mensajeTraslado.startsWith('✅') ? estilos.avisoExito : estilos.avisoError)
+                  }}
+                >
+                  {mensajeTraslado}
+                </div>
+              )}
+
+              <div style={estilos.filaCampos}>
+                <div style={{ flex: 1 }}>
+                  <label htmlFor="input-mesa-origen" style={estilos.rotulo}>
+                    Mesa origen
+                  </label>
+                  <input
+                    id="input-mesa-origen"
+                    type="number"
+                    step="1"
+                    placeholder="Ej: 2"
+                    value={mesaOrigen}
+                    onChange={(e) => {
+                      setMesaOrigen(e.target.value);
+                      setMensajeTraslado('');
+                    }}
+                    disabled={!conectado}
+                    style={estilos.campo}
+                  />
+                </div>
+                <span aria-hidden="true" style={estilos.flechaTraslado}>
+                  ⇄
+                </span>
+                <div style={{ flex: 1 }}>
+                  <label htmlFor="input-mesa-destino" style={estilos.rotulo}>
+                    Mesa destino
+                  </label>
+                  <input
+                    id="input-mesa-destino"
+                    type="number"
+                    step="1"
+                    placeholder="Ej: 6"
+                    value={mesaDestino}
+                    onChange={(e) => {
+                      setMesaDestino(e.target.value);
+                      setMensajeTraslado('');
+                    }}
+                    disabled={!conectado}
+                    style={estilos.campo}
+                  />
+                </div>
+              </div>
+
+              <button disabled={!conectado} onClick={trasladarPedido} style={estilos.botonPrimario}>
+                🔄 Trasladar Mesa
+              </button>
+            </section>
+          </aside>
         </div>
-
-        {/* US-08: Mapa interactivo de mesas con panel lateral de detalle */}
-        <MapaMesas
-          mesas={mesas}
-          mesaSeleccionada={mesaSeleccionada}
-          onSeleccionar={(m) => setMesaSeleccionada(m)}
-        />
 
         {/* US-08 CA5 / US-09: Panel lateral deslizable con el detalle de la mesa seleccionada */}
         <DetalleMesa
@@ -404,96 +460,34 @@ function App() {
             onCerrar={cerrarTomaPedido}
           />
         )}
-
-        {/* Operación 3 (US-05): Traslado de Mesa */}
-        <div
-          style={{
-            marginTop: '20px',
-            backgroundColor: '#f0f0f0',
-            padding: '20px',
-            borderRadius: '8px'
-          }}
-        >
-          <h3>🔄 Traslado de Mesa (US-05)</h3>
-
-          {/* Banner de resultado del traslado */}
-          {mensajeTraslado && (
-            <div
-              style={{
-                color: mensajeTraslado.startsWith('✅') ? 'green' : 'red',
-                fontWeight: 'bold',
-                marginBottom: '12px',
-                backgroundColor: mensajeTraslado.startsWith('✅') ? '#e6ffe6' : '#ffe6e6',
-                padding: '10px',
-                borderRadius: '5px'
-              }}
-            >
-              {mensajeTraslado}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
-                Mesa Origen:
-              </label>
-              <input
-                id="input-mesa-origen"
-                type="number"
-                step="1"
-                placeholder="Ej: 2"
-                value={mesaOrigen}
-                onChange={(e) => {
-                  setMesaOrigen(e.target.value);
-                  setMensajeTraslado('');
-                }}
-                disabled={!conectado}
-                style={{ padding: '8px', width: '80px', textAlign: 'center', fontSize: '16px' }}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
-                Mesa Destino:
-              </label>
-              <input
-                id="input-mesa-destino"
-                type="number"
-                step="1"
-                placeholder="Ej: 6"
-                value={mesaDestino}
-                onChange={(e) => {
-                  setMesaDestino(e.target.value);
-                  setMensajeTraslado('');
-                }}
-                disabled={!conectado}
-                style={{ padding: '8px', width: '80px', textAlign: 'center', fontSize: '16px' }}
-              />
-            </div>
-          </div>
-
-          <div style={{ marginTop: '12px' }}>
-            <button
-              disabled={!conectado}
-              onClick={trasladarPedido}
-              style={{
-                ...btnStyle,
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px'
-              }}
-            >
-              🔄 Trasladar Mesa
-            </button>
-          </div>
-        </div>
       </main>
     </div>
   );
 }
 
-// Estilo simple para los botones
-const btnStyle = { margin: '5px', padding: '10px 15px', fontSize: '14px', cursor: 'pointer' };
+// Colores de la píldora de "Última actualización" según el estado del pedido
+const TONOS_ESTADO = {
+  'Recibido 📝': {
+    fondo: 'var(--color-superficie-alt)',
+    texto: 'var(--color-acento-texto)',
+    borde: 'var(--color-azafran)'
+  },
+  'En Cocina 🍳': {
+    fondo: 'var(--color-primario-suave)',
+    texto: 'var(--color-primario-texto)',
+    borde: 'var(--color-acento)'
+  },
+  'Listo 🍽️': {
+    fondo: 'var(--color-exito-suave)',
+    texto: 'var(--color-exito-texto)',
+    borde: 'var(--color-exito)'
+  }
+};
+const TONO_NEUTRO = {
+  fondo: 'var(--color-superficie-alt)',
+  texto: 'var(--color-texto-suave)',
+  borde: 'var(--color-borde)'
+};
 
 // ── Estilos en línea: leen los tokens de index.css (modo claro y oscuro) ─────
 const estilos = {
@@ -568,6 +562,189 @@ const estilos = {
     width: '9px',
     height: '9px',
     borderRadius: '50%'
+  },
+  // ── Contenido principal
+  contenido: {
+    width: '100%',
+    maxWidth: '1200px',
+    margin: '0 auto',
+    padding: 'clamp(16px, 4vw, 32px) clamp(16px, 4vw, 40px) 48px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px'
+  },
+  destacado: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: '18px',
+    padding: '20px 24px',
+    background: 'var(--color-superficie)',
+    border: '1px solid var(--color-borde)',
+    borderLeft: '5px solid var(--color-azafran)',
+    borderRadius: 'var(--radio-l)',
+    boxShadow: 'var(--sombra-1)'
+  },
+  iconoDestacado: {
+    display: 'grid',
+    placeItems: 'center',
+    width: '52px',
+    height: '52px',
+    borderRadius: '50%',
+    background: 'var(--color-superficie-alt)',
+    fontSize: '26px',
+    flexShrink: 0
+  },
+  destacadoTexto: {
+    flex: '1 1 220px',
+    minWidth: 0
+  },
+  etiqueta: {
+    fontSize: '11px',
+    fontWeight: 700,
+    letterSpacing: '0.16em',
+    textTransform: 'uppercase',
+    color: 'var(--color-acento-texto)',
+    marginBottom: '4px'
+  },
+  ultimoPedido: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: '10px'
+  },
+  ultimaMesa: {
+    fontFamily: 'var(--fuente-titulo)',
+    fontSize: '26px',
+    fontWeight: 600,
+    color: 'var(--color-texto)'
+  },
+  flecha: {
+    color: 'var(--color-texto-tenue)',
+    fontSize: '20px'
+  },
+  pildoraEstado: {
+    display: 'inline-block',
+    padding: '4px 14px',
+    borderRadius: '999px',
+    border: '1px solid',
+    fontSize: '14px',
+    fontWeight: 700
+  },
+  contador: {
+    padding: '8px 14px',
+    borderRadius: '999px',
+    border: '1px solid',
+    fontFamily: 'var(--fuente-mono)',
+    fontSize: '15px',
+    fontWeight: 600,
+    fontVariantNumeric: 'tabular-nums'
+  },
+  aviso: {
+    padding: '12px 16px',
+    borderRadius: 'var(--radio-m)',
+    border: '1px solid',
+    fontSize: '14px',
+    fontWeight: 600,
+    lineHeight: 1.5
+  },
+  avisoError: {
+    background: 'var(--color-peligro-suave)',
+    color: 'var(--color-peligro-texto)',
+    borderColor: 'var(--color-peligro)'
+  },
+  avisoExito: {
+    background: 'var(--color-exito-suave)',
+    color: 'var(--color-exito-texto)',
+    borderColor: 'var(--color-exito)'
+  },
+  // Dos columnas que se apilan solas en pantallas angostas (flex-wrap)
+  columnas: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    gap: '24px'
+  },
+  columnaPrincipal: {
+    flex: '2 1 480px',
+    minWidth: 0
+  },
+  columnaLateral: {
+    flex: '1 1 320px',
+    minWidth: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px'
+  },
+  tarjeta: {
+    background: 'var(--color-superficie)',
+    border: '1px solid var(--color-borde)',
+    borderRadius: 'var(--radio-l)',
+    boxShadow: 'var(--sombra-1)',
+    padding: '24px'
+  },
+  tituloTarjeta: {
+    margin: '0 0 18px',
+    fontSize: '20px'
+  },
+  rotulo: {
+    display: 'block',
+    marginBottom: '6px',
+    fontSize: '13px',
+    fontWeight: 600,
+    color: 'var(--color-texto-suave)'
+  },
+  campo: {
+    width: '100%',
+    padding: '10px 14px',
+    fontSize: '16px',
+    color: 'var(--color-texto)',
+    background: 'var(--color-fondo)',
+    border: '1px solid var(--color-borde)',
+    borderRadius: 'var(--radio-s)'
+  },
+  grupoEstados: {
+    display: 'grid',
+    gap: '10px'
+  },
+  botonEstado: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    padding: '12px 16px',
+    fontSize: '15px',
+    fontWeight: 600,
+    textAlign: 'left',
+    color: 'var(--color-texto)',
+    background: 'var(--color-superficie-alt)',
+    border: '1px solid var(--color-borde)',
+    borderLeft: '5px solid',
+    borderRadius: 'var(--radio-m)',
+    cursor: 'pointer'
+  },
+  filaCampos: {
+    display: 'flex',
+    alignItems: 'flex-end',
+    gap: '12px',
+    marginBottom: '16px'
+  },
+  flechaTraslado: {
+    paddingBottom: '10px',
+    fontSize: '20px',
+    color: 'var(--color-texto-tenue)'
+  },
+  botonPrimario: {
+    width: '100%',
+    padding: '12px 18px',
+    fontSize: '15px',
+    fontWeight: 700,
+    color: 'var(--color-sobre-primario)',
+    background: 'var(--color-primario)',
+    border: 'none',
+    borderRadius: 'var(--radio-m)',
+    boxShadow: '0 2px 0 rgba(90, 30, 8, 0.25)',
+    cursor: 'pointer'
   }
 };
 
