@@ -42,7 +42,11 @@ describe('validarCantidad (límites 1 a 99)', () => {
     ['50', 50],
     [' 7 ', 7]
   ])('acepta %j y devuelve %i', (entrada, esperado) => {
-    expect(validarCantidad(entrada)).toEqual({ esValido: true, cantidad: esperado, mensajeError: null });
+    expect(validarCantidad(entrada)).toEqual({
+      esValido: true,
+      cantidad: esperado,
+      mensajeError: null
+    });
   });
 
   test.each([0, 100, -1, 1.5, '1.5', 'abc', '', '  ', null, undefined, NaN])(

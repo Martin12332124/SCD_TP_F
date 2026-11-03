@@ -118,7 +118,11 @@ describe('DetalleMesa: abrir mesa (US-09 CA1)', () => {
 
   test('si el backend rechaza (ESTADO_NO_PERMITIDO) muestra tipo y motivo', async () => {
     simularBackend({
-      '/api/mesas/1/abrir': { ok: false, tipo: 'ESTADO_NO_PERMITIDO', error: 'La mesa ya está ocupada' }
+      '/api/mesas/1/abrir': {
+        ok: false,
+        tipo: 'ESTADO_NO_PERMITIDO',
+        error: 'La mesa ya está ocupada'
+      }
     });
     renderizar(libre);
     await userEvent.click(screen.getByText(/Abrir mesa/));

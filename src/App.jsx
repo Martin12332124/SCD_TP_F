@@ -221,9 +221,7 @@ function App() {
     }
 
     // 4. Envío seguro al backend
-    console.log(
-      `Enviando traslado: Mesa ${resOrigen.numero} → Mesa ${resDestino.numero}`
-    );
+    console.log(`Enviando traslado: Mesa ${resOrigen.numero} → Mesa ${resDestino.numero}`);
     socket.emit('trasladar_pedido', { origen: resOrigen.numero, destino: resDestino.numero });
   };
 

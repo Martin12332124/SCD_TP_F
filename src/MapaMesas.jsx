@@ -13,9 +13,7 @@ function MapaMesas({ mesas, mesaSeleccionada, onSeleccionar }) {
       <h3 style={estilos.titulo}>🗺️ Estado de Mesas</h3>
 
       {/* US-08 CA1: mostrar todas las mesas registradas */}
-      {mesas.length === 0 && (
-        <p style={estilos.vacio}>Sin mesas registradas.</p>
-      )}
+      {mesas.length === 0 && <p style={estilos.vacio}>Sin mesas registradas.</p>}
 
       <div style={estilos.grilla}>
         {mesas.map((m) => {

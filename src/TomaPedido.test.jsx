@@ -33,7 +33,11 @@ function simularMenu(respuesta) {
     'fetch',
     vi.fn(async () => {
       if (respuesta instanceof Error) throw respuesta;
-      return { ok: respuesta.httpOk ?? true, status: respuesta.status ?? 200, json: async () => respuesta };
+      return {
+        ok: respuesta.httpOk ?? true,
+        status: respuesta.status ?? 200,
+        json: async () => respuesta
+      };
     })
   );
 }
@@ -199,8 +203,14 @@ describe('TomaPedido: confirmación', () => {
     await screen.findByText('Pizza Margarita');
     await agregar(1);
     await userEvent.click(document.getElementById('btn-confirmar-pedido'));
-    socket.disparar('respuesta_pedido', { ok: false, error: 'Producto agotado', esperado: 'ítem disponible' });
-    expect(await screen.findByText(/Producto agotado \(Esperado: ítem disponible\)/)).toBeInTheDocument();
+    socket.disparar('respuesta_pedido', {
+      ok: false,
+      error: 'Producto agotado',
+      esperado: 'ítem disponible'
+    });
+    expect(
+      await screen.findByText(/Producto agotado \(Esperado: ítem disponible\)/)
+    ).toBeInTheDocument();
     expect(onCerrar).not.toHaveBeenCalled();
     expect(document.getElementById('btn-confirmar-pedido')).toBeEnabled();
   });

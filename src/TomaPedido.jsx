@@ -194,49 +194,47 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
 
       {/* Cuerpo principal: columna de productos + panel de carrito */}
       <div style={estilos.cuerpo}>
-
         {/* ── Columna izquierda: lista de productos ─────────────────────── */}
         <div style={estilos.columnaProductos}>
-
           {/* Estado de carga */}
-          {cargando && (
-            <p style={estilos.mensaje}>⏳ Cargando menú...</p>
+          {cargando && <p style={estilos.mensaje}>⏳ Cargando menú...</p>}
+
+          {/* Error al cargar */}
+          {!cargando && error && (
+            <div style={estilos.errorBox}>
+              <p>{error}</p>
+            </div>
           )}
 
-                    {/* Error al cargar */}
-                    {!cargando && error && (
-                      <div style={estilos.errorBox}>
-                        <p>{error}</p>
-                      </div>
-                    )}
+          {/* Menú vacío */}
+          {!cargando && !error && items.length === 0 && (
+            <p style={estilos.mensaje}>
+              El menú no tiene ítems registrados. Un administrador puede agregarlos desde la API.
+            </p>
+          )}
 
-                    {/* Menú vacío */}
-                    {!cargando && !error && items.length === 0 && (
-                      <p style={estilos.mensaje}>
-                        El menú no tiene ítems registrados. Un administrador puede agregarlos desde la API.
-                      </p>
-                    )}
-
-        {/* Grilla de tarjetas de productos */}
-        {!cargando && !error && items.length > 0 && (
-          <>
-            <p style={estilos.conteo}>{items.length} producto{items.length !== 1 ? 's' : ''} en el menú ({items.filter((i) => i.disponible).length} disponible{items.filter((i) => i.disponible).length !== 1 ? 's' : ''})</p>
-            <div style={estilos.grilla}>
-              {items.map((item) => {
-                const enCarrito = carrito[item.id];
-                return (
-                  <div
-                    key={item.id}
-                    id={`producto-${item.id}`}
-                    style={{
-                      ...estilos.tarjeta,
-                      border: enCarrito
-                        ? '2px solid #007bff'
-                        : '1px solid #e0e0e0'
-                    }}
-                  >
-                    {/* Nombre del producto */}
-                    <p style={estilos.nombreProducto}>{item.nombre}</p>
+          {/* Grilla de tarjetas de productos */}
+          {!cargando && !error && items.length > 0 && (
+            <>
+              <p style={estilos.conteo}>
+                {items.length} producto{items.length !== 1 ? 's' : ''} en el menú (
+                {items.filter((i) => i.disponible).length} disponible
+                {items.filter((i) => i.disponible).length !== 1 ? 's' : ''})
+              </p>
+              <div style={estilos.grilla}>
+                {items.map((item) => {
+                  const enCarrito = carrito[item.id];
+                  return (
+                    <div
+                      key={item.id}
+                      id={`producto-${item.id}`}
+                      style={{
+                        ...estilos.tarjeta,
+                        border: enCarrito ? '2px solid #007bff' : '1px solid #e0e0e0'
+                      }}
+                    >
+                      {/* Nombre del producto */}
+                      <p style={estilos.nombreProducto}>{item.nombre}</p>
 
                       {/* Precio base */}
                       <p style={estilos.precio}>{formatearPrecio(item.precioBase)}</p>
@@ -270,21 +268,19 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
                         {item.disponible ? '+ Agregar' : 'Agotado'}
                       </button>
                     </div>
-                    );
+                  );
                 })}
-                  </div>
+              </div>
             </>
           )}
-          </div>
+        </div>
 
         {/* ── Panel lateral derecho: carrito ────────────────────────────── */}
         <div style={estilos.panelCarrito}>
           <h3 style={estilos.tituloCarrito}>🛒 Pedido</h3>
 
           {carritoVacio ? (
-            <p style={estilos.carritoVacio}>
-              Selecciona productos del menú para armar el pedido.
-            </p>
+            <p style={estilos.carritoVacio}>Selecciona productos del menú para armar el pedido.</p>
           ) : (
             <>
               {/* Lista de ítems en el carrito */}
@@ -342,12 +338,16 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
               </div>
 
               {errorCantidad && (
-                <div id="error-cantidad" style={estilos.errorEnvio}>{errorCantidad}</div>
+                <div id="error-cantidad" style={estilos.errorEnvio}>
+                  {errorCantidad}
+                </div>
               )}
 
               {/* Paso 4: confirmar pedido */}
               {errorEnvio && (
-                <div id="error-envio" style={estilos.errorEnvio}>{errorEnvio}</div>
+                <div id="error-envio" style={estilos.errorEnvio}>
+                  {errorEnvio}
+                </div>
               )}
               <button
                 id="btn-confirmar-pedido"
@@ -360,9 +360,7 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
               >
                 {enviando ? 'Enviando...' : '✅ Confirmar pedido'}
               </button>
-              {!conectado && (
-                <p style={estilos.notaConfirmar}>Sin conexión con el servidor.</p>
-              )}
+              {!conectado && <p style={estilos.notaConfirmar}>Sin conexión con el servidor.</p>}
             </>
           )}
         </div>
@@ -487,173 +485,173 @@ const estilos = {
     padding: '3px 8px',
     borderRadius: '12px'
   },
-    btnAgregar: {
-      marginTop: '4px',
-      padding: '6px 14px',
-      background: '#007bff',
-      color: 'white',
-      border: 'none',
-      borderRadius: '6px',
-      fontSize: '13px',
-      fontWeight: 'bold',
-      cursor: 'pointer',
-      width: '100%'
-    },
-    btnAgregarDeshabilitado: {
-      background: '#ccc',
-      color: '#777',
-      cursor: 'not-allowed'
-    },
-    // ── Panel carrito
-    panelCarrito: {
-      width: '300px',
-      minWidth: '260px',
-      background: '#fff',
+  btnAgregar: {
+    marginTop: '4px',
+    padding: '6px 14px',
+    background: '#007bff',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '13px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    width: '100%'
+  },
+  btnAgregarDeshabilitado: {
+    background: '#ccc',
+    color: '#777',
+    cursor: 'not-allowed'
+  },
+  // ── Panel carrito
+  panelCarrito: {
+    width: '300px',
+    minWidth: '260px',
+    background: '#fff',
     borderLeft: '2px solid #e0e0e0',
-      padding: '24px 16px',
-      overflowY: 'auto',
-      boxSizing: 'border-box',
-      display: 'flex',
-      flexDirection: 'column'
-    },
-      tituloCarrito: {
-        margin: '0 0 16px 0',
-        fontSize: '18px',
-        color: '#333'
-      },
-      carritoVacio: {
-        color: '#aaa',
-        fontSize: '14px',
-        fontStyle: 'italic',
-        textAlign: 'center',
-        marginTop: '24px'
-      },
-      listaCarrito: {
-        listStyle: 'none',
-        margin: 0,
+    padding: '24px 16px',
+    overflowY: 'auto',
+    boxSizing: 'border-box',
+    display: 'flex',
+    flexDirection: 'column'
+  },
+  tituloCarrito: {
+    margin: '0 0 16px 0',
+    fontSize: '18px',
+    color: '#333'
+  },
+  carritoVacio: {
+    color: '#aaa',
+    fontSize: '14px',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: '24px'
+  },
+  listaCarrito: {
+    listStyle: 'none',
+    margin: 0,
     padding: 0,
-        flex: 1
-      },
-      itemCarrito: {
-        borderBottom: '1px solid #f0f0f0',
-        paddingBottom: '16px',
-        marginBottom: '16px'
-      },
-      itemInfo: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: '10px',
-        gap: '8px'
-      },
-      itemNombre: {
-        fontSize: '13px',
-        fontWeight: 'bold',
-        color: '#333',
-        flex: 1,
-        marginRight: '8px'
-      },
-      itemSubtotal: {
-        fontSize: '13px',
-        fontWeight: 'bold',
-        color: '#007bff',
-        whiteSpace: 'nowrap'
-      },
-      controlesQty: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px'
-      },
-      btnQty: {
-        width: '28px',
-        height: '28px',
-        border: '1px solid #ddd',
-        borderRadius: '4px',
-        background: '#f8f8f8',
-        color: '#333',
-        fontSize: '16px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        lineHeight: 1,
-        padding: 0
-      },
-      cantidad: {
-        minWidth: '24px',
-        textAlign: 'center',
-        fontWeight: 'bold',
-        fontSize: '15px',
-        color: '#333'
-      },
-      btnQuitar: {
-        marginLeft: '4px',
-        width: '24px',
-        height: '24px',
-        border: 'none',
-        borderRadius: '50%',
-        background: '#f8d7da',
-        color: '#721c24',
-        fontSize: '12px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 0
-      },
-      totalBox: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderTop: '2px solid #e0e0e0',
-        paddingTop: '12px',
-        marginTop: '8px'
-      },
-      totalLabel: {
-        fontSize: '16px',
-        fontWeight: 'bold',
-        color: '#333'
-      },
-      totalValor: {
-        fontSize: '20px',
-        fontWeight: 'bold',
-        color: '#28a745'
-      },
-      errorEnvio: {
-        marginTop: '12px',
-        padding: '10px 12px',
-        lineHeight: 1.5,
-        background: '#f8d7da',
-        color: '#721c24',
-        borderRadius: '6px',
-        fontSize: '13px'
-      },
-      btnConfirmar: {
-        marginTop: '16px',
-        padding: '12px',
-        background: '#28a745',
-        color: 'white',
-        border: 'none',
-        borderRadius: '8px',
-        fontSize: '15px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        width: '100%'
-      },
-      btnConfirmarDeshabilitado: {
-        background: '#ccc',
-        color: '#777',
-        cursor: 'not-allowed'
-      },
-      notaConfirmar: {
-        marginTop: '16px',
-        fontSize: '12px',
-        color: '#aaa',
-        fontStyle: 'italic',
-        textAlign: 'center'
-      }
-    };
+    flex: 1
+  },
+  itemCarrito: {
+    borderBottom: '1px solid #f0f0f0',
+    paddingBottom: '16px',
+    marginBottom: '16px'
+  },
+  itemInfo: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: '10px',
+    gap: '8px'
+  },
+  itemNombre: {
+    fontSize: '13px',
+    fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
+    marginRight: '8px'
+  },
+  itemSubtotal: {
+    fontSize: '13px',
+    fontWeight: 'bold',
+    color: '#007bff',
+    whiteSpace: 'nowrap'
+  },
+  controlesQty: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  },
+  btnQty: {
+    width: '28px',
+    height: '28px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    background: '#f8f8f8',
+    color: '#333',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    lineHeight: 1,
+    padding: 0
+  },
+  cantidad: {
+    minWidth: '24px',
+    textAlign: 'center',
+    fontWeight: 'bold',
+    fontSize: '15px',
+    color: '#333'
+  },
+  btnQuitar: {
+    marginLeft: '4px',
+    width: '24px',
+    height: '24px',
+    border: 'none',
+    borderRadius: '50%',
+    background: '#f8d7da',
+    color: '#721c24',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0
+  },
+  totalBox: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTop: '2px solid #e0e0e0',
+    paddingTop: '12px',
+    marginTop: '8px'
+  },
+  totalLabel: {
+    fontSize: '16px',
+    fontWeight: 'bold',
+    color: '#333'
+  },
+  totalValor: {
+    fontSize: '20px',
+    fontWeight: 'bold',
+    color: '#28a745'
+  },
+  errorEnvio: {
+    marginTop: '12px',
+    padding: '10px 12px',
+    lineHeight: 1.5,
+    background: '#f8d7da',
+    color: '#721c24',
+    borderRadius: '6px',
+    fontSize: '13px'
+  },
+  btnConfirmar: {
+    marginTop: '16px',
+    padding: '12px',
+    background: '#28a745',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '15px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    width: '100%'
+  },
+  btnConfirmarDeshabilitado: {
+    background: '#ccc',
+    color: '#777',
+    cursor: 'not-allowed'
+  },
+  notaConfirmar: {
+    marginTop: '16px',
+    fontSize: '12px',
+    color: '#aaa',
+    fontStyle: 'italic',
+    textAlign: 'center'
+  }
+};
 
-    export default TomaPedido;
+export default TomaPedido;

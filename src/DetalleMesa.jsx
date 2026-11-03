@@ -200,7 +200,7 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
                 <button
                   id={`btn-tomar-pedido-${mesa.numero}`}
                   onClick={() => {
-                    onCerrar();          // cierra el panel lateral
+                    onCerrar(); // cierra el panel lateral
                     onTomarPedido(mesa); // abre la vista de toma de pedido
                   }}
                   disabled={!conectado}
@@ -270,9 +270,7 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
               ) : estaOcupada ? (
                 <p style={estilos.textoInfo}>Aún no se ha pedido nada en esta mesa.</p>
               ) : (
-                <p style={{ color: '#888', fontStyle: 'italic' }}>
-                  Sin cuenta abierta.
-                </p>
+                <p style={{ color: '#888', fontStyle: 'italic' }}>Sin cuenta abierta.</p>
               )}
             </div>
 
@@ -283,8 +281,7 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
                 <strong>ID interno:</strong> {mesa.id}
               </p>
               <p style={estilos.textoInfo}>
-                <strong>Estado:</strong>{' '}
-                {estaOcupada ? 'Ocupada' : 'Libre'}
+                <strong>Estado:</strong> {estaOcupada ? 'Ocupada' : 'Libre'}
               </p>
             </div>
           </>

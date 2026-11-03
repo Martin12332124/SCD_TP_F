@@ -66,13 +66,16 @@ describe('App: conexión', () => {
 });
 
 describe('App: validación defensiva del número de mesa', () => {
-  test.each(['-1', '0', '1.5'])('un valor inválido "%s" muestra error y conserva el campo', async (valor) => {
-    await renderizarConectado();
-    const input = document.getElementById('input-mesa');
-    fireEvent.change(input, { target: { value: valor } });
-    expect(screen.getByText(/⚠️/)).toBeInTheDocument();
-    expect(input).toHaveValue(Number(valor));
-  });
+  test.each(['-1', '0', '1.5'])(
+    'un valor inválido "%s" muestra error y conserva el campo',
+    async (valor) => {
+      await renderizarConectado();
+      const input = document.getElementById('input-mesa');
+      fireEvent.change(input, { target: { value: valor } });
+      expect(screen.getByText(/⚠️/)).toBeInTheDocument();
+      expect(input).toHaveValue(Number(valor));
+    }
+  );
 
   test('corregir a un valor válido limpia el error; vaciar también', async () => {
     await renderizarConectado();
@@ -119,7 +122,9 @@ describe('App: eventos del servidor', () => {
       error: 'mesa no válida',
       esperado: 'Mesa N'
     });
-    expect(screen.getByText(/ENTRADA_INVALIDA.*mesa no válida.*Esperado: Mesa N/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/ENTRADA_INVALIDA.*mesa no válida.*Esperado: Mesa N/)
+    ).toBeInTheDocument();
   });
 
   test('respuesta_pedido ok no muestra error', async () => {
@@ -142,7 +147,12 @@ describe('App: mapa de mesas (US-08)', () => {
   });
 
   test('si falla el REST inicial, el evento estado_mesas completa la carga', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('sin red'); }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('sin red');
+      })
+    );
     render(<App />);
     await servidor('estado_mesas', mesasBase);
     expect(await screen.findByText('Mesa 1')).toBeInTheDocument();
@@ -204,7 +214,12 @@ describe('App: traslado de mesa (US-05)', () => {
   test('respuesta_traslado ok muestra confirmación y limpia los campos', async () => {
     await renderizarConectado();
     rellenar('2', '6');
-    await servidor('respuesta_traslado', { ok: true, origen: 'Mesa 2', destino: 'Mesa 6', estado: 'En Cocina 🍳' });
+    await servidor('respuesta_traslado', {
+      ok: true,
+      origen: 'Mesa 2',
+      destino: 'Mesa 6',
+      estado: 'En Cocina 🍳'
+    });
     expect(screen.getByText(/Pedido trasladado: Mesa 2 → Mesa 6/)).toBeInTheDocument();
     expect(document.getElementById('input-mesa-origen')).toHaveValue(null);
   });
