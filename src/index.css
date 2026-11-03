@@ -1,109 +1,232 @@
+/*
+ * Tokens visuales del monitor de pedidos.
+ * Paleta cálida inspirada en la cocina: tomate, naranja, azafrán, oliva, hueso y chocolate.
+ * Los componentes usan estilos en línea que leen estas variables (var(--...)),
+ * así un único lugar define el modo claro y el modo oscuro.
+ */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow: rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* Superficies y texto — modo claro (sala de día) */
+  --color-fondo: #f6efe7;
+  --color-superficie: #fffbf6;
+  --color-superficie-alt: #f1e6da;
+  --color-borde: #e4d6c7;
+  --color-texto: #2b1a12;
+  --color-texto-suave: #6f5b4e;
+  --color-texto-tenue: #9c8677;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* Marca */
+  --color-primario: #c2361a;
+  --color-primario-hover: #a52c14;
+  --color-primario-texto: #b5301a;
+  --color-primario-suave: #fbe3da;
+  --color-acento: #f27a0c;
+  --color-acento-texto: #a6460a;
+  --color-azafran: #e0a21b;
+  --color-chocolate: #5a1e08;
+  --color-hueso: #f4ece3;
+  --color-sobre-primario: #ffffff;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
+  /* Estados */
+  --color-exito: #6e6212;
+  --color-exito-texto: #5c5210;
+  --color-exito-suave: #efebcf;
+  --color-peligro: #b4231a;
+  --color-peligro-texto: #a3221a;
+  --color-peligro-suave: #fbe1dc;
+  --color-neutro: #7a6a5f;
+
+  /* Encabezado */
+  --fondo-encabezado: linear-gradient(135deg, #3d1405 0%, #5a1e08 60%, #7a2a0c 100%);
+  --color-encabezado-texto: #f4ece3;
+
+  /* Elevación, forma y tipografía */
+  --sombra-1: 0 1px 2px rgba(90, 30, 8, 0.06), 0 2px 8px rgba(90, 30, 8, 0.06);
+  --sombra-2: 0 4px 12px rgba(90, 30, 8, 0.1), 0 12px 32px rgba(90, 30, 8, 0.08);
+  --sombra-panel: -12px 0 40px rgba(43, 26, 18, 0.18);
+  --velo: rgba(43, 26, 18, 0.45);
+  --radio-s: 8px;
+  --radio-m: 12px;
+  --radio-l: 18px;
+
+  --fuente-titulo: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --fuente-texto: 'Avenir Next', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --fuente-mono: ui-monospace, 'SF Mono', Consolas, monospace;
+
+  color-scheme: light;
+  font: 16px/1.55 var(--fuente-texto);
+  color: var(--color-texto);
+  background: var(--color-fondo);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
+/* Modo oscuro (salón de noche): por preferencia del sistema, salvo que el usuario elija claro */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-fondo: #171311;
+    --color-superficie: #221b17;
+    --color-superficie-alt: #2c231e;
+    --color-borde: #3e322a;
+    --color-texto: #f4ece3;
+    --color-texto-suave: #c2b1a3;
+    --color-texto-tenue: #8f7d70;
+    --color-primario-hover: #d8431f;
+    --color-primario-texto: #ff8f66;
+    --color-primario-suave: #3a1e15;
+    --color-acento-texto: #f5a04a;
+    --color-azafran: #e9b949;
+    --color-exito: #8a7c18;
+    --color-exito-texto: #d4c75a;
+    --color-exito-suave: #2f2c14;
+    --color-peligro-texto: #ff8e7d;
+    --color-peligro-suave: #3b1d18;
+    --color-neutro: #5e5149;
+    --fondo-encabezado: linear-gradient(135deg, #0f0a08 0%, #1f120c 60%, #2e160b 100%);
+    --sombra-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
+    --sombra-2: 0 4px 12px rgba(0, 0, 0, 0.45), 0 12px 32px rgba(0, 0, 0, 0.35);
+    --sombra-panel: -12px 0 40px rgba(0, 0, 0, 0.55);
+    --velo: rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow: rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+/* Modo oscuro elegido manualmente con el selector de tema */
+:root[data-theme='dark'] {
+  --color-fondo: #171311;
+  --color-superficie: #221b17;
+  --color-superficie-alt: #2c231e;
+  --color-borde: #3e322a;
+  --color-texto: #f4ece3;
+  --color-texto-suave: #c2b1a3;
+  --color-texto-tenue: #8f7d70;
+  --color-primario-hover: #d8431f;
+  --color-primario-texto: #ff8f66;
+  --color-primario-suave: #3a1e15;
+  --color-acento-texto: #f5a04a;
+  --color-azafran: #e9b949;
+  --color-exito: #8a7c18;
+  --color-exito-texto: #d4c75a;
+  --color-exito-suave: #2f2c14;
+  --color-peligro-texto: #ff8e7d;
+  --color-peligro-suave: #3b1d18;
+  --color-neutro: #5e5149;
+  --fondo-encabezado: linear-gradient(135deg, #0f0a08 0%, #1f120c 60%, #2e160b 100%);
+  --sombra-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --sombra-2: 0 4px 12px rgba(0, 0, 0, 0.45), 0 12px 32px rgba(0, 0, 0, 0.35);
+  --sombra-panel: -12px 0 40px rgba(0, 0, 0, 0.55);
+  --velo: rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  min-height: 100svh;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
 }
 
 h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+h2,
+h3,
+h4 {
+  font-family: var(--fuente-titulo);
+  font-weight: 600;
+  color: var(--color-texto);
+  letter-spacing: 0.01em;
+  line-height: 1.25;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
 p {
   margin: 0;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+button,
+input {
+  font: inherit;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+/* Latido del indicador de conexión del encabezado */
+@keyframes pulso {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(181, 196, 74, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(181, 196, 74, 0);
+  }
+}
+
+/*
+ * Estados de interacción. Los estilos en línea no admiten :hover ni :focus,
+ * por eso se definen aquí para todos los botones y campos de la app.
+ * Se usa `translate` (y no `transform`) para no pisar el transform en línea
+ * de las tarjetas de mesa.
+ */
+button {
+  transition:
+    filter 0.15s ease,
+    translate 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
+}
+
+button:not(:disabled):hover {
+  filter: brightness(1.07) saturate(1.05);
+  translate: 0 -1px;
+}
+
+button:not(:disabled):active {
+  filter: brightness(0.95);
+  translate: 0 0;
+}
+
+button:disabled,
+input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed !important;
+}
+
+/* Anillo de foco visible solo al navegar con teclado */
+:focus-visible {
+  outline: 3px solid var(--color-azafran);
+  outline-offset: 2px;
+}
+
+input::placeholder {
+  color: var(--color-texto-tenue);
+}
+
+::selection {
+  background: var(--color-azafran);
+  color: #2b1a12;
+}
+
+html {
+  scrollbar-color: var(--color-borde) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

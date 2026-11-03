@@ -99,6 +99,8 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
     }
   };
 
+  const exito = mensajeAccion.startsWith('✅');
+
   return (
     <>
       {/* Overlay semitransparente: clic fuera cierra el panel */}
@@ -115,6 +117,9 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
       {/* Panel lateral deslizable */}
       <div
         id="detalle-mesa-panel"
+        role="dialog"
+        aria-label={mesa ? `Detalle de la mesa ${mesa.numero}` : undefined}
+        aria-hidden={!mesa}
         style={{
           ...estilos.panel,
           transform: mesa ? 'translateX(0)' : 'translateX(105%)'
@@ -124,11 +129,15 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
           <>
             {/* Cabecera del panel */}
             <div style={estilos.cabecera}>
-              <h2 style={estilos.titulo}>Mesa {mesa.numero}</h2>
+              <div>
+                <p style={estilos.etiqueta}>Detalle de mesa</p>
+                <h2 style={estilos.titulo}>Mesa {mesa.numero}</h2>
+              </div>
               <button
                 id="btn-cerrar-panel"
                 onClick={onCerrar}
                 title="Cerrar panel"
+                aria-label="Cerrar panel"
                 style={estilos.btnCerrar}
               >
                 ✕
@@ -139,7 +148,7 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
             <div
               style={{
                 ...estilos.badgeEstado,
-                background: estaOcupada ? '#dc3545' : '#28a745'
+                ...(estaOcupada ? estilos.tonoPeligro : estilos.tonoExito)
               }}
             >
               {estaOcupada ? '🔴 Ocupada' : '🟢 Libre'}
@@ -149,11 +158,10 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
             {mensajeAccion && (
               <div
                 id="mensaje-accion-mesa"
+                role="status"
                 style={{
                   ...estilos.mensajeAccion,
-                  backgroundColor: mensajeAccion.startsWith('✅') ? '#e6ffe6' : '#ffe6e6',
-                  color: mensajeAccion.startsWith('✅') ? '#155724' : '#721c24',
-                  border: `1px solid ${mensajeAccion.startsWith('✅') ? '#c3e6cb' : '#f5c6cb'}`
+                  ...(exito ? estilos.tonoExito : estilos.tonoPeligro)
                 }}
               >
                 {mensajeAccion}
@@ -162,7 +170,7 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
 
             {/* US-09: acciones de apertura/liberación de mesa */}
             <div style={estilos.seccion}>
-              <h4 style={estilos.subtitulo}>⚙️ Acciones</h4>
+              <h4 style={estilos.subtitulo}>Acciones</h4>
 
               {/* CA1: botón Abrir mesa — solo visible si está libre */}
               {!estaOcupada && (
@@ -170,10 +178,7 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
                   id={`btn-abrir-mesa-${mesa.numero}`}
                   onClick={abrirMesa}
                   disabled={!conectado || cargando}
-                  style={{
-                    ...estilos.btnAccion,
-                    backgroundColor: conectado && !cargando ? '#28a745' : '#aaa'
-                  }}
+                  style={{ ...estilos.btnAccion, ...estilos.tonoExito }}
                 >
                   {cargando ? 'Procesando...' : '🟢 Abrir mesa'}
                 </button>
@@ -186,10 +191,7 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
                   id={`btn-liberar-mesa-${mesa.numero}`}
                   onClick={liberarMesa}
                   disabled={!conectado || cargando}
-                  style={{
-                    ...estilos.btnAccion,
-                    backgroundColor: conectado && !cargando ? '#dc3545' : '#aaa'
-                  }}
+                  style={{ ...estilos.btnAccion, ...estilos.tonoPeligro }}
                 >
                   {cargando ? 'Procesando...' : '🔴 Liberar mesa'}
                 </button>
@@ -200,91 +202,69 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
                 <button
                   id={`btn-tomar-pedido-${mesa.numero}`}
                   onClick={() => {
-                    onCerrar();          // cierra el panel lateral
+                    onCerrar(); // cierra el panel lateral
                     onTomarPedido(mesa); // abre la vista de toma de pedido
                   }}
                   disabled={!conectado}
-                  style={{
-                    ...estilos.btnAccion,
-                    backgroundColor: conectado ? '#007bff' : '#aaa',
-                    marginTop: '8px'
-                  }}
+                  style={{ ...estilos.btnAccion, ...estilos.btnPrimario }}
                 >
                   📝 Tomar pedido
                 </button>
               )}
 
               {/* CA2: aclaración explícita: abrir la mesa no crea una cuenta */}
-              <p style={{ ...estilos.textoInfo, marginTop: '16px', fontStyle: 'italic' }}>
+              <p style={estilos.nota}>
                 Nota: abrir la mesa no crea una cuenta. La cuenta se gestiona por separado (US-12).
               </p>
             </div>
 
             {/* US-08 CA5: cuenta abierta si la tiene */}
             <div style={estilos.seccion}>
-              <h4 style={estilos.subtitulo}>📋 Cuenta</h4>
-              {errorResumen && <p style={{ color: '#721c24' }}>⚠️ {errorResumen}</p>}
+              <h4 style={estilos.subtitulo}>Cuenta</h4>
+              {errorResumen && (
+                <p style={{ ...estilos.mensajeAccion, ...estilos.tonoPeligro }}>
+                  ⚠️ {errorResumen}
+                </p>
+              )}
               {estaOcupada && resumen && resumen.items.length > 0 ? (
-                <div id="resumen-pedido">
-                  <p style={estilos.textoInfo}>
-                    <strong>Estado del pedido:</strong> {resumen.estado}
+                <div id="resumen-pedido" style={estilos.ticket}>
+                  <p style={estilos.filaTicket}>
+                    <span style={estilos.textoSuave}>Estado del pedido</span>
+                    <span style={estilos.pildora}>{resumen.estado}</span>
                   </p>
-                  <ul style={{ listStyle: 'none', margin: '12px 0', padding: 0 }}>
+                  <ul style={estilos.listaTicket}>
                     {resumen.items.map((i) => (
-                      <li
-                        key={i.id}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          gap: '8px',
-                          fontSize: '14px',
-                          color: '#333',
-                          padding: '10px 0',
-                          borderBottom: '1px solid #f0f0f0'
-                        }}
-                      >
+                      <li key={i.id} style={estilos.itemTicket}>
                         <span>
                           {i.cantidad} × {i.nombre}
                         </span>
-                        <span>{formatearPrecio(i.precioBase * i.cantidad)}</span>
+                        <span style={estilos.importe}>
+                          {formatearPrecio(i.precioBase * i.cantidad)}
+                        </span>
                       </li>
                     ))}
                   </ul>
-                  <p
-                    id="resumen-total"
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      fontWeight: 'bold',
-                      color: '#28a745',
-                      margin: '14px 0 0',
-                      paddingTop: '10px',
-                      borderTop: '2px solid #e0e0e0',
-                      fontSize: '16px'
-                    }}
-                  >
+                  <p id="resumen-total" style={estilos.total}>
                     <span>Total acumulado</span>
-                    <span>{formatearPrecio(resumen.total)}</span>
+                    <span style={estilos.importe}>{formatearPrecio(resumen.total)}</span>
                   </p>
                 </div>
               ) : estaOcupada ? (
-                <p style={estilos.textoInfo}>Aún no se ha pedido nada en esta mesa.</p>
+                <p style={estilos.vacio}>Aún no se ha pedido nada en esta mesa.</p>
               ) : (
-                <p style={{ color: '#888', fontStyle: 'italic' }}>
-                  Sin cuenta abierta.
-                </p>
+                <p style={estilos.vacio}>Sin cuenta abierta.</p>
               )}
             </div>
 
             {/* Información general */}
             <div style={estilos.seccion}>
-              <h4 style={estilos.subtitulo}>ℹ️ Información</h4>
-              <p style={estilos.textoInfo}>
-                <strong>ID interno:</strong> {mesa.id}
+              <h4 style={estilos.subtitulo}>Información</h4>
+              <p style={estilos.filaInfo}>
+                <span style={estilos.textoSuave}>ID interno</span> <strong>{mesa.id}</strong>
               </p>
-              <p style={estilos.textoInfo}>
-                <strong>Estado:</strong>{' '}
-                {estaOcupada ? 'Ocupada' : 'Libre'}
+              <p style={estilos.filaInfo}>
+                <span style={estilos.textoSuave}>Estado</span>{' '}
+                <strong>{estaOcupada ? 'Ocupada' : 'Libre'}</strong>
               </p>
             </div>
           </>
@@ -294,12 +274,13 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
   );
 }
 
-// ── Estilos en línea (consistente con el estilo actual del proyecto) ────────
+// ── Estilos en línea: leen los tokens de index.css (modo claro y oscuro) ─────
 const estilos = {
   overlay: {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(0,0,0,0.35)',
+    background: 'var(--velo)',
+    backdropFilter: 'blur(2px)',
     zIndex: 100,
     transition: 'opacity 0.25s ease'
   },
@@ -307,85 +288,176 @@ const estilos = {
     position: 'fixed',
     top: 0,
     right: 0,
-    width: '300px',
+    width: 'min(380px, 100vw)',
     height: '100vh',
-    background: '#fff',
-    boxShadow: '-4px 0 20px rgba(0,0,0,0.2)',
+    background: 'var(--color-superficie)',
+    borderLeft: '4px solid var(--color-azafran)',
+    boxShadow: 'var(--sombra-panel)',
     zIndex: 101,
-    padding: '24px',
-    boxSizing: 'border-box',
-    transition: 'transform 0.3s ease',
+    padding: '28px 24px',
+    transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
     overflowY: 'auto',
-    fontFamily: 'Arial, sans-serif',
-    color: '#333',
+    color: 'var(--color-texto)',
     lineHeight: 1.6,
-    letterSpacing: 'normal',
     textAlign: 'left'
   },
   cabecera: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: '16px'
   },
+  etiqueta: {
+    fontSize: '11px',
+    fontWeight: 700,
+    letterSpacing: '0.16em',
+    textTransform: 'uppercase',
+    color: 'var(--color-acento-texto)'
+  },
   titulo: {
-    margin: 0,
-    fontSize: '22px',
-    color: '#222',
-    letterSpacing: 'normal'
+    margin: '2px 0 0',
+    fontSize: '30px'
   },
   btnCerrar: {
-    background: 'none',
-    border: 'none',
-    fontSize: '20px',
+    display: 'grid',
+    placeItems: 'center',
+    width: '36px',
+    height: '36px',
+    background: 'var(--color-superficie-alt)',
+    border: '1px solid var(--color-borde)',
+    borderRadius: '50%',
+    fontSize: '15px',
     cursor: 'pointer',
-    color: '#666',
-    padding: '4px 8px',
-    borderRadius: '4px'
+    color: 'var(--color-texto-suave)',
+    padding: 0
   },
   badgeEstado: {
     display: 'inline-block',
-    color: 'white',
-    fontWeight: 'bold',
+    fontWeight: 700,
     fontSize: '14px',
-    padding: '6px 14px',
-    borderRadius: '20px',
-    marginBottom: '16px'
+    padding: '5px 14px',
+    borderRadius: '999px',
+    border: '1px solid',
+    marginBottom: '20px'
+  },
+  tonoExito: {
+    background: 'var(--color-exito-suave)',
+    color: 'var(--color-exito-texto)',
+    borderColor: 'var(--color-exito)'
+  },
+  tonoPeligro: {
+    background: 'var(--color-peligro-suave)',
+    color: 'var(--color-peligro-texto)',
+    borderColor: 'var(--color-peligro)'
   },
   mensajeAccion: {
-    padding: '10px',
-    borderRadius: '6px',
+    padding: '10px 14px',
+    borderRadius: 'var(--radio-m)',
+    border: '1px solid',
     fontSize: '13px',
-    fontWeight: 'bold',
-    marginBottom: '16px',
+    fontWeight: 600,
+    margin: '0 0 16px',
     lineHeight: 1.5
   },
   seccion: {
-    borderTop: '1px solid #eee',
+    borderTop: '1px solid var(--color-borde)',
     paddingTop: '18px',
     marginBottom: '20px'
   },
   subtitulo: {
     margin: '0 0 12px 0',
-    fontSize: '15px',
-    color: '#333'
+    fontFamily: 'var(--fuente-texto)',
+    fontSize: '12px',
+    fontWeight: 700,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    color: 'var(--color-texto-suave)'
   },
   btnAccion: {
+    display: 'block',
     width: '100%',
-    padding: '10px',
-    border: 'none',
-    borderRadius: '6px',
-    color: 'white',
-    fontWeight: 'bold',
+    padding: '12px',
+    border: '1px solid',
+    borderRadius: 'var(--radio-m)',
+    fontWeight: 700,
     fontSize: '14px',
     cursor: 'pointer',
-    marginBottom: '8px'
+    marginBottom: '10px'
   },
-  textoInfo: {
-    margin: '8px 0',
+  btnPrimario: {
+    background: 'var(--color-primario)',
+    color: 'var(--color-sobre-primario)',
+    borderColor: 'var(--color-primario)'
+  },
+  nota: {
+    marginTop: '8px',
+    fontSize: '13px',
+    fontStyle: 'italic',
+    color: 'var(--color-texto-tenue)'
+  },
+  // La cuenta se presenta como un ticket de restaurante
+  ticket: {
+    background: 'var(--color-superficie-alt)',
+    border: '1px solid var(--color-borde)',
+    borderRadius: 'var(--radio-m)',
+    padding: '14px 16px'
+  },
+  filaTicket: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '13px'
+  },
+  pildora: {
+    padding: '2px 10px',
+    borderRadius: '999px',
+    background: 'var(--color-primario-suave)',
+    color: 'var(--color-primario-texto)',
+    fontWeight: 700
+  },
+  listaTicket: {
+    listStyle: 'none',
+    margin: '12px 0',
+    padding: 0
+  },
+  itemTicket: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '8px',
     fontSize: '14px',
-    lineHeight: 1.6,
-    color: '#555'
+    padding: '8px 0',
+    borderBottom: '1px dashed var(--color-borde)'
+  },
+  importe: {
+    fontVariantNumeric: 'tabular-nums',
+    whiteSpace: 'nowrap'
+  },
+  total: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontFamily: 'var(--fuente-titulo)',
+    fontWeight: 700,
+    fontSize: '18px',
+    color: 'var(--color-primario-texto)',
+    margin: '4px 0 0',
+    paddingTop: '10px',
+    borderTop: '2px solid var(--color-borde)'
+  },
+  vacio: {
+    fontSize: '14px',
+    fontStyle: 'italic',
+    color: 'var(--color-texto-tenue)'
+  },
+  textoSuave: {
+    color: 'var(--color-texto-suave)'
+  },
+  filaInfo: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '8px',
+    margin: '6px 0',
+    fontSize: '14px'
   }
 };
 

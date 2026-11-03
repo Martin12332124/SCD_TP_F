@@ -33,7 +33,11 @@ function simularMenu(respuesta) {
     'fetch',
     vi.fn(async () => {
       if (respuesta instanceof Error) throw respuesta;
-      return { ok: respuesta.httpOk ?? true, status: respuesta.status ?? 200, json: async () => respuesta };
+      return {
+        ok: respuesta.httpOk ?? true,
+        status: respuesta.status ?? 200,
+        json: async () => respuesta
+      };
     })
   );
 }
@@ -199,8 +203,14 @@ describe('TomaPedido: confirmación', () => {
     await screen.findByText('Pizza Margarita');
     await agregar(1);
     await userEvent.click(document.getElementById('btn-confirmar-pedido'));
-    socket.disparar('respuesta_pedido', { ok: false, error: 'Producto agotado', esperado: 'ítem disponible' });
-    expect(await screen.findByText(/Producto agotado \(Esperado: ítem disponible\)/)).toBeInTheDocument();
+    socket.disparar('respuesta_pedido', {
+      ok: false,
+      error: 'Producto agotado',
+      esperado: 'ítem disponible'
+    });
+    expect(
+      await screen.findByText(/Producto agotado \(Esperado: ítem disponible\)/)
+    ).toBeInTheDocument();
     expect(onCerrar).not.toHaveBeenCalled();
     expect(document.getElementById('btn-confirmar-pedido')).toBeEnabled();
   });
@@ -272,5 +282,64 @@ describe('TomaPedido: límite de cantidad 1 a 99 (US-13 CA2-CA3)', () => {
       mesa: 'Mesa 3',
       items: [{ id: 1, cantidad: 99 }]
     });
+  });
+});
+
+describe('TomaPedido: presentación y accesibilidad (#77)', () => {
+  test('la vista es un diálogo con el nombre de la mesa', async () => {
+    await renderizar();
+    expect(screen.getByRole('dialog', { name: 'Tomar pedido para la mesa 3' })).toBeInTheDocument();
+    await screen.findByText('Pizza Margarita');
+  });
+
+  test('la carta tiene título propio', async () => {
+    await renderizar();
+    expect(await screen.findByRole('heading', { name: 'Carta' })).toBeInTheDocument();
+  });
+
+  test('un producto en el pedido se marca con anillo azafrán', async () => {
+    await renderizar();
+    await screen.findByText('Pizza Margarita');
+    const tarjeta = document.getElementById('producto-1');
+    expect(tarjeta.style.boxShadow).not.toContain('var(--color-azafran)');
+    await agregar(1);
+    expect(tarjeta.style.boxShadow).toContain('var(--color-azafran)');
+    expect(document.getElementById('producto-2').style.boxShadow).not.toContain(
+      'var(--color-azafran)'
+    );
+  });
+
+  test('un producto agotado se muestra atenuado', async () => {
+    await renderizar();
+    await screen.findByText('Ensalada César');
+    expect(document.getElementById('producto-3')).toHaveStyle({ opacity: '0.7' });
+    expect(document.getElementById('producto-1')).not.toHaveStyle({ opacity: '0.7' });
+  });
+
+  test('los botones de cantidad tienen nombre accesible con el producto', async () => {
+    await renderizar();
+    await screen.findByText('Pizza Margarita');
+    await agregar(1);
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Aumentar cantidad de Pizza Margarita' })
+    );
+    expect(document.getElementById('cantidad-1')).toHaveTextContent('2');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Reducir cantidad de Pizza Margarita' })
+    );
+    expect(document.getElementById('cantidad-1')).toHaveTextContent('1');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Quitar Pizza Margarita del pedido' })
+    );
+    expect(document.getElementById('carrito-item-1')).not.toBeInTheDocument();
+  });
+
+  test('el error de envío se anuncia como alerta', async () => {
+    const { socket } = await renderizar();
+    await screen.findByText('Pizza Margarita');
+    await agregar(1);
+    await userEvent.click(document.getElementById('btn-confirmar-pedido'));
+    socket.disparar('respuesta_pedido', { ok: false, error: 'Producto agotado' });
+    expect(await screen.findByRole('alert')).toHaveTextContent('Producto agotado');
   });
 });

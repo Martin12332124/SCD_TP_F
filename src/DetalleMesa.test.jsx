@@ -1,7 +1,7 @@
 // Pruebas de DetalleMesa (US-08 CA5 y US-09): panel lateral, abrir/liberar y resumen.
 // El backend se sustituye por un fetch simulado (sin red).
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DetalleMesa from './DetalleMesa';
 
@@ -118,7 +118,11 @@ describe('DetalleMesa: abrir mesa (US-09 CA1)', () => {
 
   test('si el backend rechaza (ESTADO_NO_PERMITIDO) muestra tipo y motivo', async () => {
     simularBackend({
-      '/api/mesas/1/abrir': { ok: false, tipo: 'ESTADO_NO_PERMITIDO', error: 'La mesa ya está ocupada' }
+      '/api/mesas/1/abrir': {
+        ok: false,
+        tipo: 'ESTADO_NO_PERMITIDO',
+        error: 'La mesa ya está ocupada'
+      }
     });
     renderizar(libre);
     await userEvent.click(screen.getByText(/Abrir mesa/));
@@ -178,5 +182,58 @@ describe('DetalleMesa: liberar mesa (US-09 CA3 y CA4)', () => {
     await userEvent.click(screen.getByText(/Tomar pedido/));
     await waitFor(() => expect(onTomarPedido).toHaveBeenCalledWith(ocupada));
     expect(onCerrar).toHaveBeenCalled();
+  });
+});
+
+describe('DetalleMesa: presentación y accesibilidad (#77)', () => {
+  test('con mesa seleccionada el panel es un diálogo con nombre', () => {
+    renderizar(libre);
+    expect(screen.getByRole('dialog', { name: 'Detalle de la mesa 1' })).toBeInTheDocument();
+  });
+
+  test('sin mesa el panel queda oculto para lectores de pantalla', () => {
+    renderizar(null);
+    expect(document.getElementById('detalle-mesa-panel')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  test('el botón de cierre tiene nombre accesible', async () => {
+    const { onCerrar } = renderizar(libre);
+    await userEvent.click(screen.getByRole('button', { name: 'Cerrar panel' }));
+    expect(onCerrar).toHaveBeenCalled();
+  });
+
+  test('el estado usa tono oliva si está libre y tomate si está ocupada', () => {
+    const { unmount } = render(
+      <DetalleMesa mesa={libre} conectado onCerrar={() => {}} onTomarPedido={() => {}} />
+    );
+    expect(screen.getByText(/🟢 Libre/).style.borderColor).toBe('var(--color-exito)');
+    unmount();
+    renderizar(ocupada);
+    expect(screen.getByText(/🔴 Ocupada/).style.borderColor).toBe('var(--color-peligro)');
+  });
+
+  test('"Tomar pedido" es la acción principal en mesas ocupadas', () => {
+    renderizar(ocupada);
+    expect(screen.getByText(/Tomar pedido/).style.background).toBe('var(--color-primario)');
+  });
+
+  test('el resultado de abrir la mesa se anuncia con role status', async () => {
+    simularBackend({ '/api/mesas/1/abrir': { ok: true } });
+    renderizar(libre);
+    await userEvent.click(screen.getByText(/Abrir mesa/));
+    expect(await screen.findByRole('status')).toHaveTextContent('Mesa marcada como Ocupada');
+  });
+
+  test('la cuenta se muestra como ticket con ítems, estado y total', async () => {
+    simularBackend({ '/api/mesas/2/pedido': resumenConItems });
+    renderizar(ocupada);
+    const ticket = await screen
+      .findByText(/Pizza Margarita/)
+      .then((el) => el.closest('#resumen-pedido'));
+    expect(within(ticket).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(ticket).getByText('En Cocina 🍳')).toBeInTheDocument();
+    const total = document.getElementById('resumen-total');
+    expect(total).toHaveTextContent('Total acumulado');
+    expect(total).toHaveTextContent(/12\.500/);
   });
 });

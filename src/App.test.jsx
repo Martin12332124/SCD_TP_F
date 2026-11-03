@@ -1,8 +1,8 @@
 // Pruebas de App: validación defensiva en la frontera, eventos de socket,
 // mapa de mesas (US-08) y traslado de mesa (US-05).
 // socket.io-client y fetch se sustituyen por dobles: no se usa red ni backend real.
-import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act, fireEvent } from '@testing-library/react';
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, act, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // vi.hoisted: el doble debe existir antes de que App.jsx cree su conexión al importarse.
@@ -66,13 +66,16 @@ describe('App: conexión', () => {
 });
 
 describe('App: validación defensiva del número de mesa', () => {
-  test.each(['-1', '0', '1.5'])('un valor inválido "%s" muestra error y conserva el campo', async (valor) => {
-    await renderizarConectado();
-    const input = document.getElementById('input-mesa');
-    fireEvent.change(input, { target: { value: valor } });
-    expect(screen.getByText(/⚠️/)).toBeInTheDocument();
-    expect(input).toHaveValue(Number(valor));
-  });
+  test.each(['-1', '0', '1.5'])(
+    'un valor inválido "%s" muestra error y conserva el campo',
+    async (valor) => {
+      await renderizarConectado();
+      const input = document.getElementById('input-mesa');
+      fireEvent.change(input, { target: { value: valor } });
+      expect(screen.getByText(/⚠️/)).toBeInTheDocument();
+      expect(input).toHaveValue(Number(valor));
+    }
+  );
 
   test('corregir a un valor válido limpia el error; vaciar también', async () => {
     await renderizarConectado();
@@ -119,7 +122,9 @@ describe('App: eventos del servidor', () => {
       error: 'mesa no válida',
       esperado: 'Mesa N'
     });
-    expect(screen.getByText(/ENTRADA_INVALIDA.*mesa no válida.*Esperado: Mesa N/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/ENTRADA_INVALIDA.*mesa no válida.*Esperado: Mesa N/)
+    ).toBeInTheDocument();
   });
 
   test('respuesta_pedido ok no muestra error', async () => {
@@ -142,7 +147,12 @@ describe('App: mapa de mesas (US-08)', () => {
   });
 
   test('si falla el REST inicial, el evento estado_mesas completa la carga', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('sin red'); }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('sin red');
+      })
+    );
     render(<App />);
     await servidor('estado_mesas', mesasBase);
     expect(await screen.findByText('Mesa 1')).toBeInTheDocument();
@@ -204,7 +214,12 @@ describe('App: traslado de mesa (US-05)', () => {
   test('respuesta_traslado ok muestra confirmación y limpia los campos', async () => {
     await renderizarConectado();
     rellenar('2', '6');
-    await servidor('respuesta_traslado', { ok: true, origen: 'Mesa 2', destino: 'Mesa 6', estado: 'En Cocina 🍳' });
+    await servidor('respuesta_traslado', {
+      ok: true,
+      origen: 'Mesa 2',
+      destino: 'Mesa 6',
+      estado: 'En Cocina 🍳'
+    });
     expect(screen.getByText(/Pedido trasladado: Mesa 2 → Mesa 6/)).toBeInTheDocument();
     expect(document.getElementById('input-mesa-origen')).toHaveValue(null);
   });
@@ -218,5 +233,97 @@ describe('App: traslado de mesa (US-05)', () => {
       esperado: 'mesa libre'
     });
     expect(screen.getByText(/DESTINO_OCUPADO.*no está libre.*mesa libre/)).toBeInTheDocument();
+  });
+});
+
+describe('App: interfaz visual (#77)', () => {
+  test('el encabezado reúne título, indicador de conexión y selector de tema', async () => {
+    await renderizarConectado();
+    const encabezado = screen.getByRole('banner');
+    expect(
+      within(encabezado).getByRole('heading', { level: 1, name: /Monitor de Pedidos/ })
+    ).toBeInTheDocument();
+    expect(within(encabezado).getByRole('status')).toHaveTextContent('Sistema Conectado');
+    expect(within(encabezado).getByRole('button', { name: /Modo (claro|oscuro)/ })).toBeVisible();
+  });
+
+  test('los campos se identifican por su rótulo', async () => {
+    await renderizarConectado();
+    expect(screen.getByLabelText('Número de mesa')).toBe(document.getElementById('input-mesa'));
+    expect(screen.getByLabelText('Mesa origen')).toBe(document.getElementById('input-mesa-origen'));
+    expect(screen.getByLabelText('Mesa destino')).toBe(
+      document.getElementById('input-mesa-destino')
+    );
+  });
+
+  test('sin pedidos la píldora usa el tono neutro y no hay contador', async () => {
+    await renderizarConectado();
+    expect(screen.getByText('Sin Pedidos').style.borderColor).toBe('var(--color-borde)');
+    expect(screen.queryByText(/⏱️/)).not.toBeInTheDocument();
+  });
+
+  test.each([
+    ['Recibido 📝', 'var(--color-azafran)'],
+    ['En Cocina 🍳', 'var(--color-acento)'],
+    ['Listo 🍽️', 'var(--color-exito)']
+  ])('la píldora del estado "%s" usa su color propio', async (estado, borde) => {
+    await renderizarConectado();
+    await servidor('cambio_estado_pedido', { mesa: 'Mesa 4', estado });
+    expect(screen.getByText(estado).style.borderColor).toBe(borde);
+  });
+
+  test('un error de validación se anuncia como alerta', async () => {
+    await renderizarConectado();
+    fireEvent.change(document.getElementById('input-mesa'), { target: { value: '-1' } });
+    expect(screen.getByRole('alert')).toHaveTextContent('⚠️');
+  });
+
+  test('el resultado del traslado se anuncia con tono de éxito', async () => {
+    await renderizarConectado();
+    await servidor('respuesta_traslado', {
+      ok: true,
+      origen: 'Mesa 2',
+      destino: 'Mesa 6',
+      estado: 'En Cocina 🍳'
+    });
+    const aviso = screen.getByText(/Pedido trasladado/);
+    expect(aviso).toHaveAttribute('role', 'status');
+    expect(aviso.style.borderColor).toBe('var(--color-exito)');
+  });
+});
+
+describe('App: contador del pedido activo', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** Conecta, recibe un pedido en cocina y deja correr el reloj `segundos` segundos. */
+  async function pedidoEnCocinaDurante(segundos) {
+    render(<App />);
+    await servidor('connect');
+    await servidor('cambio_estado_pedido', { mesa: 'Mesa 4', estado: 'En Cocina 🍳' });
+    act(() => vi.advanceTimersByTime(segundos * 1000));
+    return screen.getByText(/⏱️/);
+  }
+
+  test('antes de 15 minutos el contador usa el tono normal', async () => {
+    const contador = await pedidoEnCocinaDurante(900);
+    expect(contador).toHaveTextContent('⏱️ 15:00');
+    expect(contador.style.color).toBe('var(--color-acento-texto)');
+  });
+
+  test('pasados 15 minutos el contador cambia al tono de alerta', async () => {
+    const contador = await pedidoEnCocinaDurante(901);
+    expect(contador).toHaveTextContent('⏱️ 15:01');
+    expect(contador.style.color).toBe('var(--color-peligro-texto)');
+  });
+
+  test('el contador se detiene en 99:59 para no desbordar', async () => {
+    const contador = await pedidoEnCocinaDurante(6100);
+    expect(contador).toHaveTextContent('⏱️ 99:59');
   });
 });

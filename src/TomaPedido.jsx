@@ -173,70 +173,79 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
 
   const carritoVacio = entradasCarrito.length === 0;
 
+  const disponibles = items.filter((i) => i.disponible).length;
+
   return (
     // Pantalla completa sobre el resto de la UI, dividida en dos columnas
-    <div style={estilos.overlay}>
+    <div
+      style={estilos.overlay}
+      role="dialog"
+      aria-label={`Tomar pedido para la mesa ${mesa.numero}`}
+    >
       {/* Encabezado con identificación de mesa y botón de cierre */}
       <div style={estilos.encabezado}>
-        <div>
-          <h2 style={estilos.titulo}>📝 Tomar pedido</h2>
-          <p style={estilos.subtitulo}>Mesa {mesa.numero}</p>
+        <div style={estilos.encabezadoInterior}>
+          <div style={estilos.identidad}>
+            <h2 style={estilos.titulo}>📝 Tomar pedido</h2>
+            <p style={estilos.subtitulo}>Mesa {mesa.numero}</p>
+          </div>
+          <button
+            id="btn-cerrar-toma-pedido"
+            onClick={onCerrar}
+            title="Volver al mapa de mesas"
+            style={estilos.btnCerrar}
+          >
+            ✕ Cerrar
+          </button>
         </div>
-        <button
-          id="btn-cerrar-toma-pedido"
-          onClick={onCerrar}
-          title="Volver al mapa de mesas"
-          style={estilos.btnCerrar}
-        >
-          ✕ Cerrar
-        </button>
       </div>
 
       {/* Cuerpo principal: columna de productos + panel de carrito */}
       <div style={estilos.cuerpo}>
-
         {/* ── Columna izquierda: lista de productos ─────────────────────── */}
         <div style={estilos.columnaProductos}>
-
           {/* Estado de carga */}
-          {cargando && (
-            <p style={estilos.mensaje}>⏳ Cargando menú...</p>
+          {cargando && <p style={estilos.mensaje}>⏳ Cargando menú...</p>}
+
+          {/* Error al cargar */}
+          {!cargando && error && (
+            <div role="alert" style={estilos.errorBox}>
+              <p>{error}</p>
+            </div>
           )}
 
-                    {/* Error al cargar */}
-                    {!cargando && error && (
-                      <div style={estilos.errorBox}>
-                        <p>{error}</p>
-                      </div>
-                    )}
+          {/* Menú vacío */}
+          {!cargando && !error && items.length === 0 && (
+            <p style={estilos.mensaje}>
+              El menú no tiene ítems registrados. Un administrador puede agregarlos desde la API.
+            </p>
+          )}
 
-                    {/* Menú vacío */}
-                    {!cargando && !error && items.length === 0 && (
-                      <p style={estilos.mensaje}>
-                        El menú no tiene ítems registrados. Un administrador puede agregarlos desde la API.
-                      </p>
-                    )}
-
-        {/* Grilla de tarjetas de productos */}
-        {!cargando && !error && items.length > 0 && (
-          <>
-            <p style={estilos.conteo}>{items.length} producto{items.length !== 1 ? 's' : ''} en el menú ({items.filter((i) => i.disponible).length} disponible{items.filter((i) => i.disponible).length !== 1 ? 's' : ''})</p>
-            <div style={estilos.grilla}>
-              {items.map((item) => {
-                const enCarrito = carrito[item.id];
-                return (
-                  <div
-                    key={item.id}
-                    id={`producto-${item.id}`}
-                    style={{
-                      ...estilos.tarjeta,
-                      border: enCarrito
-                        ? '2px solid #007bff'
-                        : '1px solid #e0e0e0'
-                    }}
-                  >
-                    {/* Nombre del producto */}
-                    <p style={estilos.nombreProducto}>{item.nombre}</p>
+          {/* Grilla de tarjetas de productos */}
+          {!cargando && !error && items.length > 0 && (
+            <>
+              <div style={estilos.cabeceraMenu}>
+                <h3 style={estilos.tituloMenu}>Carta</h3>
+                <p style={estilos.conteo}>
+                  {items.length} producto{items.length !== 1 ? 's' : ''} en el menú ({disponibles}{' '}
+                  disponible{disponibles !== 1 ? 's' : ''})
+                </p>
+              </div>
+              <div style={estilos.grilla}>
+                {items.map((item) => {
+                  const enCarrito = carrito[item.id];
+                  return (
+                    <div
+                      key={item.id}
+                      id={`producto-${item.id}`}
+                      style={{
+                        ...estilos.tarjeta,
+                        ...(enCarrito ? estilos.tarjetaEnCarrito : {}),
+                        ...(item.disponible ? {} : estilos.tarjetaAgotada)
+                      }}
+                    >
+                      {/* Nombre del producto */}
+                      <p style={estilos.nombreProducto}>{item.nombre}</p>
 
                       {/* Precio base */}
                       <p style={estilos.precio}>{formatearPrecio(item.precioBase)}</p>
@@ -245,8 +254,7 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
                       <span
                         style={{
                           ...estilos.badge,
-                          background: item.disponible ? '#d4edda' : '#f8d7da',
-                          color: item.disponible ? '#155724' : '#721c24'
+                          ...(item.disponible ? estilos.tonoExito : estilos.tonoPeligro)
                         }}
                       >
                         {item.disponible ? '✅ Disponible' : '🚫 Agotado'}
@@ -270,21 +278,19 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
                         {item.disponible ? '+ Agregar' : 'Agotado'}
                       </button>
                     </div>
-                    );
+                  );
                 })}
-                  </div>
+              </div>
             </>
           )}
-          </div>
+        </div>
 
         {/* ── Panel lateral derecho: carrito ────────────────────────────── */}
         <div style={estilos.panelCarrito}>
           <h3 style={estilos.tituloCarrito}>🛒 Pedido</h3>
 
           {carritoVacio ? (
-            <p style={estilos.carritoVacio}>
-              Selecciona productos del menú para armar el pedido.
-            </p>
+            <p style={estilos.carritoVacio}>Selecciona productos del menú para armar el pedido.</p>
           ) : (
             <>
               {/* Lista de ítems en el carrito */}
@@ -301,30 +307,35 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
 
                     {/* Controles de cantidad */}
                     <div style={estilos.controlesQty}>
-                      <button
-                        id={`btn-decrementar-${item.id}`}
-                        onClick={() => decrementarCantidad(item.id)}
-                        style={estilos.btnQty}
-                        title="Reducir cantidad"
-                      >
-                        −
-                      </button>
-                      <span id={`cantidad-${item.id}`} style={estilos.cantidad}>
-                        {cantidad}
-                      </span>
-                      <button
-                        id={`btn-incrementar-${item.id}`}
-                        onClick={() => incrementarCantidad(item.id)}
-                        style={estilos.btnQty}
-                        title="Aumentar cantidad"
-                      >
-                        +
-                      </button>
+                      <div style={estilos.selectorQty}>
+                        <button
+                          id={`btn-decrementar-${item.id}`}
+                          onClick={() => decrementarCantidad(item.id)}
+                          style={estilos.btnQty}
+                          title="Reducir cantidad"
+                          aria-label={`Reducir cantidad de ${item.nombre}`}
+                        >
+                          −
+                        </button>
+                        <span id={`cantidad-${item.id}`} style={estilos.cantidad}>
+                          {cantidad}
+                        </span>
+                        <button
+                          id={`btn-incrementar-${item.id}`}
+                          onClick={() => incrementarCantidad(item.id)}
+                          style={estilos.btnQty}
+                          title="Aumentar cantidad"
+                          aria-label={`Aumentar cantidad de ${item.nombre}`}
+                        >
+                          +
+                        </button>
+                      </div>
                       <button
                         id={`btn-quitar-${item.id}`}
                         onClick={() => quitarDelCarrito(item.id)}
                         style={estilos.btnQuitar}
                         title={`Quitar ${item.nombre} del pedido`}
+                        aria-label={`Quitar ${item.nombre} del pedido`}
                       >
                         ✕
                       </button>
@@ -342,12 +353,16 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
               </div>
 
               {errorCantidad && (
-                <div id="error-cantidad" style={estilos.errorEnvio}>{errorCantidad}</div>
+                <div id="error-cantidad" role="alert" style={estilos.errorEnvio}>
+                  {errorCantidad}
+                </div>
               )}
 
               {/* Paso 4: confirmar pedido */}
               {errorEnvio && (
-                <div id="error-envio" style={estilos.errorEnvio}>{errorEnvio}</div>
+                <div id="error-envio" role="alert" style={estilos.errorEnvio}>
+                  {errorEnvio}
+                </div>
               )}
               <button
                 id="btn-confirmar-pedido"
@@ -360,9 +375,7 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
               >
                 {enviando ? 'Enviando...' : '✅ Confirmar pedido'}
               </button>
-              {!conectado && (
-                <p style={estilos.notaConfirmar}>Sin conexión con el servidor.</p>
-              )}
+              {!conectado && <p style={estilos.notaConfirmar}>Sin conexión con el servidor.</p>}
             </>
           )}
         </div>
@@ -371,289 +384,350 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
   );
 }
 
-// ── Estilos en línea (consistente con el estilo del proyecto) ────────────────
+// ── Estilos en línea: leen los tokens de index.css (modo claro y oscuro) ─────
 const estilos = {
   overlay: {
     position: 'fixed',
     inset: 0,
-    background: '#f5f5f5',
+    background: 'var(--color-fondo)',
     zIndex: 200,
     display: 'flex',
     flexDirection: 'column',
-    fontFamily: 'Arial, sans-serif',
     overflowY: 'auto',
-    color: '#333',
+    color: 'var(--color-texto)',
     lineHeight: 1.6,
-    letterSpacing: 'normal'
+    textAlign: 'left'
   },
   encabezado: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    background: '#fff',
-    borderBottom: '2px solid #e0e0e0',
-    padding: '16px 24px',
+    background: 'var(--fondo-encabezado)',
+    borderBottom: '3px solid var(--color-azafran)',
+    boxShadow: 'var(--sombra-2)',
     position: 'sticky',
     top: 0,
     zIndex: 10
   },
+  encabezadoInterior: {
+    maxWidth: '1280px',
+    margin: '0 auto',
+    padding: '16px clamp(16px, 4vw, 40px)',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '16px'
+  },
+  identidad: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: '12px'
+  },
   titulo: {
     margin: 0,
-    fontSize: '22px',
-    color: '#333',
-    letterSpacing: 'normal'
+    fontSize: 'clamp(20px, 3vw, 24px)',
+    color: 'var(--color-encabezado-texto)'
   },
   subtitulo: {
-    margin: '6px 0 0 0',
-    fontSize: '14px',
-    color: '#666'
+    padding: '3px 12px',
+    borderRadius: '999px',
+    background: 'var(--color-azafran)',
+    color: '#2b1a12',
+    fontSize: '13px',
+    fontWeight: 700
   },
   btnCerrar: {
     padding: '8px 16px',
-    background: '#6c757d',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
+    background: 'rgba(244, 236, 227, 0.1)',
+    color: 'var(--color-encabezado-texto)',
+    border: '1px solid rgba(244, 236, 227, 0.3)',
+    borderRadius: '999px',
     fontSize: '14px',
     cursor: 'pointer',
-    fontWeight: 'bold'
+    fontWeight: 600,
+    whiteSpace: 'nowrap'
   },
-  // Cuerpo dividido en dos columnas: productos | carrito
+  // Cuerpo en dos columnas que se apilan solas en pantallas angostas (flex-wrap)
   cuerpo: {
-    flex: 1,
+    width: '100%',
+    maxWidth: '1280px',
+    margin: '0 auto',
+    padding: 'clamp(16px, 3vw, 32px) clamp(16px, 4vw, 40px)',
     display: 'flex',
-    gap: '0',
-    overflow: 'hidden',
-    height: '100%'
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    gap: '24px'
   },
   // ── Columna de productos
   columnaProductos: {
-    flex: 1,
-    padding: '24px',
-    overflowY: 'auto',
-    boxSizing: 'border-box'
+    flex: '3 1 480px',
+    minWidth: 0
   },
   mensaje: {
     textAlign: 'center',
-    color: '#666',
+    color: 'var(--color-texto-suave)',
     fontSize: '16px',
     marginTop: '40px'
   },
   errorBox: {
-    background: '#f8d7da',
-    color: '#721c24',
-    border: '1px solid #f5c6cb',
-    borderRadius: '6px',
+    background: 'var(--color-peligro-suave)',
+    color: 'var(--color-peligro-texto)',
+    border: '1px solid var(--color-peligro)',
+    borderRadius: 'var(--radio-m)',
     padding: '16px',
     textAlign: 'center',
     marginTop: '24px'
   },
+  cabeceraMenu: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: '8px',
+    marginBottom: '18px'
+  },
+  tituloMenu: {
+    margin: 0,
+    fontSize: '24px'
+  },
   conteo: {
-    color: '#777',
-    fontSize: '14px',
-    marginBottom: '20px'
+    color: 'var(--color-texto-suave)',
+    fontSize: '14px'
   },
   grilla: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-    gap: '20px'
+    gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))',
+    gap: '18px'
   },
   tarjeta: {
-    background: '#fff',
-    borderRadius: '10px',
+    background: 'var(--color-superficie)',
+    border: '1px solid var(--color-borde)',
+    borderRadius: 'var(--radio-l)',
     padding: '20px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'flex-start',
-    gap: '12px',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-    transition: 'border 0.15s ease'
+    gap: '10px',
+    boxShadow: 'var(--sombra-1)',
+    transition: 'border-color 0.15s ease, box-shadow 0.15s ease'
+  },
+  tarjetaEnCarrito: {
+    borderColor: 'var(--color-azafran)',
+    boxShadow: '0 0 0 2px var(--color-azafran), var(--sombra-2)'
+  },
+  tarjetaAgotada: {
+    opacity: 0.7
   },
   nombreProducto: {
     margin: 0,
-    fontWeight: 'bold',
-    fontSize: '15px',
-    color: '#333'
+    fontFamily: 'var(--fuente-titulo)',
+    fontWeight: 600,
+    fontSize: '17px',
+    lineHeight: 1.3
   },
   precio: {
     margin: 0,
     fontSize: '18px',
-    fontWeight: 'bold',
-    color: '#007bff'
+    fontWeight: 700,
+    color: 'var(--color-primario-texto)',
+    fontVariantNumeric: 'tabular-nums'
   },
   badge: {
     fontSize: '11px',
-    fontWeight: 'bold',
-    padding: '3px 8px',
-    borderRadius: '12px'
+    fontWeight: 700,
+    padding: '2px 10px',
+    borderRadius: '999px',
+    border: '1px solid'
   },
-    btnAgregar: {
-      marginTop: '4px',
-      padding: '6px 14px',
-      background: '#007bff',
-      color: 'white',
-      border: 'none',
-      borderRadius: '6px',
-      fontSize: '13px',
-      fontWeight: 'bold',
-      cursor: 'pointer',
-      width: '100%'
-    },
-    btnAgregarDeshabilitado: {
-      background: '#ccc',
-      color: '#777',
-      cursor: 'not-allowed'
-    },
-    // ── Panel carrito
-    panelCarrito: {
-      width: '300px',
-      minWidth: '260px',
-      background: '#fff',
-    borderLeft: '2px solid #e0e0e0',
-      padding: '24px 16px',
-      overflowY: 'auto',
-      boxSizing: 'border-box',
-      display: 'flex',
-      flexDirection: 'column'
-    },
-      tituloCarrito: {
-        margin: '0 0 16px 0',
-        fontSize: '18px',
-        color: '#333'
-      },
-      carritoVacio: {
-        color: '#aaa',
-        fontSize: '14px',
-        fontStyle: 'italic',
-        textAlign: 'center',
-        marginTop: '24px'
-      },
-      listaCarrito: {
-        listStyle: 'none',
-        margin: 0,
-    padding: 0,
-        flex: 1
-      },
-      itemCarrito: {
-        borderBottom: '1px solid #f0f0f0',
-        paddingBottom: '16px',
-        marginBottom: '16px'
-      },
-      itemInfo: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: '10px',
-        gap: '8px'
-      },
-      itemNombre: {
-        fontSize: '13px',
-        fontWeight: 'bold',
-        color: '#333',
-        flex: 1,
-        marginRight: '8px'
-      },
-      itemSubtotal: {
-        fontSize: '13px',
-        fontWeight: 'bold',
-        color: '#007bff',
-        whiteSpace: 'nowrap'
-      },
-      controlesQty: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px'
-      },
-      btnQty: {
-        width: '28px',
-        height: '28px',
-        border: '1px solid #ddd',
-        borderRadius: '4px',
-        background: '#f8f8f8',
-        color: '#333',
-        fontSize: '16px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        lineHeight: 1,
-        padding: 0
-      },
-      cantidad: {
-        minWidth: '24px',
-        textAlign: 'center',
-        fontWeight: 'bold',
-        fontSize: '15px',
-        color: '#333'
-      },
-      btnQuitar: {
-        marginLeft: '4px',
-        width: '24px',
-        height: '24px',
-        border: 'none',
-        borderRadius: '50%',
-        background: '#f8d7da',
-        color: '#721c24',
-        fontSize: '12px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 0
-      },
-      totalBox: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderTop: '2px solid #e0e0e0',
-        paddingTop: '12px',
-        marginTop: '8px'
-      },
-      totalLabel: {
-        fontSize: '16px',
-        fontWeight: 'bold',
-        color: '#333'
-      },
-      totalValor: {
-        fontSize: '20px',
-        fontWeight: 'bold',
-        color: '#28a745'
-      },
-      errorEnvio: {
-        marginTop: '12px',
-        padding: '10px 12px',
-        lineHeight: 1.5,
-        background: '#f8d7da',
-        color: '#721c24',
-        borderRadius: '6px',
-        fontSize: '13px'
-      },
-      btnConfirmar: {
-        marginTop: '16px',
-        padding: '12px',
-        background: '#28a745',
-        color: 'white',
-        border: 'none',
-        borderRadius: '8px',
-        fontSize: '15px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        width: '100%'
-      },
-      btnConfirmarDeshabilitado: {
-        background: '#ccc',
-        color: '#777',
-        cursor: 'not-allowed'
-      },
-      notaConfirmar: {
-        marginTop: '16px',
-        fontSize: '12px',
-        color: '#aaa',
-        fontStyle: 'italic',
-        textAlign: 'center'
-      }
-    };
+  tonoExito: {
+    background: 'var(--color-exito-suave)',
+    color: 'var(--color-exito-texto)',
+    borderColor: 'var(--color-exito)'
+  },
+  tonoPeligro: {
+    background: 'var(--color-peligro-suave)',
+    color: 'var(--color-peligro-texto)',
+    borderColor: 'var(--color-peligro)'
+  },
+  btnAgregar: {
+    marginTop: 'auto',
+    padding: '9px 14px',
+    background: 'var(--color-primario)',
+    color: 'var(--color-sobre-primario)',
+    border: 'none',
+    borderRadius: 'var(--radio-m)',
+    fontSize: '14px',
+    fontWeight: 700,
+    cursor: 'pointer',
+    width: '100%'
+  },
+  btnAgregarDeshabilitado: {
+    background: 'var(--color-superficie-alt)',
+    color: 'var(--color-texto-tenue)',
+    cursor: 'not-allowed'
+  },
+  // ── Panel carrito: tarjeta fija al hacer scroll en pantallas anchas
+  panelCarrito: {
+    flex: '1 1 300px',
+    position: 'sticky',
+    top: '100px',
+    background: 'var(--color-superficie)',
+    border: '1px solid var(--color-borde)',
+    borderTop: '4px solid var(--color-azafran)',
+    borderRadius: 'var(--radio-l)',
+    boxShadow: 'var(--sombra-2)',
+    padding: '22px 20px',
+    display: 'flex',
+    flexDirection: 'column'
+  },
+  tituloCarrito: {
+    margin: '0 0 16px 0',
+    fontSize: '22px'
+  },
+  carritoVacio: {
+    color: 'var(--color-texto-tenue)',
+    fontSize: '14px',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    padding: '24px 8px',
+    border: '1px dashed var(--color-borde)',
+    borderRadius: 'var(--radio-m)'
+  },
+  listaCarrito: {
+    listStyle: 'none',
+    margin: 0,
+    padding: 0
+  },
+  itemCarrito: {
+    borderBottom: '1px dashed var(--color-borde)',
+    paddingBottom: '14px',
+    marginBottom: '14px'
+  },
+  itemInfo: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: '10px',
+    gap: '8px'
+  },
+  itemNombre: {
+    fontSize: '14px',
+    fontWeight: 600,
+    flex: 1
+  },
+  itemSubtotal: {
+    fontSize: '14px',
+    fontWeight: 700,
+    color: 'var(--color-primario-texto)',
+    whiteSpace: 'nowrap',
+    fontVariantNumeric: 'tabular-nums'
+  },
+  controlesQty: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '8px'
+  },
+  selectorQty: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    border: '1px solid var(--color-borde)',
+    borderRadius: '999px',
+    background: 'var(--color-superficie-alt)',
+    padding: '2px'
+  },
+  btnQty: {
+    width: '30px',
+    height: '30px',
+    border: 'none',
+    borderRadius: '50%',
+    background: 'var(--color-superficie)',
+    color: 'var(--color-texto)',
+    fontSize: '16px',
+    fontWeight: 700,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    lineHeight: 1,
+    padding: 0
+  },
+  cantidad: {
+    minWidth: '32px',
+    textAlign: 'center',
+    fontWeight: 700,
+    fontSize: '15px',
+    fontVariantNumeric: 'tabular-nums'
+  },
+  btnQuitar: {
+    width: '30px',
+    height: '30px',
+    border: '1px solid var(--color-borde)',
+    borderRadius: '50%',
+    background: 'transparent',
+    color: 'var(--color-peligro-texto)',
+    fontSize: '12px',
+    fontWeight: 700,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0
+  },
+  totalBox: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    borderTop: '2px solid var(--color-borde)',
+    paddingTop: '12px',
+    marginTop: '4px'
+  },
+  totalLabel: {
+    fontFamily: 'var(--fuente-titulo)',
+    fontSize: '18px',
+    fontWeight: 600
+  },
+  totalValor: {
+    fontFamily: 'var(--fuente-titulo)',
+    fontSize: '26px',
+    fontWeight: 700,
+    color: 'var(--color-primario-texto)',
+    fontVariantNumeric: 'tabular-nums'
+  },
+  errorEnvio: {
+    marginTop: '12px',
+    padding: '10px 12px',
+    lineHeight: 1.5,
+    background: 'var(--color-peligro-suave)',
+    color: 'var(--color-peligro-texto)',
+    border: '1px solid var(--color-peligro)',
+    borderRadius: 'var(--radio-m)',
+    fontSize: '13px'
+  },
+  btnConfirmar: {
+    marginTop: '16px',
+    padding: '14px',
+    background: 'var(--color-primario)',
+    color: 'var(--color-sobre-primario)',
+    border: 'none',
+    borderRadius: 'var(--radio-m)',
+    boxShadow: '0 2px 0 rgba(90, 30, 8, 0.25)',
+    fontSize: '16px',
+    fontWeight: 700,
+    cursor: 'pointer',
+    width: '100%'
+  },
+  btnConfirmarDeshabilitado: {
+    background: 'var(--color-superficie-alt)',
+    color: 'var(--color-texto-tenue)',
+    boxShadow: 'none',
+    cursor: 'not-allowed'
+  },
+  notaConfirmar: {
+    marginTop: '12px',
+    fontSize: '12px',
+    color: 'var(--color-texto-tenue)',
+    fontStyle: 'italic',
+    textAlign: 'center'
+  }
+};
 
-    export default TomaPedido;
+export default TomaPedido;
