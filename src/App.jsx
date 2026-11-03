@@ -4,6 +4,7 @@ import { validarNumeroMesa } from './validaciones';
 import MapaMesas from './MapaMesas';
 import DetalleMesa from './DetalleMesa';
 import TomaPedido from './TomaPedido';
+import SelectorTema from './SelectorTema';
 
 // Conexión directa al servidor Backend (Puerto 3000)
 const socket = io('http://localhost:3000');
@@ -240,24 +241,28 @@ function App() {
             </div>
           </div>
 
-          <span
-            role="status"
-            title="Control de conexión con el servidor"
-            style={{
-              ...estilos.conexion,
-              borderColor: conectado ? 'rgba(181, 196, 74, 0.55)' : 'rgba(255, 107, 74, 0.6)'
-            }}
-          >
+          <div style={estilos.accionesEncabezado}>
             <span
-              aria-hidden="true"
+              role="status"
+              title="Control de conexión con el servidor"
               style={{
-                ...estilos.puntoConexion,
-                background: conectado ? '#b5c44a' : '#ff6b4a',
-                animation: conectado ? 'pulso 2s ease-in-out infinite' : 'none'
+                ...estilos.conexion,
+                borderColor: conectado ? 'rgba(181, 196, 74, 0.55)' : 'rgba(255, 107, 74, 0.6)'
               }}
-            />
-            {conectado ? 'Sistema Conectado ✔' : 'Servidor Desconectado ✖'}
-          </span>
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  ...estilos.puntoConexion,
+                  background: conectado ? '#b5c44a' : '#ff6b4a',
+                  animation: conectado ? 'pulso 2s ease-in-out infinite' : 'none'
+                }}
+              />
+              {conectado ? 'Sistema Conectado ✔' : 'Servidor Desconectado ✖'}
+            </span>
+
+            <SelectorTema />
+          </div>
         </div>
       </header>
 
@@ -552,6 +557,12 @@ const estilos = {
     fontSize: '13px',
     fontWeight: 600,
     whiteSpace: 'nowrap'
+  },
+  accionesEncabezado: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: '10px'
   },
   puntoConexion: {
     width: '9px',
