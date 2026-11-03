@@ -172,3 +172,61 @@ input {
     box-shadow: 0 0 0 6px rgba(181, 196, 74, 0);
   }
 }
+
+/*
+ * Estados de interacción. Los estilos en línea no admiten :hover ni :focus,
+ * por eso se definen aquí para todos los botones y campos de la app.
+ * Se usa `translate` (y no `transform`) para no pisar el transform en línea
+ * de las tarjetas de mesa.
+ */
+button {
+  transition:
+    filter 0.15s ease,
+    translate 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
+}
+
+button:not(:disabled):hover {
+  filter: brightness(1.07) saturate(1.05);
+  translate: 0 -1px;
+}
+
+button:not(:disabled):active {
+  filter: brightness(0.95);
+  translate: 0 0;
+}
+
+button:disabled,
+input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed !important;
+}
+
+/* Anillo de foco visible solo al navegar con teclado */
+:focus-visible {
+  outline: 3px solid var(--color-azafran);
+  outline-offset: 2px;
+}
+
+input::placeholder {
+  color: var(--color-texto-tenue);
+}
+
+::selection {
+  background: var(--color-azafran);
+  color: #2b1a12;
+}
+
+html {
+  scrollbar-color: var(--color-borde) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
