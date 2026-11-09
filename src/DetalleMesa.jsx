@@ -14,6 +14,38 @@ import { useState, useEffect } from 'react';
 
 const BASE_URL = 'http://localhost:3000';
 
+/** Marco de esquinas cóncavas y rombos para el ticket de cuenta. */
+function MarcoTicket() {
+  const esquina = (rotacion, pos) => (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 14 14"
+      fill="none"
+      style={{
+        position: 'absolute',
+        width: '14px',
+        height: '14px',
+        pointerEvents: 'none',
+        transform: `rotate(${rotacion}deg)`,
+        ...pos
+      }}
+    >
+      <rect x="0" y="0" width="10" height="10" fill="var(--color-superficie-alt)" />
+      <path d="M 0 10 A 10 10 0 0 0 10 0" stroke="var(--color-borde-suave)" strokeWidth="1" />
+      <polygon points="3.5,1 6,3.5 3.5,6 1,3.5" fill="var(--color-borde)" />
+    </svg>
+  );
+
+  return (
+    <div aria-hidden="true" style={estilos.marcoTicketInterior}>
+      {esquina(0, { top: '-1px', left: '-1px' })}
+      {esquina(90, { top: '-1px', right: '-1px' })}
+      {esquina(180, { bottom: '-1px', right: '-1px' })}
+      {esquina(270, { bottom: '-1px', left: '-1px' })}
+    </div>
+  );
+}
+
 function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos = 0 }) {
   const estaOcupada = mesa?.estado === 'ocupada';
 
@@ -63,11 +95,8 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
       });
       const data = await res.json();
       if (data.ok) {
-        // CA5: el cambio se refleja vía socket 'estado_mesas' desde el backend;
-        // solo mostramos confirmación local
         setMensajeAccion('✅ Mesa marcada como Ocupada.');
       } else {
-        // CA1 implica: si ya estaba ocupada el backend retorna ESTADO_NO_PERMITIDO
         setMensajeAccion(`⚠️ [${data.tipo}] ${data.error}`);
       }
     } catch {
@@ -89,7 +118,6 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
       if (data.ok) {
         setMensajeAccion('✅ Mesa liberada correctamente.');
       } else {
-        // CA3: si hay pedido activo, el backend devuelve tipo PEDIDO_ACTIVO con el motivo
         setMensajeAccion(`⚠️ [${data.tipo}] ${data.error}`);
       }
     } catch {
@@ -172,7 +200,6 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
             <div style={estilos.seccion}>
               <h4 style={estilos.subtitulo}>Acciones</h4>
 
-              {/* CA1: botón Abrir mesa — solo visible si está libre */}
               {!estaOcupada && (
                 <button
                   id={`btn-abrir-mesa-${mesa.numero}`}
@@ -184,8 +211,6 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
                 </button>
               )}
 
-              {/* CA4: botón Liberar mesa — solo visible si está ocupada */}
-              {/* CA3: el backend impide liberar si hay pedido activo (respuesta con error) */}
               {estaOcupada && (
                 <button
                   id={`btn-liberar-mesa-${mesa.numero}`}
@@ -197,13 +222,12 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
                 </button>
               )}
 
-              {/* Botón "Tomar pedido" — visible solo si la mesa está ocupada */}
               {estaOcupada && (
                 <button
                   id={`btn-tomar-pedido-${mesa.numero}`}
                   onClick={() => {
-                    onCerrar(); // cierra el panel lateral
-                    onTomarPedido(mesa); // abre la vista de toma de pedido
+                    onCerrar();
+                    onTomarPedido(mesa);
                   }}
                   disabled={!conectado}
                   style={{ ...estilos.btnAccion, ...estilos.btnPrimario }}
@@ -212,13 +236,12 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
                 </button>
               )}
 
-              {/* CA2: aclaración explícita: abrir la mesa no crea una cuenta */}
               <p style={estilos.nota}>
                 Nota: abrir la mesa no crea una cuenta. La cuenta se gestiona por separado (US-12).
               </p>
             </div>
 
-            {/* US-08 CA5: cuenta abierta si la tiene */}
+            {/* US-08 CA5: cuenta abierta con marco ornamental de esquinas cóncavas */}
             <div style={estilos.seccion}>
               <h4 style={estilos.subtitulo}>Cuenta</h4>
               {errorResumen && (
@@ -228,26 +251,29 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
               )}
               {estaOcupada && resumen && resumen.items.length > 0 ? (
                 <div id="resumen-pedido" style={estilos.ticket}>
-                  <p style={estilos.filaTicket}>
-                    <span style={estilos.textoSuave}>Estado del pedido</span>
-                    <span style={estilos.pildora}>{resumen.estado}</span>
-                  </p>
-                  <ul style={estilos.listaTicket}>
-                    {resumen.items.map((i) => (
-                      <li key={i.id} style={estilos.itemTicket}>
-                        <span>
-                          {i.cantidad} × {i.nombre}
-                        </span>
-                        <span style={estilos.importe}>
-                          {formatearPrecio(i.precioBase * i.cantidad)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  <p id="resumen-total" style={estilos.total}>
-                    <span>Total acumulado</span>
-                    <span style={estilos.importe}>{formatearPrecio(resumen.total)}</span>
-                  </p>
+                  <MarcoTicket />
+                  <div style={estilos.contenidoTicket}>
+                    <p style={estilos.filaTicket}>
+                      <span style={estilos.textoSuave}>Estado del pedido</span>
+                      <span style={estilos.pildora}>{resumen.estado}</span>
+                    </p>
+                    <ul style={estilos.listaTicket}>
+                      {resumen.items.map((i) => (
+                        <li key={i.id} style={estilos.itemTicket}>
+                          <span>
+                            {i.cantidad} × {i.nombre}
+                          </span>
+                          <span style={estilos.importe}>
+                            {formatearPrecio(i.precioBase * i.cantidad)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p id="resumen-total" style={estilos.total}>
+                      <span>Total acumulado</span>
+                      <span style={estilos.importe}>{formatearPrecio(resumen.total)}</span>
+                    </p>
+                  </div>
                 </div>
               ) : estaOcupada ? (
                 <p style={estilos.vacio}>Aún no se ha pedido nada en esta mesa.</p>
@@ -280,22 +306,21 @@ const estilos = {
     position: 'fixed',
     inset: 0,
     background: 'var(--velo)',
-    backdropFilter: 'blur(2px)',
     zIndex: 100,
-    transition: 'opacity 0.25s ease'
+    transition: 'opacity 0.2s ease'
   },
   panel: {
     position: 'fixed',
     top: 0,
     right: 0,
-    width: 'min(380px, 100vw)',
+    width: 'min(400px, 100vw)',
     height: '100vh',
     background: 'var(--color-superficie)',
-    borderLeft: '4px solid var(--color-azafran)',
+    borderLeft: '2px solid var(--color-borde)',
     boxShadow: 'var(--sombra-panel)',
     zIndex: 101,
-    padding: '28px 24px',
-    transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+    padding: '28px 26px',
+    transition: 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)',
     overflowY: 'auto',
     color: 'var(--color-texto)',
     lineHeight: 1.6,
@@ -305,18 +330,17 @@ const estilos = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: '16px'
+    marginBottom: '14px'
   },
   etiqueta: {
-    fontSize: '11px',
-    fontWeight: 700,
-    letterSpacing: '0.16em',
-    textTransform: 'uppercase',
-    color: 'var(--color-acento-texto)'
+    fontSize: '14px',
+    fontStyle: 'italic',
+    color: 'var(--color-texto-suave)'
   },
   titulo: {
     margin: '2px 0 0',
-    fontSize: '30px'
+    fontSize: '34px',
+    fontWeight: 400
   },
   btnCerrar: {
     display: 'grid',
@@ -324,20 +348,21 @@ const estilos = {
     width: '36px',
     height: '36px',
     background: 'var(--color-superficie-alt)',
-    border: '1px solid var(--color-borde)',
-    borderRadius: '50%',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: 'var(--color-borde)',
     fontSize: '15px',
     cursor: 'pointer',
-    color: 'var(--color-texto-suave)',
+    color: 'var(--color-texto)',
     padding: 0
   },
   badgeEstado: {
     display: 'inline-block',
-    fontWeight: 700,
-    fontSize: '14px',
-    padding: '5px 14px',
-    borderRadius: '999px',
-    border: '1px solid',
+    fontStyle: 'italic',
+    fontSize: '15px',
+    padding: '4px 14px',
+    borderWidth: '1px',
+    borderStyle: 'solid',
     marginBottom: '20px'
   },
   tonoExito: {
@@ -352,35 +377,32 @@ const estilos = {
   },
   mensajeAccion: {
     padding: '10px 14px',
-    borderRadius: 'var(--radio-m)',
-    border: '1px solid',
-    fontSize: '13px',
-    fontWeight: 600,
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    fontSize: '14px',
     margin: '0 0 16px',
     lineHeight: 1.5
   },
   seccion: {
-    borderTop: '1px solid var(--color-borde)',
+    borderTop: '1px solid var(--color-borde-suave)',
     paddingTop: '18px',
     marginBottom: '20px'
   },
   subtitulo: {
     margin: '0 0 12px 0',
-    fontFamily: 'var(--fuente-texto)',
-    fontSize: '12px',
-    fontWeight: 700,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
+    fontFamily: 'var(--fuente-titulo)',
+    fontStyle: 'italic',
+    fontSize: '18px',
+    fontWeight: 400,
     color: 'var(--color-texto-suave)'
   },
   btnAccion: {
     display: 'block',
     width: '100%',
     padding: '12px',
-    border: '1px solid',
-    borderRadius: 'var(--radio-m)',
-    fontWeight: 700,
-    fontSize: '14px',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    fontSize: '15px',
     cursor: 'pointer',
     marginBottom: '10px'
   },
@@ -395,26 +417,37 @@ const estilos = {
     fontStyle: 'italic',
     color: 'var(--color-texto-tenue)'
   },
-  // La cuenta se presenta como un ticket de restaurante
   ticket: {
+    position: 'relative',
     background: 'var(--color-superficie-alt)',
-    border: '1px solid var(--color-borde)',
-    borderRadius: 'var(--radio-m)',
-    padding: '14px 16px'
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: 'var(--color-borde)',
+    padding: '18px 20px'
+  },
+  marcoTicketInterior: {
+    position: 'absolute',
+    inset: '5px',
+    border: '1px solid var(--color-borde-suave)',
+    pointerEvents: 'none'
+  },
+  contenidoTicket: {
+    position: 'relative',
+    zIndex: 2
   },
   filaTicket: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: '8px',
-    fontSize: '13px'
+    fontSize: '14px'
   },
   pildora: {
     padding: '2px 10px',
-    borderRadius: '999px',
-    background: 'var(--color-primario-suave)',
-    color: 'var(--color-primario-texto)',
-    fontWeight: 700
+    border: '1px solid var(--color-borde)',
+    background: 'var(--color-superficie)',
+    color: 'var(--color-texto)',
+    fontStyle: 'italic'
   },
   listaTicket: {
     listStyle: 'none',
@@ -425,9 +458,9 @@ const estilos = {
     display: 'flex',
     justifyContent: 'space-between',
     gap: '8px',
-    fontSize: '14px',
+    fontSize: '15px',
     padding: '8px 0',
-    borderBottom: '1px dashed var(--color-borde)'
+    borderBottom: '1px dashed var(--color-borde-suave)'
   },
   importe: {
     fontVariantNumeric: 'tabular-nums',
@@ -437,15 +470,15 @@ const estilos = {
     display: 'flex',
     justifyContent: 'space-between',
     fontFamily: 'var(--fuente-titulo)',
-    fontWeight: 700,
-    fontSize: '18px',
-    color: 'var(--color-primario-texto)',
+    fontWeight: 400,
+    fontSize: '20px',
+    color: 'var(--color-texto)',
     margin: '4px 0 0',
     paddingTop: '10px',
-    borderTop: '2px solid var(--color-borde)'
+    borderTop: '1px solid var(--color-borde)'
   },
   vacio: {
-    fontSize: '14px',
+    fontSize: '15px',
     fontStyle: 'italic',
     color: 'var(--color-texto-tenue)'
   },
@@ -457,7 +490,7 @@ const estilos = {
     justifyContent: 'space-between',
     gap: '8px',
     margin: '6px 0',
-    fontSize: '14px'
+    fontSize: '15px'
   }
 };
 
