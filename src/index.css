@@ -1,122 +1,152 @@
 /*
- * Tokens visuales del monitor de pedidos.
- * Paleta cálida inspirada en la cocina: tomate, naranja, azafrán, oliva, hueso y chocolate.
- * Los componentes usan estilos en línea que leen estas variables (var(--...)),
- * así un único lugar define el modo claro y el modo oscuro.
+ * Tokens visuales del monitor de pedidos — Estética Editorial (Haley Park × Café Mocha & Beige Pergamino).
+ * Paleta extraída de la referencia Café & Beige:
+ *   #fdfaf5 (Alabastro), #f7e4d5 (Avena), #f4d5b9 (Almendra), #d9b394 (Latte),
+ *   #ca9b6d (Caramelo), #b88b5c (Avellana), #a66d42 (Canela), #723d2b (Mocha), #562713 (Espresso).
  */
 :root {
-  /* Superficies y texto — modo claro (sala de día) */
-  --color-fondo: #f6efe7;
-  --color-superficie: #fffbf6;
-  --color-superficie-alt: #f1e6da;
-  --color-borde: #e4d6c7;
-  --color-texto: #2b1a12;
-  --color-texto-suave: #6f5b4e;
-  --color-texto-tenue: #9c8677;
+  /* Superficies y texto — Modo Claro: Beige Pergamino */
+  --color-fondo: #f3dfcd;
+  --gradiente-lienzo: radial-gradient(ellipse at 50% 18%, #fdfaf5 0%, #f5e3d3 62%, #e6c8ae 100%);
+  --color-superficie: #fdfaf5;
+  --color-superficie-alt: #f4d5b9;
+  --color-borde: #b88b5c;
+  --color-borde-suave: rgba(114, 61, 43, 0.34);
+  --color-texto: #431e0f;
+  --color-texto-suave: #723d2b;
+  --color-texto-tenue: #8f6349;
 
-  /* Marca */
-  --color-primario: #c2361a;
-  --color-primario-hover: #a52c14;
-  --color-primario-texto: #b5301a;
-  --color-primario-suave: #fbe3da;
-  --color-acento: #f27a0c;
-  --color-acento-texto: #a6460a;
-  --color-azafran: #e0a21b;
-  --color-chocolate: #5a1e08;
-  --color-hueso: #f4ece3;
-  --color-sobre-primario: #ffffff;
+  /* Marca y acentos editoriales */
+  --color-primario: #562713;
+  --color-primario-hover: #723d2b;
+  --color-primario-texto: #562713;
+  --color-primario-suave: #f4d5b9;
+  --color-acento: #a66d42;
+  --color-acento-texto: #723d2b;
+  --color-azafran: #ca9b6d;
+  --color-chocolate: #431e0f;
+  --color-hueso: #fdfaf5;
+  --color-sobre-primario: #fdfaf5;
 
-  /* Estados */
-  --color-exito: #6e6212;
-  --color-exito-texto: #5c5210;
-  --color-exito-suave: #efebcf;
-  --color-peligro: #b4231a;
-  --color-peligro-texto: #a3221a;
-  --color-peligro-suave: #fbe1dc;
-  --color-neutro: #7a6a5f;
+  /* Estados orgánicos (Salvia y Terracota Cobre) */
+  --color-exito: #4e6e3a;
+  --color-exito-texto: #354c26;
+  --color-exito-suave: #e6ede0;
+  --color-peligro: #8c3b2b;
+  --color-peligro-texto: #6e291b;
+  --color-peligro-suave: #f5ddd6;
+  --color-neutro: #723d2b;
 
-  /* Encabezado */
-  --fondo-encabezado: linear-gradient(135deg, #3d1405 0%, #5a1e08 60%, #7a2a0c 100%);
-  --color-encabezado-texto: #f4ece3;
+  /* Recuadros de mesas y arcos de fondo */
+  --color-mesa-libre: #fdfaf5;
+  --color-mesa-ocupada: #e5c2a3;
+  --color-arcos: rgba(114, 61, 43, 0.17);
 
-  /* Elevación, forma y tipografía */
-  --sombra-1: 0 1px 2px rgba(90, 30, 8, 0.06), 0 2px 8px rgba(90, 30, 8, 0.06);
-  --sombra-2: 0 4px 12px rgba(90, 30, 8, 0.1), 0 12px 32px rgba(90, 30, 8, 0.08);
-  --sombra-panel: -12px 0 40px rgba(43, 26, 18, 0.18);
-  --velo: rgba(43, 26, 18, 0.45);
-  --radio-s: 8px;
-  --radio-m: 12px;
-  --radio-l: 18px;
+  /* Encabezado editorial */
+  --fondo-encabezado: transparent;
+  --color-encabezado-texto: #431e0f;
+
+  /* Elevación, forma y tipografía unificada (sin estilo IA) */
+  --sombra-1: 0 6px 18px rgba(86, 39, 19, 0.1);
+  --sombra-2: 0 10px 28px rgba(86, 39, 19, 0.16);
+  --sombra-panel: -12px 0 40px rgba(43, 21, 11, 0.22);
+  --velo: rgba(43, 21, 11, 0.45);
+  --radio-s: 2px;
+  --radio-m: 2px;
+  --radio-l: 2px;
 
   --fuente-titulo: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
-  --fuente-texto: 'Avenir Next', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
-  --fuente-mono: ui-monospace, 'SF Mono', Consolas, monospace;
+  --fuente-texto: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --fuente-mono: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
 
   color-scheme: light;
   font: 16px/1.55 var(--fuente-texto);
+  font-feature-settings:
+    'kern' 1,
+    'liga' 1;
   color: var(--color-texto);
-  background: var(--color-fondo);
+  background-color: var(--color-fondo);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Modo oscuro (salón de noche): por preferencia del sistema, salvo que el usuario elija claro */
+/* Modo Oscuro: Café Mocha (por preferencia del sistema, salvo que el usuario elija claro) */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --color-fondo: #171311;
-    --color-superficie: #221b17;
-    --color-superficie-alt: #2c231e;
-    --color-borde: #3e322a;
-    --color-texto: #f4ece3;
-    --color-texto-suave: #c2b1a3;
-    --color-texto-tenue: #8f7d70;
-    --color-primario-hover: #d8431f;
-    --color-primario-texto: #ff8f66;
-    --color-primario-suave: #3a1e15;
-    --color-acento-texto: #f5a04a;
-    --color-azafran: #e9b949;
-    --color-exito: #8a7c18;
-    --color-exito-texto: #d4c75a;
-    --color-exito-suave: #2f2c14;
-    --color-peligro-texto: #ff8e7d;
-    --color-peligro-suave: #3b1d18;
-    --color-neutro: #5e5149;
-    --fondo-encabezado: linear-gradient(135deg, #0f0a08 0%, #1f120c 60%, #2e160b 100%);
-    --sombra-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
-    --sombra-2: 0 4px 12px rgba(0, 0, 0, 0.45), 0 12px 32px rgba(0, 0, 0, 0.35);
-    --sombra-panel: -12px 0 40px rgba(0, 0, 0, 0.55);
-    --velo: rgba(0, 0, 0, 0.6);
+    --color-fondo: #3d1d0f;
+    --gradiente-lienzo: radial-gradient(ellipse at 50% 18%, #522916 0%, #3d1d0f 62%, #2b1309 100%);
+    --color-superficie: #261108;
+    --color-superficie-alt: #4e2615;
+    --color-borde: #d9b394;
+    --color-borde-suave: rgba(217, 179, 148, 0.36);
+    --color-texto: #f7e4d5;
+    --color-texto-suave: #d9b394;
+    --color-texto-tenue: #b88b5c;
+    --color-primario: #ca9b6d;
+    --color-primario-hover: #f4d5b9;
+    --color-primario-texto: #f4d5b9;
+    --color-primario-suave: #562713;
+    --color-acento: #ca9b6d;
+    --color-acento-texto: #f4d5b9;
+    --color-azafran: #f4d5b9;
+    --color-sobre-primario: #261108;
+    --color-exito: #7fa668;
+    --color-exito-texto: #d5e6c8;
+    --color-exito-suave: #25331d;
+    --color-peligro: #d9826c;
+    --color-peligro-texto: #fad2c8;
+    --color-peligro-suave: #4a1f16;
+    --color-neutro: #b88b5c;
+    --color-mesa-libre: #261108;
+    --color-mesa-ocupada: #5e2e19;
+    --color-arcos: rgba(217, 179, 148, 0.22);
+    --fondo-encabezado: transparent;
+    --color-encabezado-texto: #f7e4d5;
+    --sombra-1: 0 8px 24px rgba(18, 7, 2, 0.45);
+    --sombra-2: 0 12px 32px rgba(18, 7, 2, 0.58);
+    --sombra-panel: -12px 0 40px rgba(0, 0, 0, 0.65);
+    --velo: rgba(15, 6, 2, 0.65);
     color-scheme: dark;
   }
 }
 
-/* Modo oscuro elegido manualmente con el selector de tema */
+/* Modo Oscuro: Café Mocha elegido manualmente con el selector de tema */
 :root[data-theme='dark'] {
-  --color-fondo: #171311;
-  --color-superficie: #221b17;
-  --color-superficie-alt: #2c231e;
-  --color-borde: #3e322a;
-  --color-texto: #f4ece3;
-  --color-texto-suave: #c2b1a3;
-  --color-texto-tenue: #8f7d70;
-  --color-primario-hover: #d8431f;
-  --color-primario-texto: #ff8f66;
-  --color-primario-suave: #3a1e15;
-  --color-acento-texto: #f5a04a;
-  --color-azafran: #e9b949;
-  --color-exito: #8a7c18;
-  --color-exito-texto: #d4c75a;
-  --color-exito-suave: #2f2c14;
-  --color-peligro-texto: #ff8e7d;
-  --color-peligro-suave: #3b1d18;
-  --color-neutro: #5e5149;
-  --fondo-encabezado: linear-gradient(135deg, #0f0a08 0%, #1f120c 60%, #2e160b 100%);
-  --sombra-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
-  --sombra-2: 0 4px 12px rgba(0, 0, 0, 0.45), 0 12px 32px rgba(0, 0, 0, 0.35);
-  --sombra-panel: -12px 0 40px rgba(0, 0, 0, 0.55);
-  --velo: rgba(0, 0, 0, 0.6);
+  --color-fondo: #3d1d0f;
+  --gradiente-lienzo: radial-gradient(ellipse at 50% 18%, #522916 0%, #3d1d0f 62%, #2b1309 100%);
+  --color-superficie: #261108;
+  --color-superficie-alt: #4e2615;
+  --color-borde: #d9b394;
+  --color-borde-suave: rgba(217, 179, 148, 0.36);
+  --color-texto: #f7e4d5;
+  --color-texto-suave: #d9b394;
+  --color-texto-tenue: #b88b5c;
+  --color-primario: #ca9b6d;
+  --color-primario-hover: #f4d5b9;
+  --color-primario-texto: #f4d5b9;
+  --color-primario-suave: #562713;
+  --color-acento: #ca9b6d;
+  --color-acento-texto: #f4d5b9;
+  --color-azafran: #f4d5b9;
+  --color-sobre-primario: #261108;
+  --color-exito: #7fa668;
+  --color-exito-texto: #d5e6c8;
+  --color-exito-suave: #25331d;
+  --color-peligro: #d9826c;
+  --color-peligro-texto: #fad2c8;
+  --color-peligro-suave: #4a1f16;
+  --color-neutro: #b88b5c;
+  --color-mesa-libre: #261108;
+  --color-mesa-ocupada: #5e2e19;
+  --color-arcos: rgba(217, 179, 148, 0.22);
+  --fondo-encabezado: transparent;
+  --color-encabezado-texto: #f7e4d5;
+  --sombra-1: 0 8px 24px rgba(18, 7, 2, 0.45);
+  --sombra-2: 0 12px 32px rgba(18, 7, 2, 0.58);
+  --sombra-panel: -12px 0 40px rgba(0, 0, 0, 0.65);
+  --velo: rgba(15, 6, 2, 0.65);
   color-scheme: dark;
 }
 
@@ -129,11 +159,18 @@
 body {
   margin: 0;
   min-height: 100svh;
-  background: var(--color-fondo);
+  background-color: var(--color-fondo);
+  /* Textura PNG real de ruido y desgaste cacheada en GPU (0ms de recálculo al redimensionar) */
+  background-image: url('/noise-texture.png'), var(--gradiente-lienzo);
+  background-repeat: repeat, no-repeat;
+  background-size:
+    160px 160px,
+    100% 100%;
+  background-attachment: scroll, fixed;
   color: var(--color-texto);
   transition:
-    background-color 0.25s ease,
-    color 0.25s ease;
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 #root {
@@ -147,10 +184,10 @@ h2,
 h3,
 h4 {
   font-family: var(--fuente-titulo);
-  font-weight: 600;
+  font-weight: 400;
   color: var(--color-texto);
-  letter-spacing: 0.01em;
-  line-height: 1.25;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 
 p {
@@ -162,23 +199,50 @@ input {
   font: inherit;
 }
 
+/* Cabecera editorial de 3 columnas que se adapta sin solaparse al redimensionar */
+.haley-masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.haley-masthead-side {
+  flex: 1 1 200px;
+  min-width: 160px;
+}
+
+.haley-masthead-center {
+  flex: 2 1 300px;
+  text-align: center;
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .haley-masthead {
+    flex-direction: column;
+    align-items: center;
+    text-align: center !important;
+  }
+  .haley-masthead-side {
+    flex: none;
+    text-align: center !important;
+    justify-content: center !important;
+  }
+}
+
 /* Latido del indicador de conexión del encabezado */
 @keyframes pulso {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(181, 196, 74, 0.55);
+    box-shadow: 0 0 0 0 rgba(127, 166, 104, 0.55);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(181, 196, 74, 0);
+    box-shadow: 0 0 0 6px rgba(127, 166, 104, 0);
   }
 }
 
-/*
- * Estados de interacción. Los estilos en línea no admiten :hover ni :focus,
- * por eso se definen aquí para todos los botones y campos de la app.
- * Se usa `translate` (y no `transform`) para no pisar el transform en línea
- * de las tarjetas de mesa.
- */
 button {
   transition:
     filter 0.15s ease,
@@ -188,7 +252,7 @@ button {
 }
 
 button:not(:disabled):hover {
-  filter: brightness(1.07) saturate(1.05);
+  filter: brightness(1.06);
   translate: 0 -1px;
 }
 
@@ -205,7 +269,7 @@ input:disabled {
 
 /* Anillo de foco visible solo al navegar con teclado */
 :focus-visible {
-  outline: 3px solid var(--color-azafran);
+  outline: 2px solid var(--color-azafran);
   outline-offset: 2px;
 }
 
@@ -215,7 +279,7 @@ input::placeholder {
 
 ::selection {
   background: var(--color-azafran);
-  color: #2b1a12;
+  color: #261108;
 }
 
 html {
