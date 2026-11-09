@@ -1,5 +1,5 @@
 // src/SelectorTema.jsx
-// Botón del encabezado para alternar entre modo claro y modo oscuro.
+// Botón del encabezado para alternar entre modo claro (Beige Pergamino) y modo oscuro (Café Mocha).
 // El tema inicial respeta la última elección guardada; si no hay, sigue la preferencia del sistema.
 // La elección se aplica como data-theme en <html>, que index.css usa para cambiar los tokens.
 
@@ -43,35 +43,41 @@ function SelectorTema() {
       type="button"
       onClick={alternarTema}
       aria-pressed={esOscuro}
-      title={esOscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+      title={
+        esOscuro
+          ? 'Cambiar a modo claro (Beige Pergamino)'
+          : 'Cambiar a modo oscuro (Café Mocha)'
+      }
       style={estilos.boton}
     >
-      <span aria-hidden="true" style={estilos.icono}>
-        {esOscuro ? '☀️' : '🌙'}
+      <span aria-hidden="true" style={estilos.rombo}>
+        ◆
       </span>
-      {esOscuro ? 'Modo claro' : 'Modo oscuro'}
+      {esOscuro ? 'Modo claro · Pergamino' : 'Modo oscuro · Mocha'}
     </button>
   );
 }
 
-// ── Estilos en línea: pensados para ir sobre el encabezado chocolate ─────────
+// ── Estilos en línea: integrados en la barra ornamental editorial ─────────────
 const estilos = {
   boton: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '8px',
-    padding: '7px 14px',
-    borderRadius: '999px',
-    border: '1px solid rgba(244, 236, 227, 0.3)',
-    background: 'rgba(244, 236, 227, 0.08)',
-    color: 'var(--color-encabezado-texto)',
-    fontSize: '13px',
-    fontWeight: 600,
+    padding: '5px 14px',
+    border: '1px solid var(--color-borde)',
+    background: 'var(--color-superficie)',
+    color: 'var(--color-texto)',
+    fontFamily: 'var(--fuente-titulo)',
+    fontStyle: 'italic',
+    fontSize: '15px',
     cursor: 'pointer',
     whiteSpace: 'nowrap'
   },
-  icono: {
-    fontSize: '15px',
+  rombo: {
+    fontSize: '10px',
+    fontStyle: 'normal',
+    color: 'var(--color-azafran)',
     lineHeight: 1
   }
 };
