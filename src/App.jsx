@@ -9,6 +9,38 @@ import SelectorTema from './SelectorTema';
 // Conexión directa al servidor Backend (Puerto 3000)
 const socket = io('http://localhost:3000');
 
+/** Esquinas cóncavas con rombos ornamentales (proporción 1:1 fija, no se deforman al redimensionar). */
+function MarcoOrnamental({ fondo = 'var(--color-superficie)' }) {
+  const esquina = (rotacion, pos) => (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 14 14"
+      fill="none"
+      style={{
+        position: 'absolute',
+        width: '14px',
+        height: '14px',
+        pointerEvents: 'none',
+        transform: `rotate(${rotacion}deg)`,
+        ...pos
+      }}
+    >
+      <rect x="0" y="0" width="10" height="10" fill={fondo} />
+      <path d="M 0 10 A 10 10 0 0 0 10 0" stroke="var(--color-borde-suave)" strokeWidth="1" />
+      <polygon points="3.5,1 6,3.5 3.5,6 1,3.5" fill="var(--color-borde)" />
+    </svg>
+  );
+
+  return (
+    <div aria-hidden="true" style={estilos.marcoInterior}>
+      {esquina(0, { top: '-1px', left: '-1px' })}
+      {esquina(90, { top: '-1px', right: '-1px' })}
+      {esquina(180, { bottom: '-1px', right: '-1px' })}
+      {esquina(270, { bottom: '-1px', left: '-1px' })}
+    </div>
+  );
+}
+
 function App() {
   const [conectado, setConectado] = useState(false);
   // Estado para capturar la mesa seleccionada en el formulario
@@ -18,10 +50,10 @@ function App() {
   // Estado para capturar errores de validación en pantalla
   const [errorValidacion, setErrorValidacion] = useState('');
 
-  // NUEVO: Estado para el contador de tiempo en segundos
+  // Estado para el contador de tiempo en segundos
   const [segundos, setSegundos] = useState(0);
 
-  // NUEVO: Estado para el estado de las mesas en tiempo real
+  // Estado para el estado de las mesas en tiempo real
   const [mesas, setMesas] = useState([]);
 
   // Operación 3 (US-05): estados para el traslado de mesa
@@ -33,10 +65,8 @@ function App() {
   const [mesaSeleccionada, setMesaSeleccionada] = useState(null);
 
   // Vista "Tomar pedido" (Paso 1): mesa para la que se está tomando el pedido
-  // null = vista cerrada; objeto mesa = vista abierta para esa mesa
   const [mesaTomandoPedido, setMesaTomandoPedido] = useState(null);
 
-  // Referencia estable: TomaPedido la usa como dependencia de su efecto de socket
   // Se incrementa cada vez que cambia el contenido de algún pedido (para refrescar el resumen)
   const [versionPedidos, setVersionPedidos] = useState(0);
 
@@ -46,18 +76,13 @@ function App() {
     socket.on('connect', () => setConectado(true));
     socket.on('disconnect', () => setConectado(false));
 
-    // Escuchar cuando la cocina o el backend actualizan un pedido
     socket.on('cambio_estado_pedido', (datos) => {
-      // datos esperados: { mesa: 'Mesa 5', estado: 'En Cocina 🍳' }
       setUltimoPedido({ mesa: datos.mesa, estado: datos.estado });
-      setSegundos(0); // NUEVO: Resetea el reloj a 0 con cada cambio de estado
+      setSegundos(0);
     });
 
-    // NUEVO: escuchar el evento de estado de mesas que ya emite el backend
-    // US-08 CA3: reflejar cambios en tiempo real también en la mesa seleccionada
     socket.on('estado_mesas', (datos) => {
       setMesas(datos);
-      // Sincronizar el estado de la mesa seleccionada si cambió
       setMesaSeleccionada((prev) => {
         if (!prev) return null;
         const actualizada = datos.find((m) => m.id === prev.id);
@@ -67,7 +92,6 @@ function App() {
 
     socket.on('pedido_items_actualizado', () => setVersionPedidos((v) => v + 1));
 
-    // Escuchar respuesta estructurada del backend (validación defensiva)
     socket.on('respuesta_pedido', (resultado) => {
       if (!resultado.ok) {
         setErrorValidacion(
@@ -77,7 +101,6 @@ function App() {
       }
     });
 
-    // Operación 3 (US-05): escuchar respuesta del traslado de mesa
     socket.on('respuesta_traslado', (resultado) => {
       if (resultado.ok) {
         setMensajeTraslado(
@@ -112,14 +135,12 @@ function App() {
         if (data.ok) setMesas(data.mesas);
       })
       .catch(() => {
-        // Si falla el fetch inicial, el socket completará la carga al conectar
         console.warn('[US-08] No se pudo cargar las mesas por REST; se usará el socket.');
       });
   }, []);
 
-  // NUEVO: useEffect encargado de controlar el avance del tiempo y el límite de desbordamiento
+  // Control del avance del tiempo y límite de desbordamiento
   useEffect(() => {
-    // El tiempo solo corre si el pedido no está "Listo" ni "Sin Pedidos"
     const pedidoActivo =
       ultimoPedido.estado !== 'Sin Pedidos' && ultimoPedido.estado !== 'Listo 🍽️';
     let intervalo = null;
@@ -127,7 +148,6 @@ function App() {
     if (conectado && pedidoActivo) {
       intervalo = setInterval(() => {
         setSegundos((tiempoPrevio) => {
-          // Límite estricto para evitar desbordamiento visual (99 minutos y 59 segundos = 5999s)
           if (tiempoPrevio >= 5999) {
             clearInterval(intervalo);
             return 5999;
@@ -140,25 +160,18 @@ function App() {
     return () => clearInterval(intervalo);
   }, [conectado, ultimoPedido.estado]);
 
-  // NUEVO: Función auxiliar para dar formato visual MM:SS de forma compacta
   const formatearTiempo = (totSegundos) => {
     const minutos = Math.floor(totSegundos / 60);
     const segundosRestantes = totSegundos % 60;
     return `${minutos.toString().padStart(2, '0')}:${segundosRestantes.toString().padStart(2, '0')}`;
   };
 
-  // Función para manejar el cambio en el input de la mesa de forma controlada
   const manejarCambioMesa = (valor) => {
-    // 1. Conservar siempre la entrada en el estado para que el campo no se borre silenciosamente
     setMesa(valor);
-
-    // 2. Si el usuario vacía el input, limpiamos los mensajes de error
     if (valor.trim() === '') {
       setErrorValidacion('');
       return;
     }
-
-    // 3. Validación defensiva en la frontera de entrada del componente
     const resultado = validarNumeroMesa(valor);
     if (!resultado.esValido) {
       setErrorValidacion(resultado.mensajeError);
@@ -167,37 +180,29 @@ function App() {
     }
   };
 
-  // Función para simular el envío o actualización de un pedido
   const actualizarPedido = (nuevoEstado) => {
-    setErrorValidacion(''); // Limpiar errores previos
-
-    // 1. VALIDACIÓN DEFENSIVA: Verificar que se haya ingresado una mesa válida
+    setErrorValidacion('');
     const resultadoMesa = validarNumeroMesa(mesa);
     if (!resultadoMesa.esValido) {
       setErrorValidacion(
         resultadoMesa.mensajeError ||
           '⚠️ Por favor, ingresa un número de mesa válido (mayor a 0) antes de enviar.'
       );
-      return; // Frena el envío por socket
+      return;
     }
 
-    // 2. VALIDACIÓN: Lista estricta de estados permitidos en el restaurante
     const ESTADOS_PERMITIDOS = ['Recibido 📝', 'En Cocina 🍳', 'Listo 🍽️'];
     if (!ESTADOS_PERMITIDOS.includes(nuevoEstado)) {
       setErrorValidacion('⚠️ Estado de pedido no reconocido.');
-      return; // Frena el envío por socket
+      return;
     }
 
-    // 3. Envío seguro al backend si pasa las validaciones
     console.log(`Enviando actualización válida para Mesa ${resultadoMesa.numero}: ${nuevoEstado}`);
     socket.emit('actualizar_pedido', { mesa: `Mesa ${resultadoMesa.numero}`, estado: nuevoEstado });
   };
 
-  // Operación 3 (US-05): Traslada el pedido activo de una mesa a otra
   const trasladarPedido = () => {
-    setMensajeTraslado(''); // Limpiar mensajes previos
-
-    // 1. VALIDACIÓN DEFENSIVA: verificar mesa origen
+    setMensajeTraslado('');
     const resOrigen = validarNumeroMesa(mesaOrigen);
     if (!resOrigen.esValido) {
       setMensajeTraslado(
@@ -206,7 +211,6 @@ function App() {
       return;
     }
 
-    // 2. VALIDACIÓN DEFENSIVA: verificar mesa destino
     const resDestino = validarNumeroMesa(mesaDestino);
     if (!resDestino.esValido) {
       setMensajeTraslado(
@@ -215,13 +219,11 @@ function App() {
       return;
     }
 
-    // 3. VALIDACIÓN: origen y destino deben ser distintos (primera barrera cliente)
     if (resOrigen.numero === resDestino.numero) {
       setMensajeTraslado('⚠️ [ENTRADA_INVALIDA] origen y destino deben ser mesas distintas.');
       return;
     }
 
-    // 4. Envío seguro al backend
     console.log(`Enviando traslado: Mesa ${resOrigen.numero} → Mesa ${resDestino.numero}`);
     socket.emit('trasladar_pedido', { origen: resOrigen.numero, destino: resDestino.numero });
   };
@@ -230,50 +232,124 @@ function App() {
 
   return (
     <div style={estilos.app}>
-      {/* Encabezado: identidad del local e indicador de conexión con el backend */}
+      {/* Encabezado estilo Haley Park: barra superior de doble marco con puntas (< >) y cabecera de 3 columnas */}
       <header style={estilos.encabezado}>
-        <div style={estilos.encabezadoInterior}>
-          <div style={estilos.marca}>
-            <span aria-hidden="true" style={estilos.logo}>
-              🍽️
-            </span>
-            <div>
-              <p style={estilos.marcaEtiqueta}>Sala · Cocina · Caja</p>
-              <h1 style={estilos.titulo}>Monitor de Pedidos en Tiempo Real</h1>
+        <div style={estilos.barraSuperiorContenedor}>
+          <div style={estilos.barraMarcoExterior}>
+            <div style={estilos.barraMarcoInterior}>
+              {/* Punta angular izquierda (<) sin deformación */}
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 16 44"
+                preserveAspectRatio="none"
+                fill="none"
+                style={estilos.puntaIzquierda}
+              >
+                <polyline
+                  points="16,0 1,22 16,44"
+                  stroke="var(--color-borde)"
+                  strokeWidth="1.15"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+
+              {/* Punta angular derecha (>) sin deformación */}
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 16 44"
+                preserveAspectRatio="none"
+                fill="none"
+                style={estilos.puntaDerecha}
+              >
+                <polyline
+                  points="0,0 15,22 0,44"
+                  stroke="var(--color-borde)"
+                  strokeWidth="1.15"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+
+              <span aria-hidden="true" style={estilos.cruzBarra}>
+                ┼
+              </span>
+
+              <div style={estilos.accionesEncabezado}>
+                <span style={estilos.itemNavActivo}>
+                  Salón y comandas
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 72 6"
+                    preserveAspectRatio="none"
+                    fill="none"
+                    style={estilos.ondaSubrayado}
+                  >
+                    <path
+                      d="M1 3.5C5 1 9 6 13 3.5C17 1 21 6 25 3.5C29 1 33 6 37 3.5C41 1 45 6 49 3.5C53 1 57 6 61 3.5C65 1 69 6 71 3.5"
+                      stroke="var(--color-azafran)"
+                      strokeWidth="1.3"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </span>
+
+                <span
+                  role="status"
+                  title="Control de conexión con el servidor"
+                  style={{
+                    ...estilos.conexion,
+                    borderColor: conectado ? 'var(--color-exito)' : 'var(--color-peligro)'
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      ...estilos.puntoConexion,
+                      background: conectado ? 'var(--color-exito)' : 'var(--color-peligro)',
+                      animation: conectado ? 'pulso 2s ease-in-out infinite' : 'none'
+                    }}
+                  />
+                  {conectado ? 'Sistema Conectado' : 'Servidor Desconectado'}
+                </span>
+
+                <SelectorTema />
+              </div>
+
+              <span aria-hidden="true" style={estilos.cruzBarra}>
+                ┼
+              </span>
             </div>
           </div>
+        </div>
 
-          <div style={estilos.accionesEncabezado}>
-            <span
-              role="status"
-              title="Control de conexión con el servidor"
-              style={{
-                ...estilos.conexion,
-                borderColor: conectado ? 'rgba(181, 196, 74, 0.55)' : 'rgba(255, 107, 74, 0.6)'
-              }}
-            >
-              <span
-                aria-hidden="true"
-                style={{
-                  ...estilos.puntoConexion,
-                  background: conectado ? '#b5c44a' : '#ff6b4a',
-                  animation: conectado ? 'pulso 2s ease-in-out infinite' : 'none'
-                }}
-              />
-              {conectado ? 'Sistema Conectado ✔' : 'Servidor Desconectado ✖'}
-            </span>
+        {/* Cabecera monumental de 3 columnas que nunca se solapa al redimensionar */}
+        <div className="haley-masthead" style={estilos.masthead}>
+          <div className="haley-masthead-side" style={estilos.mastheadIzq}>
+            <p style={estilos.marcaEtiqueta}>Sala · Cocina · Caja</p>
+          </div>
 
-            <SelectorTema />
+          <div className="haley-masthead-center">
+            <h1 style={estilos.titulo}>Monitor de Pedidos en Tiempo Real</h1>
+          </div>
+
+          <div className="haley-masthead-side" style={estilos.mastheadDer}>
+            <p style={estilos.subtituloDerecha}>Servicio de salón</p>
           </div>
         </div>
       </header>
 
       <main style={estilos.contenido}>
-        {/* Pantalla central que muestra el último movimiento con el contador compacto integrado */}
+        {/* Divisor ornamental horizontal estilo Haley Park */}
+        <div aria-hidden="true" style={estilos.divisorEditorial}>
+          <span style={estilos.cruzDivisor}>┼</span>
+          <div style={estilos.lineaDivisor} />
+          <span style={estilos.textoDivisor}>Actividad reciente y estado de sala</span>
+          <div style={estilos.lineaDivisor} />
+          <span style={estilos.cruzDivisor}>┼</span>
+        </div>
+
+        {/* Recuadro central de última actualización con marco de esquinas cóncavas y rombos */}
         <section style={estilos.destacado} aria-live="polite">
-          <span aria-hidden="true" style={estilos.iconoDestacado}>
-            🛎️
-          </span>
+          <MarcoOrnamental />
           <div style={estilos.destacadoTexto}>
             <p style={estilos.etiqueta}>Última actualización</p>
             <div style={estilos.ultimoPedido}>
@@ -294,7 +370,6 @@ function App() {
             </div>
           </div>
 
-          {/* Visualización del contador compacto */}
           {ultimoPedido.estado !== 'Sin Pedidos' && (
             <span
               title="Tiempo en el estado actual"
@@ -319,130 +394,144 @@ function App() {
         )}
 
         <div style={estilos.columnas}>
-          {/* US-08: Mapa interactivo de mesas con panel lateral de detalle */}
+          {/* US-08: Mapa interactivo de mesas */}
           <section style={{ ...estilos.tarjeta, ...estilos.columnaPrincipal }}>
-            <MapaMesas
-              mesas={mesas}
-              mesaSeleccionada={mesaSeleccionada}
-              onSeleccionar={(m) => setMesaSeleccionada(m)}
-            />
+            <MarcoOrnamental />
+            <div style={estilos.contenidoTarjeta}>
+              <MapaMesas
+                mesas={mesas}
+                mesaSeleccionada={mesaSeleccionada}
+                onSeleccionar={(m) => setMesaSeleccionada(m)}
+              />
+            </div>
           </section>
 
           <aside style={estilos.columnaLateral}>
-            {/* Formulario de Simulación */}
+            {/* Panel de control de estados */}
             <section style={estilos.tarjeta}>
-              <p style={estilos.etiqueta}>Mozo · Cocina</p>
-              <h3 style={estilos.tituloTarjeta}>Panel de control</h3>
+              <MarcoOrnamental />
+              <div style={estilos.contenidoTarjeta}>
+                <p style={estilos.etiqueta}>Mozo · Cocina</p>
+                <h3 style={estilos.tituloTarjeta}>Panel de control</h3>
 
-              <label htmlFor="input-mesa" style={estilos.rotulo}>
-                Número de mesa
-              </label>
-              <input
-                id="input-mesa"
-                type="number"
-                step="1"
-                placeholder="Ej: 5"
-                value={mesa}
-                onChange={(e) => manejarCambioMesa(e.target.value)}
-                disabled={!conectado}
-                style={estilos.campo}
-              />
+                <label htmlFor="input-mesa" style={estilos.rotulo}>
+                  Número de mesa
+                </label>
+                <input
+                  id="input-mesa"
+                  type="number"
+                  step="1"
+                  placeholder="Ej: 5"
+                  value={mesa}
+                  onChange={(e) => manejarCambioMesa(e.target.value)}
+                  disabled={!conectado}
+                  style={estilos.campo}
+                />
 
-              <p style={{ ...estilos.rotulo, marginTop: '18px' }}>Cambiar estado a</p>
-              {/* Los botones se deshabilitan automáticamente si el servidor cae */}
-              <div style={estilos.grupoEstados}>
-                <button
-                  disabled={!conectado}
-                  onClick={() => actualizarPedido('Recibido 📝')}
-                  style={{ ...estilos.botonEstado, borderLeftColor: 'var(--color-azafran)' }}
-                >
-                  Tomar Pedido 📝
-                </button>
-                <button
-                  disabled={!conectado}
-                  onClick={() => actualizarPedido('En Cocina 🍳')}
-                  style={{ ...estilos.botonEstado, borderLeftColor: 'var(--color-acento)' }}
-                >
-                  Empezar Cocina 🍳
-                </button>
-                <button
-                  disabled={!conectado}
-                  onClick={() => actualizarPedido('Listo 🍽️')}
-                  style={{ ...estilos.botonEstado, borderLeftColor: 'var(--color-exito)' }}
-                >
-                  Pedido Listo 🍽️
-                </button>
+                <p style={{ ...estilos.rotulo, marginTop: '18px' }}>Cambiar estado a</p>
+                <div style={estilos.grupoEstados}>
+                  <button
+                    disabled={!conectado}
+                    onClick={() => actualizarPedido('Recibido 📝')}
+                    style={{ ...estilos.botonEstado, borderLeftColor: 'var(--color-azafran)' }}
+                  >
+                    Tomar Pedido 📝
+                  </button>
+                  <button
+                    disabled={!conectado}
+                    onClick={() => actualizarPedido('En Cocina 🍳')}
+                    style={{ ...estilos.botonEstado, borderLeftColor: 'var(--color-acento)' }}
+                  >
+                    Empezar Cocina 🍳
+                  </button>
+                  <button
+                    disabled={!conectado}
+                    onClick={() => actualizarPedido('Listo 🍽️')}
+                    style={{ ...estilos.botonEstado, borderLeftColor: 'var(--color-exito)' }}
+                  >
+                    Pedido Listo 🍽️
+                  </button>
+                </div>
               </div>
             </section>
 
             {/* Operación 3 (US-05): Traslado de Mesa */}
             <section style={estilos.tarjeta}>
-              <p style={estilos.etiqueta}>Sala</p>
-              <h3 style={estilos.tituloTarjeta}>Traslado de mesa</h3>
+              <MarcoOrnamental />
+              <div style={estilos.contenidoTarjeta}>
+                <p style={estilos.etiqueta}>Sala</p>
+                <h3 style={estilos.tituloTarjeta}>Traslado de mesa</h3>
 
-              {/* Banner de resultado del traslado */}
-              {mensajeTraslado && (
-                <div
-                  role="status"
-                  style={{
-                    ...estilos.aviso,
-                    ...(mensajeTraslado.startsWith('✅') ? estilos.avisoExito : estilos.avisoError)
-                  }}
+                {mensajeTraslado && (
+                  <div
+                    role="status"
+                    style={{
+                      ...estilos.aviso,
+                      marginBottom: '14px',
+                      ...(mensajeTraslado.startsWith('✅')
+                        ? estilos.avisoExito
+                        : estilos.avisoError)
+                    }}
+                  >
+                    {mensajeTraslado}
+                  </div>
+                )}
+
+                <div style={estilos.filaCampos}>
+                  <div style={{ flex: 1 }}>
+                    <label htmlFor="input-mesa-origen" style={estilos.rotulo}>
+                      Mesa origen
+                    </label>
+                    <input
+                      id="input-mesa-origen"
+                      type="number"
+                      step="1"
+                      placeholder="Ej: 2"
+                      value={mesaOrigen}
+                      onChange={(e) => {
+                        setMesaOrigen(e.target.value);
+                        setMensajeTraslado('');
+                      }}
+                      disabled={!conectado}
+                      style={estilos.campo}
+                    />
+                  </div>
+                  <span aria-hidden="true" style={estilos.flechaTraslado}>
+                    ⇄
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <label htmlFor="input-mesa-destino" style={estilos.rotulo}>
+                      Mesa destino
+                    </label>
+                    <input
+                      id="input-mesa-destino"
+                      type="number"
+                      step="1"
+                      placeholder="Ej: 6"
+                      value={mesaDestino}
+                      onChange={(e) => {
+                        setMesaDestino(e.target.value);
+                        setMensajeTraslado('');
+                      }}
+                      disabled={!conectado}
+                      style={estilos.campo}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  disabled={!conectado}
+                  onClick={trasladarPedido}
+                  style={estilos.botonPrimario}
                 >
-                  {mensajeTraslado}
-                </div>
-              )}
-
-              <div style={estilos.filaCampos}>
-                <div style={{ flex: 1 }}>
-                  <label htmlFor="input-mesa-origen" style={estilos.rotulo}>
-                    Mesa origen
-                  </label>
-                  <input
-                    id="input-mesa-origen"
-                    type="number"
-                    step="1"
-                    placeholder="Ej: 2"
-                    value={mesaOrigen}
-                    onChange={(e) => {
-                      setMesaOrigen(e.target.value);
-                      setMensajeTraslado('');
-                    }}
-                    disabled={!conectado}
-                    style={estilos.campo}
-                  />
-                </div>
-                <span aria-hidden="true" style={estilos.flechaTraslado}>
-                  ⇄
-                </span>
-                <div style={{ flex: 1 }}>
-                  <label htmlFor="input-mesa-destino" style={estilos.rotulo}>
-                    Mesa destino
-                  </label>
-                  <input
-                    id="input-mesa-destino"
-                    type="number"
-                    step="1"
-                    placeholder="Ej: 6"
-                    value={mesaDestino}
-                    onChange={(e) => {
-                      setMesaDestino(e.target.value);
-                      setMensajeTraslado('');
-                    }}
-                    disabled={!conectado}
-                    style={estilos.campo}
-                  />
-                </div>
+                  Trasladar Mesa
+                </button>
               </div>
-
-              <button disabled={!conectado} onClick={trasladarPedido} style={estilos.botonPrimario}>
-                🔄 Trasladar Mesa
-              </button>
             </section>
           </aside>
         </div>
 
-        {/* US-08 CA5 / US-09: Panel lateral deslizable con el detalle de la mesa seleccionada */}
+        {/* Panel lateral deslizable con el detalle de la mesa seleccionada */}
         <DetalleMesa
           mesa={mesaSeleccionada}
           conectado={conectado}
@@ -451,7 +540,7 @@ function App() {
           onTomarPedido={(m) => setMesaTomandoPedido(m)}
         />
 
-        {/* Vista "Tomar pedido" — se muestra encima de todo cuando hay una mesa activa */}
+        {/* Vista "Tomar pedido" */}
         {mesaTomandoPedido && (
           <TomaPedido
             mesa={mesaTomandoPedido}
@@ -461,6 +550,40 @@ function App() {
           />
         )}
       </main>
+
+      {/* Ilustración arquitectónica de arcos góticos y rosetones en SVG estático (0ms CPU) */}
+      <div aria-hidden="true" style={estilos.contenedorArcos}>
+        <svg
+          viewBox="0 0 1400 320"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          preserveAspectRatio="xMidYMax slice"
+          style={estilos.svgArcos}
+        >
+          <defs>
+            <g id="cathedral-arch">
+              <path d="M 0 320 C 10 180, 75 85, 160 20 C 245 85, 310 180, 320 320" strokeWidth="1.25" />
+              <path d="M 12 320 C 22 190, 82 98, 160 35 C 238 98, 298 190, 308 320" strokeWidth="0.85" />
+              <path d="M 18 320 C 25 240, 55 190, 90 160 C 125 190, 155 240, 160 320" strokeWidth="0.95" />
+              <path d="M 160 320 C 165 240, 195 190, 230 160 C 265 190, 295 240, 302 320" strokeWidth="0.95" />
+              <circle cx="160" cy="115" r="42" strokeWidth="1.15" />
+              <circle cx="160" cy="115" r="35" strokeWidth="0.75" />
+              <circle cx="160" cy="115" r="16" strokeWidth="0.85" />
+              <line x1="160" y1="73" x2="160" y2="157" strokeWidth="0.7" />
+              <line x1="118" y1="115" x2="202" y2="115" strokeWidth="0.7" />
+              <line x1="130" y1="85" x2="190" y2="145" strokeWidth="0.7" />
+              <line x1="190" y1="85" x2="130" y2="145" strokeWidth="0.7" />
+            </g>
+          </defs>
+          <use href="#cathedral-arch" x="30" y="45" />
+          <use href="#cathedral-arch" x="260" y="45" />
+          <g transform="translate(480, -30) scale(1.35)">
+            <use href="#cathedral-arch" x="0" y="0" />
+          </g>
+          <use href="#cathedral-arch" x="820" y="45" />
+          <use href="#cathedral-arch" x="1050" y="45" />
+        </svg>
+      </div>
     </div>
   );
 }
@@ -489,163 +612,230 @@ const TONO_NEUTRO = {
   borde: 'var(--color-borde)'
 };
 
-// ── Estilos en línea: leen los tokens de index.css (modo claro y oscuro) ─────
 const estilos = {
   app: {
     minHeight: '100svh',
     display: 'flex',
-    flexDirection: 'column'
+    flexDirection: 'column',
+    position: 'relative',
+    overflowX: 'hidden'
   },
   encabezado: {
-    background: 'var(--fondo-encabezado)',
-    color: 'var(--color-encabezado-texto)',
-    borderBottom: '3px solid var(--color-azafran)',
-    boxShadow: 'var(--sombra-2)'
-  },
-  encabezadoInterior: {
+    position: 'relative',
+    zIndex: 10,
     maxWidth: '1200px',
+    width: '100%',
     margin: '0 auto',
-    padding: '18px clamp(16px, 4vw, 40px)',
+    padding: '16px clamp(16px, 4vw, 40px) 0'
+  },
+  barraSuperiorContenedor: {
+    width: '100%'
+  },
+  barraMarcoExterior: {
+    padding: '4px',
+    border: '1px solid var(--color-borde-suave)',
+    background: 'rgba(38, 17, 8, 0.08)'
+  },
+  barraMarcoInterior: {
+    position: 'relative',
     display: 'flex',
-    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: '16px'
+    gap: '12px',
+    padding: '9px clamp(20px, 3vw, 36px)',
+    borderTop: '1px solid var(--color-borde)',
+    borderBottom: '1px solid var(--color-borde)'
   },
-  marca: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '14px'
+  puntaIzquierda: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: '16px',
+    height: '100%',
+    pointerEvents: 'none'
   },
-  logo: {
-    display: 'grid',
-    placeItems: 'center',
-    width: '48px',
-    height: '48px',
-    borderRadius: '50%',
-    background: 'var(--color-azafran)',
-    boxShadow: 'inset 0 0 0 3px rgba(90, 30, 8, 0.25)',
-    fontSize: '24px',
+  puntaDerecha: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: '16px',
+    height: '100%',
+    pointerEvents: 'none'
+  },
+  cruzBarra: {
+    fontSize: '12px',
+    color: 'var(--color-texto-suave)',
+    userSelect: 'none',
     flexShrink: 0
-  },
-  marcaEtiqueta: {
-    fontSize: '11px',
-    fontWeight: 600,
-    letterSpacing: '0.18em',
-    textTransform: 'uppercase',
-    color: 'var(--color-azafran)'
-  },
-  titulo: {
-    margin: '2px 0 0',
-    fontSize: 'clamp(20px, 3vw, 26px)',
-    color: 'var(--color-encabezado-texto)'
-  },
-  conexion: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '7px 14px',
-    borderRadius: '999px',
-    border: '1px solid',
-    background: 'rgba(244, 236, 227, 0.08)',
-    fontSize: '13px',
-    fontWeight: 600,
-    whiteSpace: 'nowrap'
   },
   accionesEncabezado: {
     display: 'flex',
     flexWrap: 'wrap',
     alignItems: 'center',
-    gap: '10px'
+    justifyContent: 'space-around',
+    flex: 1,
+    gap: '12px 24px'
+  },
+  itemNavActivo: {
+    position: 'relative',
+    fontFamily: 'var(--fuente-titulo)',
+    fontSize: '17px',
+    color: 'var(--color-texto)',
+    paddingBottom: '2px'
+  },
+  ondaSubrayado: {
+    position: 'absolute',
+    left: 0,
+    bottom: '-5px',
+    width: '100%',
+    height: '6px',
+    pointerEvents: 'none'
+  },
+  conexion: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '4px 12px',
+    border: '1px solid',
+    background: 'var(--color-superficie)',
+    fontSize: '14px',
+    fontStyle: 'italic',
+    whiteSpace: 'nowrap'
   },
   puntoConexion: {
-    width: '9px',
-    height: '9px',
+    width: '8px',
+    height: '8px',
     borderRadius: '50%'
   },
-  // ── Contenido principal
+  masthead: {
+    padding: '28px 0 8px'
+  },
+  mastheadIzq: {
+    textAlign: 'left'
+  },
+  mastheadDer: {
+    textAlign: 'right'
+  },
+  marcaEtiqueta: {
+    fontSize: '18px',
+    fontStyle: 'italic',
+    color: 'var(--color-texto-suave)'
+  },
+  subtituloDerecha: {
+    fontSize: '18px',
+    fontStyle: 'italic',
+    color: 'var(--color-texto-suave)'
+  },
+  titulo: {
+    margin: 0,
+    fontSize: 'clamp(28px, 4.2vw, 48px)',
+    fontWeight: 400,
+    letterSpacing: '-0.02em',
+    color: 'var(--color-texto)'
+  },
   contenido: {
+    position: 'relative',
+    zIndex: 10,
     width: '100%',
     maxWidth: '1200px',
     margin: '0 auto',
-    padding: 'clamp(16px, 4vw, 32px) clamp(16px, 4vw, 40px) 48px',
+    padding: '12px clamp(16px, 4vw, 40px) 64px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '24px'
+    gap: '22px'
+  },
+  divisorEditorial: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+    margin: '4px 0'
+  },
+  cruzDivisor: {
+    fontSize: '12px',
+    color: 'var(--color-texto-suave)',
+    flexShrink: 0
+  },
+  lineaDivisor: {
+    flex: 1,
+    borderTop: '1px solid var(--color-borde-suave)'
+  },
+  textoDivisor: {
+    fontFamily: 'var(--fuente-titulo)',
+    fontStyle: 'italic',
+    fontSize: 'clamp(17px, 2.2vw, 22px)',
+    color: 'var(--color-texto-suave)',
+    padding: '0 8px',
+    textAlign: 'center'
+  },
+  marcoInterior: {
+    position: 'absolute',
+    inset: '6px',
+    border: '1px solid var(--color-borde-suave)',
+    pointerEvents: 'none',
+    zIndex: 1
   },
   destacado: {
+    position: 'relative',
     display: 'flex',
     flexWrap: 'wrap',
     alignItems: 'center',
-    gap: '18px',
-    padding: '20px 24px',
+    justifyContent: 'space-between',
+    gap: '16px',
+    padding: '20px 26px',
     background: 'var(--color-superficie)',
     border: '1px solid var(--color-borde)',
-    borderLeft: '5px solid var(--color-azafran)',
-    borderRadius: 'var(--radio-l)',
     boxShadow: 'var(--sombra-1)'
   },
-  iconoDestacado: {
-    display: 'grid',
-    placeItems: 'center',
-    width: '52px',
-    height: '52px',
-    borderRadius: '50%',
-    background: 'var(--color-superficie-alt)',
-    fontSize: '26px',
-    flexShrink: 0
-  },
   destacadoTexto: {
+    position: 'relative',
+    zIndex: 2,
     flex: '1 1 220px',
     minWidth: 0
   },
   etiqueta: {
-    fontSize: '11px',
-    fontWeight: 700,
-    letterSpacing: '0.16em',
-    textTransform: 'uppercase',
-    color: 'var(--color-acento-texto)',
+    fontSize: '14px',
+    fontStyle: 'italic',
+    color: 'var(--color-texto-suave)',
     marginBottom: '4px'
   },
   ultimoPedido: {
     display: 'flex',
     flexWrap: 'wrap',
-    alignItems: 'center',
+    alignItems: 'baseline',
     gap: '10px'
   },
   ultimaMesa: {
     fontFamily: 'var(--fuente-titulo)',
-    fontSize: '26px',
-    fontWeight: 600,
+    fontSize: '28px',
+    fontWeight: 400,
     color: 'var(--color-texto)'
   },
   flecha: {
     color: 'var(--color-texto-tenue)',
-    fontSize: '20px'
+    fontSize: '18px'
   },
   pildoraEstado: {
     display: 'inline-block',
-    padding: '4px 14px',
-    borderRadius: '999px',
+    padding: '3px 14px',
     border: '1px solid',
-    fontSize: '14px',
-    fontWeight: 700
+    fontSize: '15px',
+    fontStyle: 'italic'
   },
   contador: {
-    padding: '8px 14px',
-    borderRadius: '999px',
+    position: 'relative',
+    zIndex: 2,
+    padding: '6px 14px',
     border: '1px solid',
     fontFamily: 'var(--fuente-mono)',
-    fontSize: '15px',
-    fontWeight: 600,
+    fontSize: '16px',
     fontVariantNumeric: 'tabular-nums'
   },
   aviso: {
     padding: '12px 16px',
-    borderRadius: 'var(--radio-m)',
     border: '1px solid',
-    fontSize: '14px',
-    fontWeight: 600,
+    fontSize: '15px',
     lineHeight: 1.5
   },
   avisoError: {
@@ -658,7 +848,6 @@ const estilos = {
     color: 'var(--color-exito-texto)',
     borderColor: 'var(--color-exito)'
   },
-  // Dos columnas que se apilan solas en pantallas angostas (flex-wrap)
   columnas: {
     display: 'flex',
     flexWrap: 'wrap',
@@ -677,21 +866,26 @@ const estilos = {
     gap: '24px'
   },
   tarjeta: {
+    position: 'relative',
     background: 'var(--color-superficie)',
     border: '1px solid var(--color-borde)',
-    borderRadius: 'var(--radio-l)',
     boxShadow: 'var(--sombra-1)',
-    padding: '24px'
+    padding: '26px'
+  },
+  contenidoTarjeta: {
+    position: 'relative',
+    zIndex: 2
   },
   tituloTarjeta: {
-    margin: '0 0 18px',
-    fontSize: '20px'
+    margin: '0 0 16px',
+    fontSize: '24px',
+    fontWeight: 400
   },
   rotulo: {
     display: 'block',
     marginBottom: '6px',
-    fontSize: '13px',
-    fontWeight: 600,
+    fontSize: '14px',
+    fontStyle: 'italic',
     color: 'var(--color-texto-suave)'
   },
   campo: {
@@ -700,8 +894,7 @@ const estilos = {
     fontSize: '16px',
     color: 'var(--color-texto)',
     background: 'var(--color-fondo)',
-    border: '1px solid var(--color-borde)',
-    borderRadius: 'var(--radio-s)'
+    border: '1px solid var(--color-borde)'
   },
   grupoEstados: {
     display: 'grid',
@@ -712,15 +905,15 @@ const estilos = {
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    padding: '12px 16px',
-    fontSize: '15px',
-    fontWeight: 600,
+    padding: '11px 16px',
+    fontSize: '16px',
     textAlign: 'left',
     color: 'var(--color-texto)',
     background: 'var(--color-superficie-alt)',
-    border: '1px solid var(--color-borde)',
-    borderLeft: '5px solid',
-    borderRadius: 'var(--radio-m)',
+    borderTop: '1px solid var(--color-borde)',
+    borderRight: '1px solid var(--color-borde)',
+    borderBottom: '1px solid var(--color-borde)',
+    borderLeft: '4px solid',
     cursor: 'pointer'
   },
   filaCampos: {
@@ -731,20 +924,33 @@ const estilos = {
   },
   flechaTraslado: {
     paddingBottom: '10px',
-    fontSize: '20px',
+    fontSize: '18px',
     color: 'var(--color-texto-tenue)'
   },
   botonPrimario: {
     width: '100%',
     padding: '12px 18px',
-    fontSize: '15px',
-    fontWeight: 700,
+    fontSize: '16px',
     color: 'var(--color-sobre-primario)',
     background: 'var(--color-primario)',
-    border: 'none',
-    borderRadius: 'var(--radio-m)',
-    boxShadow: '0 2px 0 rgba(90, 30, 8, 0.25)',
+    border: '1px solid var(--color-borde)',
     cursor: 'pointer'
+  },
+  contenedorArcos: {
+    position: 'fixed',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '300px',
+    pointerEvents: 'none',
+    userSelect: 'none',
+    zIndex: 1,
+    overflow: 'hidden'
+  },
+  svgArcos: {
+    width: '100%',
+    height: '100%',
+    stroke: 'var(--color-arcos)'
   }
 };
 
