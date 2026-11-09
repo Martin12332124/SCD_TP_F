@@ -286,6 +286,24 @@ html {
   scrollbar-color: var(--color-borde) transparent;
 }
 
+/* Adaptación de los recuadros de mesas en Modo Oscuro (Café Mocha) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .tarjeta-mesa[data-ocupada='false'] {
+    background-color: var(--color-mesa-libre) !important;
+  }
+  :root:not([data-theme='light']) .tarjeta-mesa[data-ocupada='true'] {
+    background-color: var(--color-mesa-ocupada) !important;
+  }
+}
+
+:root[data-theme='dark'] .tarjeta-mesa[data-ocupada='false'] {
+  background-color: var(--color-mesa-libre) !important;
+}
+
+:root[data-theme='dark'] .tarjeta-mesa[data-ocupada='true'] {
+  background-color: var(--color-mesa-ocupada) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
