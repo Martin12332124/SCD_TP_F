@@ -20,8 +20,8 @@ describe('MapaMesas (US-08)', () => {
     render(<MapaMesas mesas={mesas} mesaSeleccionada={null} onSeleccionar={() => {}} />);
     expect(screen.getByText('Libre')).toBeInTheDocument();
     expect(screen.getByText('Ocupada')).toBeInTheDocument();
-    expect(screen.getByTitle(/Mesa 1/)).toHaveStyle({ backgroundColor: 'rgb(40, 167, 69)' });
-    expect(screen.getByTitle(/Mesa 2/)).toHaveStyle({ backgroundColor: 'rgb(220, 53, 69)' });
+    expect(screen.getByTitle(/Mesa 1/)).toHaveStyle({ backgroundColor: 'rgb(253, 250, 245)' });
+    expect(screen.getByTitle(/Mesa 2/)).toHaveStyle({ backgroundColor: 'rgb(229, 194, 163)' });
   });
 
   test('sin mesas muestra el aviso de lista vacía', () => {

@@ -562,10 +562,22 @@ function App() {
         >
           <defs>
             <g id="cathedral-arch">
-              <path d="M 0 320 C 10 180, 75 85, 160 20 C 245 85, 310 180, 320 320" strokeWidth="1.25" />
-              <path d="M 12 320 C 22 190, 82 98, 160 35 C 238 98, 298 190, 308 320" strokeWidth="0.85" />
-              <path d="M 18 320 C 25 240, 55 190, 90 160 C 125 190, 155 240, 160 320" strokeWidth="0.95" />
-              <path d="M 160 320 C 165 240, 195 190, 230 160 C 265 190, 295 240, 302 320" strokeWidth="0.95" />
+              <path
+                d="M 0 320 C 10 180, 75 85, 160 20 C 245 85, 310 180, 320 320"
+                strokeWidth="1.25"
+              />
+              <path
+                d="M 12 320 C 22 190, 82 98, 160 35 C 238 98, 298 190, 308 320"
+                strokeWidth="0.85"
+              />
+              <path
+                d="M 18 320 C 25 240, 55 190, 90 160 C 125 190, 155 240, 160 320"
+                strokeWidth="0.95"
+              />
+              <path
+                d="M 160 320 C 165 240, 195 190, 230 160 C 265 190, 295 240, 302 320"
+                strokeWidth="0.95"
+              />
               <circle cx="160" cy="115" r="42" strokeWidth="1.15" />
               <circle cx="160" cy="115" r="35" strokeWidth="0.75" />
               <circle cx="160" cy="115" r="16" strokeWidth="0.85" />

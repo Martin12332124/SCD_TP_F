@@ -44,9 +44,7 @@ function SelectorTema() {
       onClick={alternarTema}
       aria-pressed={esOscuro}
       title={
-        esOscuro
-          ? 'Cambiar a modo claro (Beige Pergamino)'
-          : 'Cambiar a modo oscuro (Café Mocha)'
+        esOscuro ? 'Cambiar a modo claro (Beige Pergamino)' : 'Cambiar a modo oscuro (Café Mocha)'
       }
       style={estilos.boton}
     >
