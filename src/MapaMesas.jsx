@@ -70,19 +70,21 @@ function MapaMesas({ mesas, mesaSeleccionada, onSeleccionar }) {
           <div style={estilos.leyenda}>
             <span style={estilos.itemLeyenda}>
               <span
+                aria-hidden="true"
                 style={{
                   ...estilos.punto,
                   background: COLOR_LIBRE,
-                  border: '1px solid var(--color-borde)'
+                  border: '1.5px solid var(--color-borde)'
                 }}
               />
               {libres} {libres === 1 ? 'libre' : 'libres'}
             </span>
             <span style={estilos.itemLeyenda}>
               <span
+                aria-hidden="true"
                 style={{
-                  ...estilos.punto,
-                  background: COLOR_OCUPADA,
+                  ...estilos.romboLeyenda,
+                  background: 'var(--color-borde)',
                   border: '1px solid var(--color-borde)'
                 }}
               />
@@ -141,8 +143,20 @@ function MapaMesas({ mesas, mesaSeleccionada, onSeleccionar }) {
                 </svg>
               )}
 
-              {/* US-08 CA2: etiqueta de estado explícita en tipografía serif cursiva */}
-              <span style={estilos.estado}>{estaOcupada ? 'Ocupada' : 'Libre'}</span>
+              {/* US-08 CA2 y REF-05: pastilla con símbolo geométrico redundante (◆ vs ○) para daltonismo */}
+              <span
+                style={{
+                  ...estilos.insigniaEstado,
+                  background: estaOcupada ? '#36190c' : 'transparent',
+                  color: estaOcupada ? '#fdfaf5' : 'var(--color-texto-suave)',
+                  borderColor: estaOcupada ? '#36190c' : 'var(--color-borde-suave)'
+                }}
+              >
+                <span aria-hidden="true" style={estilos.simboloEstado}>
+                  {estaOcupada ? '◆' : '○'}
+                </span>
+                <span style={estilos.estado}>{estaOcupada ? 'Ocupada' : 'Libre'}</span>
+              </span>
             </button>
           );
         })}
@@ -194,6 +208,11 @@ const estilos = {
     height: '9px',
     borderRadius: '50%'
   },
+  romboLeyenda: {
+    width: '8px',
+    height: '8px',
+    transform: 'rotate(45deg)'
+  },
   vacio: {
     padding: '32px 16px',
     textAlign: 'center',
@@ -244,13 +263,26 @@ const estilos = {
     height: '6px',
     marginTop: '1px'
   },
-  estado: {
+  insigniaEstado: {
     position: 'relative',
     zIndex: 2,
-    fontSize: '15px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '5px',
+    padding: '2px 10px',
+    marginTop: '3px',
+    borderWidth: '1px',
+    borderStyle: 'solid'
+  },
+  simboloEstado: {
+    fontSize: '10px',
+    fontStyle: 'normal',
+    lineHeight: 1
+  },
+  estado: {
+    fontSize: '14px',
     fontStyle: 'italic',
-    color: 'var(--color-texto-suave)',
-    marginTop: '2px'
+    lineHeight: 1.2
   }
 };
 
