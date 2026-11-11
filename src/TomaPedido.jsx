@@ -16,6 +16,7 @@
 
 import { useState, useEffect } from 'react';
 import { validarCantidad } from './validaciones';
+import { formatearPrecio } from './utils/formato';
 
 const BASE_URL = 'http://localhost:3000';
 
@@ -77,9 +78,6 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
       });
   }, []);
 
-  // Formatea un número como precio en CLP: 8500 → "$8.500"
-  const formatearPrecio = (precio) =>
-    precio.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
 
   // ── Paso 2: lógica del carrito ────────────────────────────────────────────────
 

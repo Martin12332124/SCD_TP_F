@@ -11,6 +11,7 @@
 //   versionPedidos    {number}      - Cambia cuando se actualiza algún pedido (refresca el resumen)
 
 import { useState, useEffect } from 'react';
+import { formatearPrecio } from './utils/formato';
 
 const BASE_URL = 'http://localhost:3000';
 
@@ -50,8 +51,6 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
     };
   }, [numeroMesa, estadoMesa, versionPedidos]);
 
-  const formatearPrecio = (precio) =>
-    precio.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
 
   // ── US-09 CA1: Marcar una mesa libre como ocupada ───────────────────────────
   const abrirMesa = async () => {
