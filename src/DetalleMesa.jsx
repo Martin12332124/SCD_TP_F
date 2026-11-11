@@ -12,8 +12,11 @@
 
 import { useState, useEffect } from 'react';
 import { formatearPrecio } from './utils/formato';
-
-const BASE_URL = 'http://localhost:3000';
+import {
+  obtenerPedidoMesa,
+  abrirMesa as abrirMesaApi,
+  cerrarMesa as cerrarMesaApi
+} from './servicios/api';
 
 function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos = 0 }) {
   const estaOcupada = mesa?.estado === 'ocupada';
@@ -32,8 +35,7 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
   useEffect(() => {
     if (numeroMesa === undefined) return undefined;
     let cancelado = false;
-    fetch(`${BASE_URL}/api/mesas/${numeroMesa}/pedido`)
-      .then((res) => res.json())
+    obtenerPedidoMesa(numeroMesa)
       .then((data) => {
         if (cancelado) return;
         if (data.ok) {
@@ -57,10 +59,7 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
     setMensajeAccion('');
     setCargando(true);
     try {
-      const res = await fetch(`${BASE_URL}/api/mesas/${mesa.numero}/abrir`, {
-        method: 'POST'
-      });
-      const data = await res.json();
+      const data = await abrirMesaApi(mesa.numero);
       if (data.ok) {
         // CA5: el cambio se refleja vía socket 'estado_mesas' desde el backend;
         // solo mostramos confirmación local
@@ -81,10 +80,7 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
     setMensajeAccion('');
     setCargando(true);
     try {
-      const res = await fetch(`${BASE_URL}/api/mesas/${mesa.numero}/cerrar`, {
-        method: 'POST'
-      });
-      const data = await res.json();
+      const data = await cerrarMesaApi(mesa.numero);
       if (data.ok) {
         setMensajeAccion('✅ Mesa liberada correctamente.');
       } else {
