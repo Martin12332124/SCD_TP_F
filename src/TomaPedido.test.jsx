@@ -343,3 +343,25 @@ describe('TomaPedido: presentación y accesibilidad (#77)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Producto agotado');
   });
 });
+
+
+// Guía U3 · Protección previa a la refactorización de formatearPrecio:
+// fija el formato exacto en CLP (símbolo $, punto de miles, sin decimales).
+describe('TomaPedido: formato de precios (protección refactor U3)', () => {
+  test('la carta muestra el precio unitario con formato CLP exacto', async () => {
+    await renderizar();
+    await screen.findByText('Pizza Margarita');
+    expect(screen.getByText('$8.500')).toBeInTheDocument();
+    expect(screen.getByText('$2.000')).toBeInTheDocument();
+  });
+
+  test('subtotal y total del carrito usan formato CLP exacto', async () => {
+    await renderizar();
+    await screen.findByText('Pizza Margarita');
+    await agregar(1);
+    await agregar(1); // 2 × 8.500
+    await agregar(2); // 1 × 2.000
+    expect(screen.getByText('$17.000')).toBeInTheDocument();
+    expect(document.getElementById('total-carrito')).toHaveTextContent(/^\$19\.000$/);
+  });
+});

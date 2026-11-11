@@ -237,3 +237,16 @@ describe('DetalleMesa: presentación y accesibilidad (#77)', () => {
     expect(total).toHaveTextContent(/12\.500/);
   });
 });
+
+
+// Guía U3 · Protección previa a la refactorización de formatearPrecio.
+describe('DetalleMesa: formato de precios (protección refactor U3)', () => {
+  test('subtotales y total de la cuenta usan formato CLP exacto', async () => {
+    simularBackend({ '/api/mesas/2/pedido': resumenConItems });
+    renderizar(ocupada);
+    await screen.findByText(/Pizza Margarita/);
+    expect(screen.getByText('$8.500')).toBeInTheDocument(); // 1 × 8.500
+    expect(screen.getByText('$4.000')).toBeInTheDocument(); // 2 × 2.000
+    expect(document.getElementById('resumen-total')).toHaveTextContent('$12.500');
+  });
+});
