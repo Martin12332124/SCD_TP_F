@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { validarNumeroMesa } from './validaciones';
+import { formatearTiempo } from './utils/formato';
 import MapaMesas from './MapaMesas';
 import DetalleMesa from './DetalleMesa';
 import TomaPedido from './TomaPedido';
@@ -140,12 +141,6 @@ function App() {
     return () => clearInterval(intervalo);
   }, [conectado, ultimoPedido.estado]);
 
-  // NUEVO: Función auxiliar para dar formato visual MM:SS de forma compacta
-  const formatearTiempo = (totSegundos) => {
-    const minutos = Math.floor(totSegundos / 60);
-    const segundosRestantes = totSegundos % 60;
-    return `${minutos.toString().padStart(2, '0')}:${segundosRestantes.toString().padStart(2, '0')}`;
-  };
 
   // Función para manejar el cambio en el input de la mesa de forma controlada
   const manejarCambioMesa = (valor) => {
