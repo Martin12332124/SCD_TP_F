@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { validarNumeroMesa } from './validaciones';
 import { formatearTiempo } from './utils/formato';
+import { API_URL, obtenerMesas } from './servicios/api';
 import MapaMesas from './MapaMesas';
 import DetalleMesa from './DetalleMesa';
 import TomaPedido from './TomaPedido';
 import SelectorTema from './SelectorTema';
 
-// Conexión directa al servidor Backend (Puerto 3000)
-const socket = io('http://localhost:3000');
+// Conexión socket.io al backend (la URL viene de servicios/api.js)
+const socket = io(API_URL);
 
 function App() {
   const [conectado, setConectado] = useState(false);
@@ -107,8 +108,7 @@ function App() {
 
   // US-08: carga inicial de mesas vía REST para no depender solo del socket
   useEffect(() => {
-    fetch('http://localhost:3000/api/mesas')
-      .then((res) => res.json())
+    obtenerMesas()
       .then((data) => {
         if (data.ok) setMesas(data.mesas);
       })

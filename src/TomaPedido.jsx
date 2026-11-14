@@ -17,8 +17,7 @@
 import { useState, useEffect } from 'react';
 import { validarCantidad } from './validaciones';
 import { formatearPrecio } from './utils/formato';
-
-const BASE_URL = 'http://localhost:3000';
+import { obtenerMenu } from './servicios/api';
 
 function TomaPedido({ mesa, onCerrar, socket, conectado }) {
   // Lista de ítems del menú cargados desde el backend
@@ -58,11 +57,7 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
   // No se llama setState en el cuerpo del efecto; los cambios de estado
   // ocurren únicamente dentro de los callbacks de la promesa (.then / .catch / .finally).
   useEffect(() => {
-    fetch(`${BASE_URL}/api/menu-items`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`Error del servidor: ${res.status}`);
-        return res.json();
-      })
+    obtenerMenu()
       .then((data) => {
         if (data.ok) {
           setItems(data.items);
