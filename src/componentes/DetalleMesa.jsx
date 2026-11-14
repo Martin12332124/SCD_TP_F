@@ -11,12 +11,12 @@
 //   versionPedidos    {number}      - Cambia cuando se actualiza algún pedido (refresca el resumen)
 
 import { useState, useEffect } from 'react';
-import { formatearPrecio } from './utils/formato';
+import { formatearPrecio } from '../utils/formato';
 import {
   obtenerPedidoMesa,
   abrirMesa as abrirMesaApi,
   cerrarMesa as cerrarMesaApi
-} from './servicios/api';
+} from '../servicios/api';
 
 function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos = 0 }) {
   const estaOcupada = mesa?.estado === 'ocupada';

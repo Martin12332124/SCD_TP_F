@@ -15,9 +15,9 @@
 //   conectado {boolean}  - true si el socket está conectado al backend
 
 import { useState, useEffect } from 'react';
-import { validarCantidad } from './validaciones';
-import { formatearPrecio } from './utils/formato';
-import { obtenerMenu } from './servicios/api';
+import { validarCantidad } from '../validaciones/validaciones';
+import { formatearPrecio } from '../utils/formato';
+import { obtenerMenu } from '../servicios/api';
 
 function TomaPedido({ mesa, onCerrar, socket, conectado }) {
   // Lista de ítems del menú cargados desde el backend
