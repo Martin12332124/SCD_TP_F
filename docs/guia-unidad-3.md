@@ -2,7 +2,7 @@
 
 Taller de Programación Avanzada ISF224 · Proyecto POS + KDS
 
-> **Estado:** intervenciones 1, 2 y 3 y modularización terminadas. Queda **PENDIENTE** la parte de Claudia (uso de `api.js` y revisión de socket.io), la prueba "después" y los links de CI.
+> **Estado:** terminado. Las tres intervenciones, la modularización, el uso del componente reutilizable y la revisión de la dependencia están en `dev` (frontend: PR #80, #81, #82 y #83 · backend: PR #47). La prueba "después" da el mismo resultado que la prueba "antes".
 
 Repositorios: [SCD_TP_F (frontend)](https://github.com/Martin12332124/SCD_TP_F) · [SCD_TP_B (backend)](https://github.com/Martin12332124/SCD_TP_B)
 
@@ -25,7 +25,16 @@ Repositorios: [SCD_TP_F (frontend)](https://github.com/Martin12332124/SCD_TP_F) 
 
 Revisó: Claudia Medina, 11-11-2026, en Windows (PowerShell), ramas `dev` de ambos repos.
 
-Después de las refactorizaciones se repite el mismo flujo y debe dar el mismo resultado.
+**Prueba "después"**: el mismo flujo, repetido con todos los PR ya integrados en `dev`.
+
+| Paso | Observado (antes) | Observado (después) | Evidencia | ¿Igual? |
+|---|---|---|---|---|
+| Carrito | **$19.000** (Pizza $17.000 + Coca-Cola $2.000) | **$19.000** (Pizza $17.000 + Coca-Cola $2.000) | [despues-1](evidencias/despues-1.jpg) | ✅ |
+| Cuenta tras confirmar | "En Cocina 🍳", total acumulado **$19.000** | "En Cocina 🍳", total acumulado **$19.000** | [despues-2](evidencias/despues-2.jpg) | ✅ |
+| Liberar mesa con pedido activo | `[PEDIDO_ACTIVO] … Debe servirse antes de cerrar la mesa.` | `[PEDIDO_ACTIVO] … Debe servirse antes de cerrar la mesa.` | [despues-3](evidencias/despues-3.jpg) | ✅ |
+
+Revisó: Claudia Medina, 14-11-2026, en macOS, ramas `dev` de ambos repos (frontend `7c72453`, backend `92d55cf`).
+**Conclusión:** la refactorización no cambió el comportamiento visible de la operación revisada.
 
 ---
 
@@ -36,7 +45,7 @@ Después de las refactorizaciones se repite el mismo flujo y debe dar el mismo r
 | 1 | F | URL del backend escrita a mano en varios archivos | `App.jsx`, `DetalleMesa.jsx`, `TomaPedido.jsx` | Alta | Diego Urbano | [PR #81](https://github.com/Martin12332124/SCD_TP_F/pull/81): `fe935f1`, `ba392a2`, `706ea38`, `0d8bb2f`, `ad23414` |
 | 2 | F | Función de formato de precio duplicada | `DetalleMesa.jsx`, `TomaPedido.jsx` | Media | Martín Carvallo | [PR #80](https://github.com/Martin12332124/SCD_TP_F/pull/80): `d632675` (tests), `cbb4f41` |
 | 3 | B | Handlers de socket mezclados con la composición de la app y `try/catch` copiado 3 veces | `src/app.js` | Alta | Francisca Hernández | [PR #47](https://github.com/Martin12332124/SCD_TP_B/pull/47): `61bdb5c`, `3e274b4` |
-| — | F | Modularización de `src/` | todo `src/` | Obligatoria | Martín Saldívar | `a3a18b5` (PR **PENDIENTE**) |
+| — | F | Modularización de `src/` | todo `src/` | Obligatoria | Martín Saldívar | [PR #82](https://github.com/Martin12332124/SCD_TP_F/pull/82): `a3a18b5` |
 
 ### Intervención 1 — Cliente API centralizado (frontend)
 
@@ -114,7 +123,15 @@ console.log(r.ok, r.tipo); // false 'ESTADO_NO_PERMITIDO' (la mesa 1 está libre
 ```
 
 **Consumidores:** `App.jsx`, `DetalleMesa.jsx` y `TomaPedido.jsx`, todos con la misma implementación.
-**Ejecutado por otro integrante a partir de esta descripción:** Claudia Medina, con `scripts/probar-api.mjs`. Resultado: **PENDIENTE**.
+**Ejecutado por otro integrante a partir de esta descripción:** Claudia Medina, con [`scripts/probar-api.mjs`](../scripts/probar-api.mjs) ([PR #83](https://github.com/Martin12332124/SCD_TP_F/pull/83), commit `f282fbf`). Con el backend encendido (`npm start` en SCD_TP_B) y `node scripts/probar-api.mjs` en SCD_TP_F, el resultado fue:
+
+```
+Mesas cargadas: 10
+Productos en la carta: Pizza Margarita, Coca-Cola 500 ml, Ensalada César
+Cerrar mesa 1 (libre): false ESTADO_NO_PERMITIDO
+```
+
+Coincide con lo que dice el contrato: `obtenerMesas` y `obtenerMenu` devuelven el cuerpo del backend, y `cerrarMesa` devuelve el rechazo (`ok: false`) sin lanzar un error.
 
 ---
 
@@ -127,9 +144,9 @@ console.log(r.ok, r.tipo); // false 'ESTADO_NO_PERMITIDO' (la mesa 1 está libre
 | **Ejemplo ejecutable** | `test/socket.test.js` en SCD_TP_B levanta el servidor y conecta un cliente real `socket.io-client`. |
 | **Mantenimiento** | La versión 4.8.3 se publicó en diciembre de 2025 ([notas de versión](https://github.com/socketio/socket.io/releases), [docs de instalación](https://socket.io/docs/v4/client-installation/)). |
 | **Licencia y condiciones** | MIT (campo `license` del `package.json` instalado). Obligación: conservar el aviso de copyright y la licencia al redistribuir el código de la librería. |
-| **Riesgo** | Cambio incompatible: una versión mayor (5.x) podría alterar la API de eventos o la compatibilidad entre cliente y servidor. Probabilidad: baja (el rango `^4.8.3` no instala 5.x). Impacto: alto (sin socket no llegan pedidos a cocina). |
-| **Medida de mitigación** | Mantener el rango `^4` en ambos repos, actualizar cliente y servidor juntos y no aceptar una versión mayor sin pasar `test/socket.test.js`. |
-| **Cómo se comprueba** | El CI corre `test/socket.test.js` en cada push y PR: si una actualización rompe la conexión o los eventos, el CI falla. Además se revisa `npm audit` antes de cada entrega. |
+| **Riesgo** | **Vulnerabilidad conocida.** `npm audit` (14-11-2026) reporta en el backend una vulnerabilidad **alta** en `engine.io@6.6.9`, dependencia interna de `socket.io`: denegación de servicio por diferencia de revisión del protocolo ([GHSA-2gc4-cqfq-p2gv](https://github.com/advisories/GHSA-2gc4-cqfq-p2gv), afecta `>=6.6.0 <6.6.10`). Probabilidad: baja en un entorno de clase, media si se expone a internet. Impacto: alto (si el servidor de socket cae, los pedidos no llegan a cocina). Riesgo secundario: un cambio incompatible en una versión mayor (5.x), mitigado porque el rango `^4.8.3` no la instala. |
+| **Medida de mitigación** | Ejecutar `npm audit fix` en SCD_TP_B, que actualiza `engine.io` a 6.6.10 sin salir del rango `^4` de `socket.io` (no requiere `--force`). Mantener el rango `^4` en ambos repos y actualizar cliente y servidor juntos. |
+| **Cómo se comprueba** | Después de la actualización: `npm ls engine.io` debe mostrar 6.6.10 o superior, `npm audit` ya no debe listar `engine.io`, y `test/socket.test.js` (que corre en el CI en cada PR) debe seguir pasando. Estado actual: **pendiente de aplicar** (ver sección 7). |
 
 ---
 
@@ -159,8 +176,18 @@ cd SCD_TP_F && npm ci && npm run dev
 npm run lint && npm run build && npm run test:ci
 ```
 
-- CI frontend: **PENDIENTE** (link a GitHub Actions del PR)
-- CI backend: **PENDIENTE** (link a GitHub Actions del PR)
+Cada PR corre el CI de GitHub Actions (lint, pruebas y cobertura) y requiere una aprobación antes del merge.
+
+| Repo | PR | Checks del CI |
+|---|---|---|
+| SCD_TP_F | #80 formato | [checks](https://github.com/Martin12332124/SCD_TP_F/pull/80/checks) |
+| SCD_TP_F | #81 api.js | [checks](https://github.com/Martin12332124/SCD_TP_F/pull/81/checks) |
+| SCD_TP_F | #82 modularización + ficha | [checks](https://github.com/Martin12332124/SCD_TP_F/pull/82/checks) |
+| SCD_TP_F | #83 uso de api.js | [checks](https://github.com/Martin12332124/SCD_TP_F/pull/83/checks) |
+| SCD_TP_B | #47 handlers de socket | [checks](https://github.com/Martin12332124/SCD_TP_B/pull/47/checks) |
+| Ambos | Historial completo | [Actions F](https://github.com/Martin12332124/SCD_TP_F/actions) · [Actions B](https://github.com/Martin12332124/SCD_TP_B/actions) |
+
+Resultado local sobre `dev` final: frontend 163/163 pruebas, cobertura 97,55 % · backend 145/145 pruebas, cobertura 93,45 %.
 
 ---
 
@@ -168,6 +195,7 @@ npm run lint && npm run build && npm run test:ci
 
 | Deuda | Motivo para dejarla | Responsable | Condición de revisión |
 |---|---|---|---|
-| `mesas.router.js` llama a `mesaEstadoService._validarNumero`, un método privado, desde fuera del servicio | Cambiarlo toca el contrato del servicio y sus pruebas; queda fuera del alcance de esta guía | **PENDIENTE** | Al agregar otra ruta que valide número de mesa |
-| La tabla `HTTP_STATUS` está repetida en `mesas.router.js` y `menu-items.router.js` | Son tablas distintas (cada una mapea sus propios tipos de error) | **PENDIENTE** | Si aparece un tercer router |
-| `App.jsx` (≈745 líneas) y `TomaPedido.jsx` (≈725 líneas) siguen siendo extensos, sobre todo por los estilos en línea | Separar estilos y subcomponentes es un cambio grande que no aporta a las intervenciones elegidas | **PENDIENTE** | Antes de agregar una vista nueva |
+| `mesas.router.js` llama a `mesaEstadoService._validarNumero`, un método privado, desde fuera del servicio | Cambiarlo toca el contrato del servicio y sus pruebas; queda fuera del alcance de esta guía | Francisca Hernández | Al agregar otra ruta que valide número de mesa |
+| La tabla `HTTP_STATUS` está repetida en `mesas.router.js` y `menu-items.router.js` | Son tablas distintas (cada una mapea sus propios tipos de error) | Francisca Hernández | Si aparece un tercer router |
+| `App.jsx` (≈745 líneas) y `TomaPedido.jsx` (≈725 líneas) siguen siendo extensos, sobre todo por los estilos en línea | Separar estilos y subcomponentes es un cambio grande que no aporta a las intervenciones elegidas | Martín Saldívar | Antes de agregar una vista nueva |
+| `engine.io@6.6.9` con vulnerabilidad alta (GHSA-2gc4-cqfq-p2gv), y otras 24 alertas de `npm audit` en el backend y 10 en el frontend, todas en dependencias indirectas | Actualizar dependencias es un cambio aparte de la refactorización y debe ir en su propio PR con las pruebas de socket | Francisca Hernández | Antes de la entrega final o de exponer el backend fuera de la red local |
