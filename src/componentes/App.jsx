@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
-import { validarNumeroMesa } from './validaciones';
-import { formatearTiempo } from './utils/formato';
-import { API_URL, obtenerMesas } from './servicios/api';
+import { validarNumeroMesa } from '../validaciones/validaciones';
+import { formatearTiempo } from '../utils/formato';
+import { API_URL, obtenerMesas } from '../servicios/api';
 import MapaMesas from './MapaMesas';
 import DetalleMesa from './DetalleMesa';
 import TomaPedido from './TomaPedido';

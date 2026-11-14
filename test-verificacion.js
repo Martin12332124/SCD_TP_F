@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { io } from 'socket.io-client';
-import { validarNumeroMesa } from './src/validaciones.js';
+import { validarNumeroMesa } from './src/validaciones/validaciones.js';
 
 console.log('========================================================');
 console.log(' EJECUTANDO PRUEBAS DE CONSTRUCCIÓN PARA LA VERIFICACIÓN');
