@@ -99,6 +99,21 @@ Regla de dependencias: `componentes/` usa `servicios/`, `utils/` y `validaciones
 | `src/infraestructura/` | Datos y notificaciones | `repositorios.js`, `notificador.js` |
 | `src/app.js` | Composición: crea servicios y monta rutas y socket | — |
 
+### Operaciones que ofrece cada módulo
+
+| Repo | Módulo | Operaciones públicas | Quién lo usa |
+|---|---|---|---|
+| F | `servicios/api.js` | `API_URL`, `obtenerMesas()`, `obtenerPedidoMesa(n)`, `abrirMesa(n)`, `cerrarMesa(n)`, `obtenerMenu()` | `App`, `DetalleMesa`, `TomaPedido`, `scripts/probar-api.mjs` |
+| F | `utils/formato.js` | `formatearPrecio(precio)`, `formatearTiempo(segundos)` | `App`, `DetalleMesa`, `TomaPedido` |
+| F | `validaciones/validaciones.js` | `validarNumeroMesa(valor)`, `validarCantidad(valor)`, `CANTIDAD_MINIMA`, `CANTIDAD_MAXIMA` | `App`, `TomaPedido` |
+| F | `componentes/` | Un componente React por archivo (`export default`): `App`, `MapaMesas`, `DetalleMesa`, `TomaPedido`, `SelectorTema` | `main.jsx` monta `App`; `App` compone al resto |
+| B | `presentacion/` | `crearMesasRouter(deps)`, `crearMenuItemsRouter(deps)`, `registrarHandlersSocket(io, deps)`, `responderSeguro(socket, opciones)` | `app.js` |
+| B | `dominio/` | `PedidoService` (`actualizarEstado`, `confirmarPedido`, `obtenerResumen`) · `MesaService` (`trasladarPedido`) · `MesaEstadoService` (`abrirMesa`, `cerrarMesa`) · `MenuItemService` (`crearItem`, `editarItem`, `cambiarDisponibilidad`, `obtenerItem`, `listarItems`) | `presentacion/` |
+| B | `infraestructura/` | `PedidosEnMemoria`, `MesasEnMemoria`, `MenuItemsEnMemoria` (repositorios) · `SocketNotificador` | Servicios de `dominio/`, inyectados desde `app.js` |
+| B | `app.js` | `crearApp()`: crea los repositorios y servicios, monta las rutas y registra el socket | `index.js` y las pruebas |
+
+Las reglas compartidas viven en un solo lugar: el formato de moneda en `utils/formato.js`, los rangos de entrada en `validaciones/validaciones.js` y la URL del servidor en `servicios/api.js`.
+
 ---
 
 ## 3. Interfaz del componente reutilizable — `src/servicios/api.js`
