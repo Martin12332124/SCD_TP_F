@@ -391,7 +391,9 @@ const estilos = {
     height: 'var(--toque)',
     flexShrink: 0,
     background: 'var(--color-superficie-alt)',
-    border: '2px solid var(--color-texto-suave)',
+    borderStyle: 'solid',
+    borderWidth: '2px',
+    borderColor: 'var(--color-texto-suave)',
     borderRadius: 'var(--radio-m)',
     fontSize: '20px',
     fontWeight: 700,
@@ -410,7 +412,8 @@ const estilos = {
   aviso: {
     padding: '12px 14px',
     borderRadius: 'var(--radio-m)',
-    border: '2px solid',
+    borderStyle: 'solid',
+    borderWidth: '2px',
     fontSize: '16px',
     fontWeight: 600,
     margin: '0 0 16px',
@@ -441,7 +444,8 @@ const estilos = {
     minHeight: 'var(--toque)',
     padding: '12px 14px',
     marginBottom: '10px',
-    border: '2px solid',
+    borderStyle: 'solid',
+    borderWidth: '2px',
     borderRadius: 'var(--radio-m)',
     fontSize: '17px',
     fontWeight: 700,
@@ -474,7 +478,9 @@ const estilos = {
   // La cuenta se presenta como un ticket de restaurante
   ticket: {
     background: 'var(--color-superficie-alt)',
-    border: '1px solid var(--color-borde)',
+    borderStyle: 'solid',
+    borderWidth: '1px',
+    borderColor: 'var(--color-borde)',
     borderRadius: 'var(--radio-m)',
     padding: '12px 16px'
   },

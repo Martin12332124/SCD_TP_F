@@ -156,7 +156,9 @@ const estilos = {
     fontWeight: 700,
     textAlign: 'center',
     borderRadius: 'var(--radio-s)',
-    border: '2px solid transparent'
+    borderStyle: 'solid',
+    borderWidth: '2px',
+    borderColor: 'transparent'
   },
   pasoPendiente: {
     background: 'var(--color-superficie-alt)',
@@ -174,7 +176,8 @@ const estilos = {
     minHeight: 'var(--toque)',
     padding: '12px 14px',
     marginBottom: '10px',
-    border: '2px solid',
+    borderStyle: 'solid',
+    borderWidth: '2px',
     borderRadius: 'var(--radio-m)',
     fontSize: '17px',
     fontWeight: 700,

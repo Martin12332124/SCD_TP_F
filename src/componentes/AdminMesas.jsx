@@ -261,7 +261,9 @@ const estilos = {
   botonVolver: {
     minHeight: 'var(--toque)',
     padding: '10px 18px',
-    border: '2px solid var(--color-encabezado-texto)',
+    borderStyle: 'solid',
+    borderWidth: '2px',
+    borderColor: 'var(--color-encabezado-texto)',
     borderRadius: 'var(--radio-m)',
     background: 'transparent',
     color: 'var(--color-encabezado-texto)',
@@ -281,7 +283,8 @@ const estilos = {
   aviso: {
     padding: '12px 16px',
     marginBottom: '18px',
-    border: '2px solid',
+    borderStyle: 'solid',
+    borderWidth: '2px',
     borderRadius: 'var(--radio-m)',
     fontSize: '16px',
     fontWeight: 600
@@ -298,7 +301,9 @@ const estilos = {
   },
   bloque: {
     background: 'var(--color-superficie)',
-    border: '1px solid var(--color-borde)',
+    borderStyle: 'solid',
+    borderWidth: '1px',
+    borderColor: 'var(--color-borde)',
     borderRadius: 'var(--radio-l)',
     padding: '20px',
     marginBottom: '20px'
@@ -310,7 +315,8 @@ const estilos = {
   boton: {
     minHeight: 'var(--toque)',
     padding: '12px 18px',
-    border: '2px solid',
+    borderStyle: 'solid',
+    borderWidth: '2px',
     borderRadius: 'var(--radio-m)',
     fontSize: '17px',
     fontWeight: 700,
@@ -348,7 +354,9 @@ const estilos = {
     fontSize: '19px',
     color: 'var(--color-texto)',
     background: 'var(--color-fondo)',
-    border: '2px solid var(--color-texto-suave)',
+    borderStyle: 'solid',
+    borderWidth: '2px',
+    borderColor: 'var(--color-texto-suave)',
     borderRadius: 'var(--radio-m)'
   },
   botonFormulario: {
@@ -393,7 +401,8 @@ const estilos = {
   botonFila: {
     minHeight: 'var(--toque)',
     padding: '8px 16px',
-    border: '2px solid',
+    borderStyle: 'solid',
+    borderWidth: '2px',
     borderRadius: 'var(--radio-m)',
     fontSize: '16px',
     fontWeight: 700,

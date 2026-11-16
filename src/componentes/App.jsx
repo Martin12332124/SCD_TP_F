@@ -276,7 +276,8 @@ const estilos = {
   aviso: {
     padding: '12px 16px',
     borderRadius: 'var(--radio-m)',
-    border: '2px solid',
+    borderStyle: 'solid',
+    borderWidth: '2px',
     fontSize: '16px',
     fontWeight: 600,
     lineHeight: 1.5
@@ -288,7 +289,9 @@ const estilos = {
   },
   tarjeta: {
     background: 'var(--color-superficie)',
-    border: '1px solid var(--color-borde)',
+    borderStyle: 'solid',
+    borderWidth: '1px',
+    borderColor: 'var(--color-borde)',
     borderRadius: 'var(--radio-l)',
     boxShadow: 'var(--sombra-1)',
     padding: '24px'

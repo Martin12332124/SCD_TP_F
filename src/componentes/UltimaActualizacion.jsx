@@ -23,7 +23,10 @@ function UltimaActualizacion({ ultimoPedido, segundos }) {
       aria-label="Último cambio"
       style={{
         ...estilos.franja,
-        borderLeftColor: visual ? `var(--mesa-${visual.clave})` : 'var(--color-borde)'
+        // Franja izquierda gruesa con el color del estado; el resto del borde, neutro
+        borderColor: `var(--color-borde) var(--color-borde) var(--color-borde) ${
+          visual ? `var(--mesa-${visual.clave})` : 'var(--color-borde)'
+        }`
       }}
     >
       <div style={estilos.texto}>
@@ -67,8 +70,8 @@ const estilos = {
     gap: '14px 24px',
     padding: '16px 22px',
     background: 'var(--color-superficie)',
-    border: '1px solid var(--color-borde)',
-    borderLeft: '10px solid',
+    borderStyle: 'solid',
+    borderWidth: '1px 1px 1px 10px',
     borderRadius: 'var(--radio-l)',
     boxShadow: 'var(--sombra-1)'
   },
@@ -108,12 +111,15 @@ const estilos = {
   estadoNeutro: {
     background: 'var(--color-superficie-alt)',
     color: 'var(--color-texto)',
-    border: '2px solid var(--color-borde)'
+    borderStyle: 'solid',
+    borderWidth: '2px',
+    borderColor: 'var(--color-borde)'
   },
   contador: {
     padding: '10px 16px',
     borderRadius: 'var(--radio-m)',
-    border: '2px solid',
+    borderStyle: 'solid',
+    borderWidth: '2px',
     fontFamily: 'var(--fuente-mono)',
     fontSize: '22px',
     fontWeight: 700,
