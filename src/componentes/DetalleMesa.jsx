@@ -26,6 +26,7 @@ import {
   cerrarMesa as cerrarMesaApi
 } from '../servicios/api';
 import AvancePedido from './AvancePedido';
+import Icono from './Icono';
 import TrasladoMesa from './TrasladoMesa';
 
 function DetalleMesa({
@@ -195,7 +196,7 @@ function DetalleMesa({
                 color: `var(--mesa-${visual.clave}-texto)`
               }}
             >
-              <span aria-hidden="true">{visual.icono}</span> {visual.etiqueta}
+              <Icono nombre={visual.icono} tamano={26} /> {visual.etiqueta}
             </div>
 
             {/* US-09: resultado de la última acción (abrir/liberar) */}

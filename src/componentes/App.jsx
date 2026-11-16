@@ -8,23 +8,22 @@ import DetalleMesa from './DetalleMesa';
 import TomaPedido from './TomaPedido';
 import AdminMesas from './AdminMesas';
 import Encabezado from './Encabezado';
-import UltimaActualizacion from './UltimaActualizacion';
+import RielComandas from './RielComandas';
+import { comandasActivas } from '../utils/tiempoComanda';
 
 // Conexión socket.io al backend (la URL viene de servicios/api.js)
 const socket = io(API_URL);
 
 function App() {
   const [conectado, setConectado] = useState(false);
-  // Estado para mostrar el último pedido actualizado que llega del backend
-  const [ultimoPedido, setUltimoPedido] = useState({ mesa: 'Ninguna', estado: 'Sin Pedidos' });
   // Rechazo del último cambio de estado del pedido (validación del frontend o del backend)
   const [errorValidacion, setErrorValidacion] = useState('');
 
-  // NUEVO: Estado para el contador de tiempo en segundos
-  const [segundos, setSegundos] = useState(0);
-
   // NUEVO: Estado para el estado de las mesas en tiempo real
   const [mesas, setMesas] = useState([]);
+
+  // Hora actual en ms, para los temporizadores del riel de comandas
+  const [ahora, setAhora] = useState(() => Date.now());
 
   // US-05: resultado del último traslado, que se muestra en el panel de la mesa
   const [mensajeTraslado, setMensajeTraslado] = useState('');
@@ -54,13 +53,16 @@ function App() {
     // Escuchar cuando la cocina o el backend actualizan un pedido
     socket.on('cambio_estado_pedido', (datos) => {
       // datos esperados: { mesa: 'Mesa 5', estado: 'En Cocina 🍳' }
-      setUltimoPedido({ mesa: datos.mesa, estado: datos.estado });
-      setSegundos(0); // NUEVO: Resetea el reloj a 0 con cada cambio de estado
-      // El mapa muestra en qué va el pedido de cada mesa. El backend no reenvía
-      // 'estado_mesas' en cada cambio de estado del pedido, así que se actualiza aquí.
+      // El mapa y el riel de comandas muestran en qué va el pedido de cada mesa y desde
+      // cuándo. El backend no reenvía 'estado_mesas' en cada cambio de estado del pedido,
+      // así que se actualiza aquí: el cambio acaba de ocurrir, su tiempo parte en 00:00.
+      const ahoraIso = new Date().toISOString();
       setMesas((prev) =>
-        prev.map((m) => (m.id === datos.mesa ? { ...m, estadoPedido: datos.estado } : m))
+        prev.map((m) =>
+          m.id === datos.mesa ? { ...m, estadoPedido: datos.estado, pedidoDesde: ahoraIso } : m
+        )
       );
+      setAhora(Date.now());
       // La cuenta del panel abierto se vuelve a cargar con el pedido actualizado
       setVersionPedidos((v) => v + 1);
     });
@@ -69,6 +71,7 @@ function App() {
     // US-08 CA3: reflejar cambios en tiempo real también en la mesa seleccionada
     socket.on('estado_mesas', (datos) => {
       setMesas(datos);
+      setAhora(Date.now()); // los tiempos de las comandas se calculan con la hora actual
       // Si la mesa seleccionada ya no existe (la quitaron), su panel se cierra
       setIdSeleccionada((prev) => (datos.some((m) => m.id === prev) ? prev : null));
     });
@@ -114,7 +117,10 @@ function App() {
   useEffect(() => {
     obtenerMesas()
       .then((data) => {
-        if (data.ok) setMesas(data.mesas);
+        if (data.ok) {
+          setMesas(data.mesas);
+          setAhora(Date.now());
+        }
       })
       .catch(() => {
         // Si falla el fetch inicial, el socket completará la carga al conectar
@@ -122,29 +128,22 @@ function App() {
       });
   }, []);
 
-  // NUEVO: useEffect encargado de controlar el avance del tiempo y el límite de desbordamiento
+  // Abre el panel de una mesa (desde el plano o desde su comanda en el riel)
+  const abrirMesa = (m) => {
+    setIdSeleccionada(m.id);
+    // los avisos anteriores no pertenecen a esta mesa
+    setErrorValidacion('');
+    setMensajeTraslado('');
+  };
+
+  // Temporizadores de las comandas: un solo reloj para todas, que avanza cada segundo
+  // mientras haya alguna comanda en curso (cada ticket calcula su tiempo con `ahora`).
+  const hayComandas = comandasActivas(mesas).length > 0;
   useEffect(() => {
-    // El tiempo solo corre si el pedido no está "Listo" ni "Sin Pedidos"
-    const pedidoActivo =
-      ultimoPedido.estado !== 'Sin Pedidos' && ultimoPedido.estado !== 'Listo 🍽️';
-    let intervalo = null;
-
-    if (conectado && pedidoActivo) {
-      intervalo = setInterval(() => {
-        setSegundos((tiempoPrevio) => {
-          // Límite estricto para evitar desbordamiento visual (99 minutos y 59 segundos = 5999s)
-          if (tiempoPrevio >= 5999) {
-            clearInterval(intervalo);
-            return 5999;
-          }
-          return tiempoPrevio + 1;
-        });
-      }, 1000);
-    }
-
+    if (!hayComandas) return undefined;
+    const intervalo = setInterval(() => setAhora(Date.now()), 1000);
     return () => clearInterval(intervalo);
-  }, [conectado, ultimoPedido.estado]);
-
+  }, [hayComandas]);
 
   // Pide al backend pasar el pedido de una mesa a un estado, desde el panel de esa mesa.
   const actualizarPedido = (valorMesa, nuevoEstado) => {
@@ -196,8 +195,10 @@ function App() {
         }}
       />
 
+      {/* Riel de comandas: un ticket por cada pedido en curso, con su temporizador */}
+      <RielComandas mesas={mesas} ahora={ahora} onSeleccionar={(m) => abrirMesa(m)} />
+
       <main style={estilos.contenido}>
-        <UltimaActualizacion ultimoPedido={ultimoPedido} segundos={segundos} />
 
         {/* Alerta de validación o de rechazo del backend. Con el panel de una mesa abierto,
             el aviso se muestra dentro del panel (que tapa esta zona). */}
@@ -212,12 +213,7 @@ function App() {
           <MapaMesas
             mesas={mesas}
             mesaSeleccionada={mesaSeleccionada}
-            onSeleccionar={(m) => {
-              setIdSeleccionada(m.id);
-              // los avisos anteriores no pertenecen a esta mesa
-              setErrorValidacion('');
-              setMensajeTraslado('');
-            }}
+            onSeleccionar={(m) => abrirMesa(m)}
           />
         </section>
 

@@ -92,11 +92,12 @@ describe('App: sin escribir números de mesa', () => {
 });
 
 describe('App: eventos del servidor', () => {
-  test('cambio_estado_pedido actualiza el último pedido y muestra el contador', async () => {
+  test('cambio_estado_pedido pone la comanda de esa mesa en el riel con su tiempo en 00:00', async () => {
     await renderizarConectado();
-    await servidor('cambio_estado_pedido', { mesa: 'Mesa 4', estado: 'Recibido 📝' });
-    expect(screen.getByText(/Mesa 4/, { selector: 'span' })).toBeInTheDocument();
-    expect(screen.getByText(/⏱️ 00:00/)).toBeInTheDocument();
+    await servidor('cambio_estado_pedido', { mesa: 'Mesa 2', estado: 'Recibido 📝' });
+    const comanda = document.getElementById('comanda-2');
+    expect(comanda).toHaveTextContent('Mesa 2');
+    expect(comanda.querySelector('[data-tiempo]')).toHaveTextContent('00:00');
   });
 
   test('cambio_estado_pedido actualiza el estado de esa mesa en el mapa', async () => {
@@ -372,26 +373,27 @@ describe('App: interfaz visual (#77)', () => {
     expect(within(encabezado).getByRole('button', { name: /Modo (claro|oscuro)/ })).toBeVisible();
   });
 
-  test('sin pedidos el estado usa el tono neutro y no hay contador', async () => {
+  test('sin pedidos el riel lo dice y no hay temporizadores', async () => {
     await renderizarConectado();
-    expect(document.getElementById('ultimo-estado').style.background).toBe(
-      'var(--color-superficie-alt)'
-    );
-    expect(screen.queryByText(/⏱️/)).not.toBeInTheDocument();
+    expect(document.getElementById('resumen-comandas')).toHaveTextContent('Sin comandas en curso');
+    expect(document.querySelector('[data-tiempo]')).not.toBeInTheDocument();
   });
 
   test.each([
-    ['Recibido 📝', 'recibido'],
-    ['En Cocina 🍳', 'cocina'],
-    ['Listo 🍽️', 'listo']
-  ])('el último estado "%s" usa el mismo color que la mesa en el plano', async (estado, clave) => {
-    await renderizarConectado();
-    await servidor('cambio_estado_pedido', { mesa: 'Mesa 4', estado });
-    const bloque = document.getElementById('ultimo-estado');
-    expect(bloque).toHaveTextContent(estado);
-    expect(bloque.style.background).toBe(`var(--mesa-${clave})`);
-    expect(bloque.style.color).toBe(`var(--mesa-${clave}-texto)`);
-  });
+    ['Recibido 📝', 'recibido', 'Pedido tomado'],
+    ['En Cocina 🍳', 'cocina', 'En cocina'],
+    ['Listo 🍽️', 'listo', 'Pedido listo']
+  ])(
+    'la comanda en "%s" usa el mismo color y nombre que la mesa en el plano',
+    async (estado, clave, etiqueta) => {
+      await renderizarConectado();
+      await servidor('cambio_estado_pedido', { mesa: 'Mesa 2', estado });
+      const comanda = document.getElementById('comanda-2');
+      expect(comanda).toHaveAttribute('data-estado', clave);
+      expect(comanda).toHaveTextContent(etiqueta);
+      expect(screen.getByTitle(`Mesa 2 — ${etiqueta}`)).toHaveAttribute('data-estado', clave);
+    }
+  );
 
   test('un rechazo del backend sin panel abierto se anuncia como alerta', async () => {
     await renderizarConectado();
@@ -414,7 +416,70 @@ describe('App: interfaz visual (#77)', () => {
   });
 });
 
-describe('App: contador del pedido activo', () => {
+describe('App: riel de comandas con varias mesas', () => {
+  const conPedidos = [
+    { id: 'Mesa 1', numero: 1, estado: 'libre', estadoPedido: null, pedidoDesde: null },
+    {
+      id: 'Mesa 3',
+      numero: 3,
+      estado: 'ocupada',
+      estadoPedido: 'En Cocina 🍳',
+      pedidoDesde: new Date(Date.now() - 5 * 60 * 1000).toISOString()
+    },
+    {
+      id: 'Mesa 4',
+      numero: 4,
+      estado: 'ocupada',
+      estadoPedido: 'Recibido 📝',
+      pedidoDesde: new Date(Date.now() - 60 * 1000).toISOString()
+    },
+    { id: 'Mesa 6', numero: 6, estado: 'libre', estadoPedido: null, pedidoDesde: null }
+  ];
+
+  test('muestra todas las comandas en curso, no solo la última', async () => {
+    await renderizarConectado();
+    await servidor('estado_mesas', conPedidos);
+    expect(document.getElementById('comanda-3')).toBeInTheDocument();
+    expect(document.getElementById('comanda-4')).toBeInTheDocument();
+    expect(document.getElementById('resumen-comandas')).toHaveTextContent('2 en curso');
+  });
+
+  test('al trasladar un pedido, su comanda pasa a la mesa nueva con el mismo tiempo', async () => {
+    await renderizarConectado();
+    await servidor('estado_mesas', conPedidos);
+    const antes = document.getElementById('comanda-3').querySelector('[data-tiempo]').textContent;
+
+    // El backend avisa el traslado 3 → 6 con la lista de mesas actualizada
+    await servidor('estado_mesas', [
+      conPedidos[0],
+      { ...conPedidos[1], estado: 'libre', estadoPedido: null, pedidoDesde: null },
+      conPedidos[2],
+      { ...conPedidos[1], id: 'Mesa 6', numero: 6 }
+    ]);
+
+    expect(document.getElementById('comanda-3')).not.toBeInTheDocument();
+    const comanda6 = document.getElementById('comanda-6');
+    expect(comanda6).toHaveTextContent('Mesa 6');
+    expect(comanda6.querySelector('[data-tiempo]').textContent).toBe(antes);
+  });
+
+  test('tocar una comanda abre el panel de esa mesa', async () => {
+    await renderizarConectado();
+    await servidor('estado_mesas', conPedidos);
+    await userEvent.click(document.getElementById('comanda-4'));
+    expect(screen.getByRole('dialog', { name: 'Detalle de la mesa 4' })).toBeInTheDocument();
+  });
+
+  test('cuando un pedido se cierra (mesa liberada), su comanda sale del riel', async () => {
+    await renderizarConectado();
+    await servidor('estado_mesas', conPedidos);
+    await servidor('estado_mesas', [conPedidos[0], conPedidos[2], conPedidos[3]]);
+    expect(document.getElementById('comanda-3')).not.toBeInTheDocument();
+    expect(document.getElementById('resumen-comandas')).toHaveTextContent('1 en curso');
+  });
+});
+
+describe('App: temporizador de cada comanda', () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -427,25 +492,39 @@ describe('App: contador del pedido activo', () => {
   async function pedidoEnCocinaDurante(segundos) {
     render(<App />);
     await servidor('connect');
-    await servidor('cambio_estado_pedido', { mesa: 'Mesa 4', estado: 'En Cocina 🍳' });
+    await servidor('estado_mesas', mesasBase);
+    await servidor('cambio_estado_pedido', { mesa: 'Mesa 2', estado: 'En Cocina 🍳' });
     act(() => vi.advanceTimersByTime(segundos * 1000));
-    return screen.getByText(/⏱️/);
+    return document.getElementById('comanda-2');
   }
 
-  test('antes de 15 minutos el contador usa el tono normal', async () => {
-    const contador = await pedidoEnCocinaDurante(900);
-    expect(contador).toHaveTextContent('⏱️ 15:00');
-    expect(contador.style.color).toBe('var(--color-acento-texto)');
+  const tiempo = (comanda) => comanda.querySelector('[data-tiempo]');
+
+  test('hasta 15 minutos la comanda queda normal', async () => {
+    const comanda = await pedidoEnCocinaDurante(900);
+    expect(tiempo(comanda)).toHaveTextContent('15:00');
+    expect(comanda).toHaveAttribute('data-urgencia', 'normal');
+    expect(comanda.style.background).toBe('var(--papel)');
   });
 
-  test('pasados 15 minutos el contador cambia al tono de alerta', async () => {
-    const contador = await pedidoEnCocinaDurante(901);
-    expect(contador).toHaveTextContent('⏱️ 15:01');
-    expect(contador.style.color).toBe('var(--color-peligro-texto)');
+  test('pasados 15 minutos toda la comanda cambia al tono de atención', async () => {
+    const comanda = await pedidoEnCocinaDurante(901);
+    expect(tiempo(comanda)).toHaveTextContent('15:01');
+    expect(comanda).toHaveAttribute('data-urgencia', 'atencion');
+    expect(comanda.style.background).toBe('var(--papel-atencion)');
+    expect(comanda).toHaveTextContent('Más de 15 min');
   });
 
-  test('el contador se detiene en 99:59 para no desbordar', async () => {
-    const contador = await pedidoEnCocinaDurante(6100);
-    expect(contador).toHaveTextContent('⏱️ 99:59');
+  test('pasados 20 minutos la comanda queda roja y dice "Atrasado"', async () => {
+    const comanda = await pedidoEnCocinaDurante(1201);
+    expect(comanda).toHaveAttribute('data-urgencia', 'atrasado');
+    expect(comanda.style.background).toBe('var(--papel-atraso)');
+    expect(comanda).toHaveTextContent('Atrasado');
+    expect(document.getElementById('resumen-comandas')).toHaveTextContent('1 en curso, 1 atrasada');
+  });
+
+  test('el temporizador se detiene en 99:59 para no desbordar', async () => {
+    const comanda = await pedidoEnCocinaDurante(6100);
+    expect(tiempo(comanda)).toHaveTextContent('99:59');
   });
 });

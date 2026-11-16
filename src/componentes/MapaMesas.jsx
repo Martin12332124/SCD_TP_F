@@ -9,6 +9,7 @@
 //   onSeleccionar     {Function}    - Callback al tocar una mesa
 
 import { estadoVisualMesa, contarEstados } from '../utils/estadoMesa';
+import Icono from './Icono';
 
 const plural = (cantidad, singular, pluralizado) => (cantidad === 1 ? singular : pluralizado);
 
@@ -83,8 +84,8 @@ function MapaMesas({ mesas, mesaSeleccionada, onSeleccionar }) {
                 {SILLAS.map((posicion, i) => (
                   <span key={i} aria-hidden="true" style={{ ...estilos.silla, ...posicion }} />
                 ))}
-                <span aria-hidden="true" style={estilos.icono}>
-                  {visual.icono}
+                <span style={estilos.icono}>
+                  <Icono nombre={visual.icono} tamano={28} />
                 </span>
                 <span style={estilos.numero}>Mesa {m.numero}</span>
                 {/* US-08 CA2: estado explícito en texto, no solo color */}

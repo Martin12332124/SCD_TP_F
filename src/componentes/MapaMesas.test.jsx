@@ -115,7 +115,8 @@ describe('MapaMesas: estado del pedido de cada mesa', () => {
     renderizar();
     const claves = ['libre', 'ocupada', 'recibido', 'cocina', 'listo'];
     claves.forEach((clave, i) => {
-      expect(document.getElementById(`mesa-${i + 1}`)).toHaveTextContent(ESTADOS_MESA[clave].icono);
+      const mesa = document.getElementById(`mesa-${i + 1}`);
+      expect(mesa.querySelector(`svg[data-icono="${ESTADOS_MESA[clave].icono}"]`)).not.toBeNull();
     });
   });
 

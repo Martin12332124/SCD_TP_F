@@ -48,7 +48,8 @@ test('se revisaron todos los componentes', () => {
       'TomaPedido.jsx',
       'SelectorTema.jsx',
       'Encabezado.jsx',
-      'UltimaActualizacion.jsx',
+      'RielComandas.jsx',
+      'Icono.jsx',
       'AvancePedido.jsx',
       'TrasladoMesa.jsx',
       'AdminMesas.jsx'

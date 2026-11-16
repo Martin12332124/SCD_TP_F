@@ -56,6 +56,22 @@
   --piso-linea: rgba(90, 30, 8, 0.08);
   --mesa-silla: #8a6b52;
 
+  /*
+   * Riel de comandas: el riel es de pizarra con barra de latón, y los tickets son de papel
+   * (papel claro en ambos temas, como un ticket impreso real). Los papeles de alerta
+   * cambian todo el ticket a los 15 y 20 minutos (REF-04). Contrastes: tinta/papel 16.2,
+   * atención 10.4, atraso 6.5, texto/pizarra 13.2, latón/pizarra 7.3.
+   */
+  --pizarra: #1f2723;
+  --pizarra-texto: #f3eee4;
+  --laton: #d4ae5c;
+  --papel: #fffaf0;
+  --tinta: #231c14;
+  --papel-atencion: #ffd66b;
+  --papel-atencion-texto: #3a2600;
+  --papel-atraso: #b3261e;
+  --papel-atraso-texto: #ffffff;
+
   /* Tamaño mínimo de botones y zonas táctiles (uso en tablet) */
   --toque: 52px;
 
@@ -75,6 +91,7 @@
   --fuente-titulo: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
   --fuente-texto: 'Avenir Next', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
   --fuente-mono: ui-monospace, 'SF Mono', Consolas, monospace;
+  --fuente-condensada: 'Arial Narrow', 'Roboto Condensed', sans-serif;
 
   color-scheme: light;
   font: 16px/1.55 var(--fuente-texto);
@@ -117,6 +134,8 @@
     --piso: #1b1512;
     --piso-linea: rgba(255, 255, 255, 0.05);
     --mesa-silla: #6b5546;
+    --pizarra: #121614;
+    --papel: #efe6d2;
     --color-peligro-texto: #ff8e7d;
     --color-peligro-suave: #3b1d18;
     --color-neutro: #5e5149;
@@ -159,6 +178,8 @@
   --piso: #1b1512;
   --piso-linea: rgba(255, 255, 255, 0.05);
   --mesa-silla: #6b5546;
+  --pizarra: #121614;
+  --papel: #efe6d2;
   --color-peligro-texto: #ff8e7d;
   --color-peligro-suave: #3b1d18;
   --color-neutro: #5e5149;

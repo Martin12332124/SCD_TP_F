@@ -5,13 +5,16 @@
 
 import { ESTADO_RECIBIDO, ESTADO_EN_COCINA, ESTADO_LISTO } from './flujoPedido';
 
-/** Los cinco estados que puede mostrar una mesa. El ícono acompaña al color (REF-05). */
+/**
+ * Los cinco estados que puede mostrar una mesa. El ícono (nombre de un trazo de
+ * componentes/Icono.jsx) acompaña al color, para no depender solo del color (REF-05).
+ */
 export const ESTADOS_MESA = {
-  libre: { clave: 'libre', etiqueta: 'Libre', icono: '🪑' },
-  ocupada: { clave: 'ocupada', etiqueta: 'Ocupada', icono: '🍷' },
-  recibido: { clave: 'recibido', etiqueta: 'Pedido tomado', icono: '📝' },
-  cocina: { clave: 'cocina', etiqueta: 'En cocina', icono: '🍳' },
-  listo: { clave: 'listo', etiqueta: 'Pedido listo', icono: '🍽️' }
+  libre: { clave: 'libre', etiqueta: 'Libre', icono: 'silla' },
+  ocupada: { clave: 'ocupada', etiqueta: 'Ocupada', icono: 'personas' },
+  recibido: { clave: 'recibido', etiqueta: 'Pedido tomado', icono: 'libreta' },
+  cocina: { clave: 'cocina', etiqueta: 'En cocina', icono: 'olla' },
+  listo: { clave: 'listo', etiqueta: 'Pedido listo', icono: 'campana' }
 };
 
 const CLAVE_POR_PEDIDO = {
