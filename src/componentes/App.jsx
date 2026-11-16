@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { validarNumeroMesa } from '../validaciones/validaciones';
 import { formatearTiempo } from '../utils/formato';
-import { API_URL, obtenerMesas } from '../servicios/api';
+import { FLUJO_PEDIDO, pasosHastaEstado } from '../utils/flujoPedido';
+import { API_URL, obtenerMesas, obtenerPedidoMesa } from '../servicios/api';
 import MapaMesas from './MapaMesas';
 import DetalleMesa from './DetalleMesa';
 import TomaPedido from './TomaPedido';
@@ -177,15 +178,29 @@ function App() {
     }
 
     // 2. VALIDACIÓN: Lista estricta de estados permitidos en el restaurante
-    const ESTADOS_PERMITIDOS = ['Recibido 📝', 'En Cocina 🍳', 'Listo 🍽️'];
-    if (!ESTADOS_PERMITIDOS.includes(nuevoEstado)) {
+    if (!FLUJO_PEDIDO.includes(nuevoEstado)) {
       setErrorValidacion('⚠️ Estado de pedido no reconocido.');
       return; // Frena el envío por socket
     }
 
-    // 3. Envío seguro al backend si pasa las validaciones
-    console.log(`Enviando actualización válida para Mesa ${resultadoMesa.numero}: ${nuevoEstado}`);
-    socket.emit('actualizar_pedido', { mesa: `Mesa ${resultadoMesa.numero}`, estado: nuevoEstado });
+    const numero = resultadoMesa.numero;
+    const enviar = (estado) => {
+      console.log(`Enviando actualización válida para Mesa ${numero}: ${estado}`);
+      socket.emit('actualizar_pedido', { mesa: `Mesa ${numero}`, estado });
+    };
+
+    // 3. Si la mesa ya está abierta (ocupada), no se obliga a pasar antes por "Tomar Pedido":
+    //    se consulta el pedido vigente y se envían, en orden, los pasos que falten.
+    const mesaAbierta = mesas.find((m) => m.numero === numero)?.estado === 'ocupada';
+    if (!mesaAbierta || nuevoEstado === FLUJO_PEDIDO[0]) {
+      enviar(nuevoEstado);
+      return;
+    }
+
+    obtenerPedidoMesa(numero)
+      .then((data) => (data.ok ? (data.estado ?? null) : null))
+      .catch(() => null)
+      .then((estadoActual) => pasosHastaEstado(estadoActual, nuevoEstado).forEach(enviar));
   };
 
   // Operación 3 (US-05): Traslada el pedido activo de una mesa a otra
@@ -319,7 +334,11 @@ function App() {
             <MapaMesas
               mesas={mesas}
               mesaSeleccionada={mesaSeleccionada}
-              onSeleccionar={(m) => setMesaSeleccionada(m)}
+              onSeleccionar={(m) => {
+                setMesaSeleccionada(m);
+                // Elegir la mesa con un clic equivale a escribir su número en el panel de control
+                manejarCambioMesa(String(m.numero));
+              }}
             />
           </section>
 

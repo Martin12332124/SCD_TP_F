@@ -2,7 +2,7 @@
 // mapa de mesas (US-08) y traslado de mesa (US-05).
 // socket.io-client y fetch se sustituyen por dobles: no se usa red ni backend real.
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act, fireEvent, within } from '@testing-library/react';
+import { render, screen, act, fireEvent, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // vi.hoisted: el doble debe existir antes de que App.jsx cree su conexión al importarse.
@@ -181,6 +181,71 @@ describe('App: mapa de mesas (US-08)', () => {
     expect(await screen.findByText('Mesa 2', { selector: 'p' })).toBeInTheDocument();
     await userEvent.click(screen.getByText(/✕ Cerrar/));
     expect(screen.queryByText(/Tomar pedido$/)).not.toBeInTheDocument();
+  });
+});
+
+describe('App: panel de control con una mesa ya abierta', () => {
+  /** Hace que GET /api/mesas/:n/pedido responda con el estado indicado (null = sin pedido). */
+  function pedidoVigente(estado) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url) => ({
+        json: async () =>
+          url.endsWith('/pedido')
+            ? { ok: true, estado, items: [], total: 0 }
+            : { ok: true, mesas: mesasBase }
+      }))
+    );
+  }
+
+  /** Estados enviados por actualizar_pedido, en orden. */
+  const estadosEnviados = () =>
+    socket.emitirMock.mock.calls
+      .filter(([evento]) => evento === 'actualizar_pedido')
+      .map(([, datos]) => datos.estado);
+
+  test('elegir una mesa con clic completa el número en el panel de control', async () => {
+    await renderizarConectado();
+    await userEvent.click(screen.getByTitle(/Mesa 2/));
+    expect(document.getElementById('input-mesa')).toHaveValue(2);
+  });
+
+  test('mesa abierta sin pedido: "Empezar Cocina" envía Recibido y luego En Cocina', async () => {
+    pedidoVigente(null);
+    await renderizarConectado();
+    await userEvent.click(screen.getByTitle(/Mesa 2/));
+    await userEvent.click(screen.getByLabelText('Cerrar panel'));
+    await userEvent.click(screen.getByText(/Empezar Cocina/));
+    await waitFor(() => expect(estadosEnviados()).toEqual(['Recibido 📝', 'En Cocina 🍳']));
+    expect(socket.emitirMock).toHaveBeenCalledWith('actualizar_pedido', {
+      mesa: 'Mesa 2',
+      estado: 'En Cocina 🍳'
+    });
+  });
+
+  test('mesa abierta sin pedido: "Pedido Listo" completa los tres pasos', async () => {
+    pedidoVigente(null);
+    await renderizarConectado();
+    fireEvent.change(document.getElementById('input-mesa'), { target: { value: '2' } });
+    await userEvent.click(screen.getByText(/Pedido Listo/));
+    await waitFor(() =>
+      expect(estadosEnviados()).toEqual(['Recibido 📝', 'En Cocina 🍳', 'Listo 🍽️'])
+    );
+  });
+
+  test('pedido ya en cocina: "Pedido Listo" envía solo Listo', async () => {
+    pedidoVigente('En Cocina 🍳');
+    await renderizarConectado();
+    fireEvent.change(document.getElementById('input-mesa'), { target: { value: '2' } });
+    await userEvent.click(screen.getByText(/Pedido Listo/));
+    await waitFor(() => expect(estadosEnviados()).toEqual(['Listo 🍽️']));
+  });
+
+  test('mesa libre: se envía solo el estado pedido (el backend exige tomar el pedido)', async () => {
+    await renderizarConectado();
+    fireEvent.change(document.getElementById('input-mesa'), { target: { value: '1' } });
+    await userEvent.click(screen.getByText(/Empezar Cocina/));
+    expect(estadosEnviados()).toEqual(['En Cocina 🍳']);
   });
 });
 
