@@ -176,6 +176,8 @@ Al ejecutar el comando, Vite te mostrará una dirección local en la terminal.
 Una vez que entres a la página web:
 * **Indicador de Servidor:** Si el Backend está encendido, verás un letrero verde que dice **"Conectado ✔"**. Si el Backend está apagado, dirá **"Desconectado ✖"** en rojo.
 
+* **Comandas:** bajo el encabezado cuelga un ticket por cada pedido en curso, con su tiempo. Pasados 15 minutos el ticket se pone ámbar y pasados 20, rojo ("Atrasado"). Tocar un ticket abre su mesa.
+
 * **Sala:** cada mesa del plano muestra su estado con color, ícono y texto: libre, ocupada, pedido tomado, en cocina o pedido listo.
 
 * **Todo dentro de la mesa:** toca una mesa para abrir su panel. Ahí puedes abrirla o liberarla, tomar el pedido (carta), avanzarlo con un solo botón (**Enviar a cocina** → **Marcar pedido listo**), ver la cuenta y trasladar el pedido tocando la mesa de destino.

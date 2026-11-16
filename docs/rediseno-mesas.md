@@ -235,3 +235,96 @@ de React en la consola y los dos elementos con forma de cajita).
   prefiere aún más simple (solo colores, sin texto), es un ajuste de estilos en `AvancePedido.jsx`.
 - **Formato:** `App.jsx`, `TomaPedido.jsx` y algunos tests ya no seguían Prettier antes de esta
   tarea; no se reformatearon para no mezclar cambios ajenos en el diff.
+
+## 9. Segunda iteración: riel de comandas e identidad visual
+
+Commits `9eddc98` (riel) y `67818b1` (identidad). Requiere el commit `1c52921` del backend.
+
+### Qué se corrigió
+
+- **Bug del traslado:** la franja "Último cambio" guardaba la mesa del último evento
+  `cambio_estado_pedido`. Un traslado no emite ese evento, así que seguía diciendo "Mesa 3"
+  después de mover el pedido a la Mesa 6.
+- **Solo un pedido visible:** la franja mostraba un único pedido, aunque hubiera varios en curso.
+
+### Qué la reemplaza: el riel de comandas
+
+Bajo el encabezado, como el riel del pase de una cocina, cuelga un **ticket de papel por cada
+pedido en curso**, del más antiguo al más nuevo. Cada ticket muestra su mesa, el estado (franja con
+el color e ícono de la mesa) y su propio temporizador. Tocar un ticket abre el panel de esa mesa.
+
+- **Las comandas salen de la lista de mesas** (`estadoPedido` y `pedidoDesde`), no de un evento
+  suelto. Al trasladar, el backend envía `estado_mesas` y el ticket pasa a la mesa nueva con el
+  mismo tiempo.
+- **El tiempo viene del backend** (`pedidoDesde`), así sobrevive a recargas y todas las tablets ven
+  lo mismo. Un solo reloj en `App` avanza cada segundo mientras haya comandas.
+- **Urgencia (REF-04):** pasados 15 minutos en el mismo estado, **todo el ticket** se pone ámbar
+  ("Más de 15 min"). Pasados 20, se pone rojo ("Atrasado"). Cambiar el ticket entero, y no un
+  indicador chico, permite contar los atrasados de un vistazo desde lejos. El nivel se dice también
+  con texto, no solo con color.
+
+### Identidad visual: "pase de cocina"
+
+Se investigaron guías de pantallas de cocina (KDS) y de identidad de restaurantes (fuentes al
+final). Las decisiones:
+
+| Elemento | Decisión | Por qué |
+| --- | --- | --- |
+| Encabezado y riel | Pizarra `#1f2723` con barra de latón `#d4ae5c` | Forman el "pase" del que cuelgan las comandas; contraste texto 13.2, latón 7.3 |
+| Tickets | Papel `#fffaf0` con borde inferior dentado y pinza | Se leen como comandas impresas; el papel es claro también en tema oscuro |
+| Alertas | Papel ámbar `#ffd66b` (10.4) y rojo `#b3261e` con blanco (6.5) | Cambio de todo el ticket a los 15 y 20 min |
+| Marca | "Comanda" en **Fraunces**, con ícono de campana | Una sola tipografía de carácter, usada poco: serif cálida de carta de bistró |
+| Texto | **Barlow** | Grotesca inspirada en señalética, legible a distancia; evita la típica Inter/system-ui |
+| Temporizadores | **Barlow Condensed** con cifras tabulares | Números grandes que no "bailan" al cambiar cada segundo |
+| Íconos | SVG propios (`Icono.jsx`) en lugar de emojis | Mismo trazo en todas las pantallas, toman el color del texto y no dependen del sistema operativo |
+
+Las tipografías se instalan con `@fontsource` (licencia OFL) y Vite las empaqueta con la app:
+**no se descargan de internet**, como exige REF-08. Los avisos `✅`/`⚠️` se mantienen porque son
+parte del contrato con los tests y el script de integración. Los estados del backend
+(`'En Cocina 🍳'`) son datos, y la interfaz muestra su etiqueta ("En cocina").
+
+### Resultados
+
+| | Antes de la iteración | Después |
+| --- | --- | --- |
+| Tests | 406 | **462** (17 archivos) |
+| Statements / Branches / Funcs / Lines | 97.64 / 95.59 / 98.48 / 98.09 % | 97.6 / 94.89 / 98.62 / 98.2 % |
+| Lint / build | OK | OK |
+
+Tests que cambiaron porque probaban la franja eliminada:
+- **Contador (3 tests):** ahora cada comanda tiene su temporizador, con el caso nuevo de 20 minutos.
+- **"cambio_estado_pedido actualiza el último pedido…":** ahora comprueba la comanda en el riel.
+- **Franja "Último cambio" (4 tests de esta rama):** ahora prueban el riel.
+- **"Tomar pedido abre la vista…":** buscaba el emoji 📝.
+
+Tests nuevos:
+- `RielComandas.test.jsx` y `tiempoComanda.test.js`.
+- En `App.test.jsx`: varias comandas a la vez, el traslado que mueve la comanda con el mismo
+  tiempo, tocar una comanda y la comanda que sale al liberar la mesa.
+- En `patrones-visuales.test.js`: una regla contra los emojis decorativos.
+
+Verificado en Chrome:
+- Cuatro comandas con edades distintas (normal, más de 15 minutos y atrasada).
+- El traslado Mesa 3 → Mesa 6: el ticket cambió de mesa y el tiempo siguió (24:06 → 24:08).
+- Tema claro a 1660 px, tema oscuro a 820 px sin scroll horizontal, y consola sin errores.
+
+### Puntos frágiles
+
+- **Relojes distintos:** el tiempo se calcula con la hora de la tablet menos la hora del servidor.
+  Si los relojes no están sincronizados, se corre esa diferencia (nunca muestra negativos).
+- **Pedidos anteriores a la columna nueva:** muestran `--:--` hasta su próximo cambio de estado.
+- **Muchas comandas:** el riel se desliza horizontalmente con el dedo. No se probó en una tablet
+  real con 20 o más comandas.
+
+### Fuentes consultadas
+
+- [Toast: Kitchen display system overview](https://doc.toasttab.com/doc/platformguide/platformKDSOverview.html):
+  color del ticket según su antigüedad.
+- [Epson TrueOrder KDS: order timers](https://files.support.epson.com/pdf/pos/kds/111-56-qum-013_r3.40_trueorder_kds_order_timers-quick_user_manual.pdf):
+  el encabezado del ticket cambia de color por intervalos.
+- [VP0: Restaurant kitchen display system UI](https://vp0.com/blogs/restaurant-kitchen-display-system-kds-ui/):
+  texto grande, zonas táctiles grandes y cambio de color de todo el ticket.
+- [TouchBistro: Using the KDS](https://cdn.touchbistro.com/help/articles/using-the-kds):
+  verde, amarillo y rojo según el tiempo.
+- [Lovart: brand kit para restaurante y café](https://www.lovart.ai/es/blog/brand-kit-restaurant-cafe-lovart):
+  una sola tipografía de carácter para la marca.
