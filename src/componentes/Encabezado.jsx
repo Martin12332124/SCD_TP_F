@@ -3,11 +3,12 @@
 // con el backend y selector de tema.
 //
 // Props:
-//   conectado {boolean} - true si el socket está conectado al backend
+//   conectado         {boolean}  - true si el socket está conectado al backend
+//   onConfigurarMesas {Function} - Abre la pantalla para agregar y quitar mesas
 
 import SelectorTema from './SelectorTema';
 
-function Encabezado({ conectado }) {
+function Encabezado({ conectado, onConfigurarMesas }) {
   return (
     <header style={estilos.encabezado}>
       <div style={estilos.encabezadoInterior}>
@@ -42,6 +43,15 @@ function Encabezado({ conectado }) {
           </span>
 
           <SelectorTema />
+
+          <button
+            id="btn-configurar-mesas"
+            type="button"
+            onClick={onConfigurarMesas}
+            style={estilos.botonConfigurar}
+          >
+            ⚙️ Configurar mesas
+          </button>
         </div>
       </div>
     </header>
@@ -111,6 +121,18 @@ const estilos = {
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: '10px'
+  },
+  botonConfigurar: {
+    minHeight: '44px',
+    padding: '8px 14px',
+    border: '2px solid rgba(244, 236, 227, 0.55)',
+    borderRadius: 'var(--radio-m)',
+    background: 'transparent',
+    color: 'var(--color-encabezado-texto)',
+    fontSize: '15px',
+    fontWeight: 700,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap'
   },
   puntoConexion: {
     width: '9px',

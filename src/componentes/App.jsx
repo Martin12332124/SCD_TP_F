@@ -6,6 +6,7 @@ import { API_URL, obtenerMesas } from '../servicios/api';
 import MapaMesas from './MapaMesas';
 import DetalleMesa from './DetalleMesa';
 import TomaPedido from './TomaPedido';
+import AdminMesas from './AdminMesas';
 import Encabezado from './Encabezado';
 import UltimaActualizacion from './UltimaActualizacion';
 
@@ -42,6 +43,9 @@ function App() {
   const [versionPedidos, setVersionPedidos] = useState(0);
 
   const cerrarTomaPedido = useCallback(() => setMesaTomandoPedido(null), []);
+
+  // Pantalla "Configurar mesas" (agregar y quitar mesas), separada de la operación diaria
+  const [configurandoMesas, setConfigurandoMesas] = useState(false);
 
   useEffect(() => {
     socket.on('connect', () => setConectado(true));
@@ -184,7 +188,13 @@ function App() {
 
   return (
     <div style={estilos.app}>
-      <Encabezado conectado={conectado} />
+      <Encabezado
+        conectado={conectado}
+        onConfigurarMesas={() => {
+          setIdSeleccionada(null); // cierra el panel de la mesa, si estaba abierto
+          setConfigurandoMesas(true);
+        }}
+      />
 
       <main style={estilos.contenido}>
         <UltimaActualizacion ultimoPedido={ultimoPedido} segundos={segundos} />
@@ -232,6 +242,14 @@ function App() {
             socket={socket}
             conectado={conectado}
             onCerrar={cerrarTomaPedido}
+          />
+        )}
+
+        {configurandoMesas && (
+          <AdminMesas
+            mesas={mesas}
+            conectado={conectado}
+            onCerrar={() => setConfigurandoMesas(false)}
           />
         )}
       </main>

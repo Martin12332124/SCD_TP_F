@@ -330,6 +330,37 @@ describe('App: trasladar desde el panel de la mesa (US-05)', () => {
   });
 });
 
+describe('App: configurar mesas', () => {
+  test('"Configurar mesas" abre la pantalla de administración y "Volver" la cierra', async () => {
+    await renderizarConectado();
+    await userEvent.click(screen.getByRole('button', { name: /Configurar mesas/ }));
+    expect(screen.getByRole('dialog', { name: 'Configurar mesas' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Volver a la sala/ }));
+    expect(screen.queryByRole('dialog', { name: 'Configurar mesas' })).not.toBeInTheDocument();
+  });
+
+  test('abrir la administración cierra el panel de la mesa', async () => {
+    await renderizarConectado();
+    await userEvent.click(screen.getByTitle(/Mesa 1 —/));
+    await userEvent.click(screen.getByRole('button', { name: /Configurar mesas/ }));
+    expect(document.getElementById('detalle-mesa-panel')).toBeEmptyDOMElement();
+  });
+
+  test('cuando otra tablet agrega o quita una mesa, la sala y la lista se actualizan', async () => {
+    await renderizarConectado();
+    await userEvent.click(screen.getByRole('button', { name: /Configurar mesas/ }));
+    await servidor('estado_mesas', [
+      ...mesasBase,
+      { id: 'Mesa 7', numero: 7, estado: 'libre', estadoPedido: null }
+    ]);
+    expect(document.getElementById('fila-mesa-7')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ Agregar mesa 8' })).toBeInTheDocument();
+
+    await servidor('estado_mesas', [mesasBase[1]]);
+    expect(document.getElementById('fila-mesa-1')).not.toBeInTheDocument();
+  });
+});
+
 describe('App: interfaz visual (#77)', () => {
   test('el encabezado reúne título, indicador de conexión y selector de tema', async () => {
     await renderizarConectado();
