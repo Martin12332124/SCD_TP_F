@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { validarNumeroMesa } from '../validaciones/validaciones';
-import { formatearTiempo } from '../utils/formato';
 import { API_URL, obtenerMesas } from '../servicios/api';
 import MapaMesas from './MapaMesas';
 import DetalleMesa from './DetalleMesa';
 import TomaPedido from './TomaPedido';
-import SelectorTema from './SelectorTema';
+import Encabezado from './Encabezado';
+import UltimaActualizacion from './UltimaActualizacion';
 
 // Conexión socket.io al backend (la URL viene de servicios/api.js)
 const socket = io(API_URL);
@@ -221,90 +221,12 @@ function App() {
     socket.emit('trasladar_pedido', { origen: resOrigen.numero, destino: resDestino.numero });
   };
 
-  const tonoEstado = TONOS_ESTADO[ultimoPedido.estado] ?? TONO_NEUTRO;
-
   return (
     <div style={estilos.app}>
-      {/* Encabezado: identidad del local e indicador de conexión con el backend */}
-      <header style={estilos.encabezado}>
-        <div style={estilos.encabezadoInterior}>
-          <div style={estilos.marca}>
-            <span aria-hidden="true" style={estilos.logo}>
-              🍽️
-            </span>
-            <div>
-              <p style={estilos.marcaEtiqueta}>Sala · Cocina · Caja</p>
-              <h1 style={estilos.titulo}>Monitor de Pedidos en Tiempo Real</h1>
-            </div>
-          </div>
-
-          <div style={estilos.accionesEncabezado}>
-            <span
-              role="status"
-              title="Control de conexión con el servidor"
-              style={{
-                ...estilos.conexion,
-                borderColor: conectado ? 'rgba(181, 196, 74, 0.55)' : 'rgba(255, 107, 74, 0.6)'
-              }}
-            >
-              <span
-                aria-hidden="true"
-                style={{
-                  ...estilos.puntoConexion,
-                  background: conectado ? '#b5c44a' : '#ff6b4a',
-                  animation: conectado ? 'pulso 2s ease-in-out infinite' : 'none'
-                }}
-              />
-              {conectado ? 'Sistema Conectado ✔' : 'Servidor Desconectado ✖'}
-            </span>
-
-            <SelectorTema />
-          </div>
-        </div>
-      </header>
+      <Encabezado conectado={conectado} />
 
       <main style={estilos.contenido}>
-        {/* Pantalla central que muestra el último movimiento con el contador compacto integrado */}
-        <section style={estilos.destacado} aria-live="polite">
-          <span aria-hidden="true" style={estilos.iconoDestacado}>
-            🛎️
-          </span>
-          <div style={estilos.destacadoTexto}>
-            <p style={estilos.etiqueta}>Última actualización</p>
-            <div style={estilos.ultimoPedido}>
-              <span style={estilos.ultimaMesa}>{ultimoPedido.mesa}</span>
-              <span aria-hidden="true" style={estilos.flecha}>
-                →
-              </span>
-              <span
-                style={{
-                  ...estilos.pildoraEstado,
-                  background: tonoEstado.fondo,
-                  color: tonoEstado.texto,
-                  borderColor: tonoEstado.borde
-                }}
-              >
-                {ultimoPedido.estado}
-              </span>
-            </div>
-          </div>
-
-          {/* Visualización del contador compacto */}
-          {ultimoPedido.estado !== 'Sin Pedidos' && (
-            <span
-              title="Tiempo en el estado actual"
-              style={{
-                ...estilos.contador,
-                background:
-                  segundos > 900 ? 'var(--color-peligro-suave)' : 'var(--color-superficie-alt)',
-                color: segundos > 900 ? 'var(--color-peligro-texto)' : 'var(--color-acento-texto)',
-                borderColor: segundos > 900 ? 'var(--color-peligro)' : 'var(--color-azafran)'
-              }}
-            >
-              ⏱️ {formatearTiempo(segundos)}
-            </span>
-          )}
-        </section>
+        <UltimaActualizacion ultimoPedido={ultimoPedido} segundos={segundos} />
 
         {/* Alerta de validación del Frontend */}
         {errorValidacion && (
@@ -459,104 +381,12 @@ function App() {
     </div>
   );
 }
-
-// Colores de la píldora de "Última actualización" según el estado del pedido
-const TONOS_ESTADO = {
-  'Recibido 📝': {
-    fondo: 'var(--color-superficie-alt)',
-    texto: 'var(--color-acento-texto)',
-    borde: 'var(--color-azafran)'
-  },
-  'En Cocina 🍳': {
-    fondo: 'var(--color-primario-suave)',
-    texto: 'var(--color-primario-texto)',
-    borde: 'var(--color-acento)'
-  },
-  'Listo 🍽️': {
-    fondo: 'var(--color-exito-suave)',
-    texto: 'var(--color-exito-texto)',
-    borde: 'var(--color-exito)'
-  }
-};
-const TONO_NEUTRO = {
-  fondo: 'var(--color-superficie-alt)',
-  texto: 'var(--color-texto-suave)',
-  borde: 'var(--color-borde)'
-};
-
 // ── Estilos en línea: leen los tokens de index.css (modo claro y oscuro) ─────
 const estilos = {
   app: {
     minHeight: '100svh',
     display: 'flex',
     flexDirection: 'column'
-  },
-  encabezado: {
-    background: 'var(--fondo-encabezado)',
-    color: 'var(--color-encabezado-texto)',
-    borderBottom: '3px solid var(--color-azafran)',
-    boxShadow: 'var(--sombra-2)'
-  },
-  encabezadoInterior: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: '18px clamp(16px, 4vw, 40px)',
-    display: 'flex',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '16px'
-  },
-  marca: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '14px'
-  },
-  logo: {
-    display: 'grid',
-    placeItems: 'center',
-    width: '48px',
-    height: '48px',
-    borderRadius: '50%',
-    background: 'var(--color-azafran)',
-    boxShadow: 'inset 0 0 0 3px rgba(90, 30, 8, 0.25)',
-    fontSize: '24px',
-    flexShrink: 0
-  },
-  marcaEtiqueta: {
-    fontSize: '11px',
-    fontWeight: 600,
-    letterSpacing: '0.18em',
-    textTransform: 'uppercase',
-    color: 'var(--color-azafran)'
-  },
-  titulo: {
-    margin: '2px 0 0',
-    fontSize: 'clamp(20px, 3vw, 26px)',
-    color: 'var(--color-encabezado-texto)'
-  },
-  conexion: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '7px 14px',
-    borderRadius: '999px',
-    border: '1px solid',
-    background: 'rgba(244, 236, 227, 0.08)',
-    fontSize: '13px',
-    fontWeight: 600,
-    whiteSpace: 'nowrap'
-  },
-  accionesEncabezado: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: '10px'
-  },
-  puntoConexion: {
-    width: '9px',
-    height: '9px',
-    borderRadius: '50%'
   },
   // ── Contenido principal
   contenido: {
@@ -568,32 +398,6 @@ const estilos = {
     flexDirection: 'column',
     gap: '24px'
   },
-  destacado: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: '18px',
-    padding: '20px 24px',
-    background: 'var(--color-superficie)',
-    border: '1px solid var(--color-borde)',
-    borderLeft: '5px solid var(--color-azafran)',
-    borderRadius: 'var(--radio-l)',
-    boxShadow: 'var(--sombra-1)'
-  },
-  iconoDestacado: {
-    display: 'grid',
-    placeItems: 'center',
-    width: '52px',
-    height: '52px',
-    borderRadius: '50%',
-    background: 'var(--color-superficie-alt)',
-    fontSize: '26px',
-    flexShrink: 0
-  },
-  destacadoTexto: {
-    flex: '1 1 220px',
-    minWidth: 0
-  },
   etiqueta: {
     fontSize: '11px',
     fontWeight: 700,
@@ -601,39 +405,6 @@ const estilos = {
     textTransform: 'uppercase',
     color: 'var(--color-acento-texto)',
     marginBottom: '4px'
-  },
-  ultimoPedido: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: '10px'
-  },
-  ultimaMesa: {
-    fontFamily: 'var(--fuente-titulo)',
-    fontSize: '26px',
-    fontWeight: 600,
-    color: 'var(--color-texto)'
-  },
-  flecha: {
-    color: 'var(--color-texto-tenue)',
-    fontSize: '20px'
-  },
-  pildoraEstado: {
-    display: 'inline-block',
-    padding: '4px 14px',
-    borderRadius: '999px',
-    border: '1px solid',
-    fontSize: '14px',
-    fontWeight: 700
-  },
-  contador: {
-    padding: '8px 14px',
-    borderRadius: '999px',
-    border: '1px solid',
-    fontFamily: 'var(--fuente-mono)',
-    fontSize: '15px',
-    fontWeight: 600,
-    fontVariantNumeric: 'tabular-nums'
   },
   aviso: {
     padding: '12px 16px',
