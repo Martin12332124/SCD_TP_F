@@ -53,6 +53,11 @@ function App() {
       // datos esperados: { mesa: 'Mesa 5', estado: 'En Cocina 🍳' }
       setUltimoPedido({ mesa: datos.mesa, estado: datos.estado });
       setSegundos(0); // NUEVO: Resetea el reloj a 0 con cada cambio de estado
+      // El mapa muestra en qué va el pedido de cada mesa. El backend no reenvía
+      // 'estado_mesas' en cada cambio de estado del pedido, así que se actualiza aquí.
+      setMesas((prev) =>
+        prev.map((m) => (m.id === datos.mesa ? { ...m, estadoPedido: datos.estado } : m))
+      );
     });
 
     // NUEVO: escuchar el evento de estado de mesas que ya emite el backend

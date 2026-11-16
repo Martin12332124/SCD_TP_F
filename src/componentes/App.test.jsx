@@ -114,6 +114,27 @@ describe('App: eventos del servidor', () => {
     expect(screen.getByText(/⏱️ 00:00/)).toBeInTheDocument();
   });
 
+  test('cambio_estado_pedido actualiza el estado de esa mesa en el mapa', async () => {
+    await renderizarConectado();
+    expect(screen.getByTitle('Mesa 2 — Ocupada')).toBeInTheDocument();
+    await servidor('cambio_estado_pedido', { mesa: 'Mesa 2', estado: 'En Cocina 🍳' });
+    expect(screen.getByTitle('Mesa 2 — En cocina')).toHaveAttribute('data-estado', 'cocina');
+    await servidor('cambio_estado_pedido', { mesa: 'Mesa 2', estado: 'Listo 🍽️' });
+    expect(screen.getByTitle('Mesa 2 — Pedido listo')).toBeInTheDocument();
+    // Las demás mesas no cambian
+    expect(screen.getByTitle('Mesa 1 — Libre')).toBeInTheDocument();
+  });
+
+  test('estado_mesas trae el estado del pedido y reemplaza lo que había', async () => {
+    await renderizarConectado();
+    await servidor('estado_mesas', [
+      { id: 'Mesa 1', numero: 1, estado: 'ocupada', estadoPedido: 'Recibido 📝' },
+      { id: 'Mesa 2', numero: 2, estado: 'libre', estadoPedido: null }
+    ]);
+    expect(screen.getByTitle('Mesa 1 — Pedido tomado')).toBeInTheDocument();
+    expect(screen.getByTitle('Mesa 2 — Libre')).toBeInTheDocument();
+  });
+
   test('respuesta_pedido con error muestra tipo, motivo y lo esperado', async () => {
     await renderizarConectado();
     await servidor('respuesta_pedido', {
