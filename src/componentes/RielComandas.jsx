@@ -195,7 +195,8 @@ const estilos = {
     alignItems: 'stretch',
     gap: '8px',
     width: '176px',
-    padding: '18px 14px 10px',
+    minHeight: '178px',
+    padding: '0 14px 10px',
     border: 'none',
     borderRadius: '0',
     boxShadow: '0 6px 10px rgba(0, 0, 0, 0.35)',
@@ -212,12 +213,13 @@ const estilos = {
     borderRadius: '0 0 4px 4px',
     background: '#4b4f4c'
   },
+  // Franja superior del ticket, de borde a borde, con el color del estado
   estado: {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
-    padding: '5px 8px',
-    borderRadius: 'var(--radio-s)',
+    margin: '0 -14px',
+    padding: '16px 14px 8px',
     fontSize: '16px',
     fontWeight: 700
   },

@@ -184,7 +184,7 @@ describe('App: mapa de mesas (US-08)', () => {
   test('"Tomar pedido" abre la vista de toma de pedido de la mesa ocupada', async () => {
     await renderizarConectado();
     await userEvent.click(screen.getByTitle(/Mesa 2/));
-    await userEvent.click(await screen.findByText(/📝 Tomar pedido/));
+    await userEvent.click(await screen.findByRole('button', { name: /Tomar pedido/ }));
     expect(await screen.findByText('Mesa 2', { selector: 'p' })).toBeInTheDocument();
     await userEvent.click(screen.getByText(/✕ Cerrar/));
     expect(screen.queryByText(/Tomar pedido$/)).not.toBeInTheDocument();

@@ -20,6 +20,7 @@ import {
   siguienteEstado
 } from '../utils/flujoPedido';
 import { estadoVisualPedido } from '../utils/estadoMesa';
+import Icono from './Icono';
 
 /** Nombre corto de cada paso en la barra de progreso. */
 const PASOS = [
@@ -30,8 +31,8 @@ const PASOS = [
 
 /** Texto del botón que lleva el pedido a cada estado. */
 const ACCION_HACIA = {
-  [ESTADO_EN_COCINA]: '🍳 Enviar a cocina',
-  [ESTADO_LISTO]: '🍽️ Marcar pedido listo'
+  [ESTADO_EN_COCINA]: 'Enviar a cocina',
+  [ESTADO_LISTO]: 'Marcar pedido listo'
 };
 
 function AvancePedido({ estadoPedido, conectado, onCambiarEstado, onTomarPedido }) {
@@ -78,7 +79,7 @@ function AvancePedido({ estadoPedido, conectado, onCambiarEstado, onTomarPedido 
             disabled={!conectado}
             style={{ ...estilos.boton, ...estilos.botonPrimario }}
           >
-            📝 Tomar pedido
+            <Icono nombre="libreta" tamano={22} /> Tomar pedido
           </button>
           <button
             id="btn-registrar-sin-productos"
@@ -105,7 +106,7 @@ function AvancePedido({ estadoPedido, conectado, onCambiarEstado, onTomarPedido 
             borderColor: 'transparent'
           }}
         >
-          {ACCION_HACIA[siguiente]}
+          <Icono nombre={visualSiguiente.icono} tamano={22} /> {ACCION_HACIA[siguiente]}
         </button>
       )}
 

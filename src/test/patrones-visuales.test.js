@@ -4,7 +4,10 @@
 // - botones o etiquetas con forma de píldora (radio 999px),
 // - puntitos de color con texto (🟢/🔴 o círculos con radio 50%),
 // - texto muy chico (menos de 14px) o con el gris tenue que casi se pierde con el fondo,
-// - etiquetas numeradas tipo 01/02/03.
+// - etiquetas numeradas tipo 01/02/03,
+// - emojis como íconos decorativos (se usan íconos SVG propios: componentes/Icono.jsx).
+//   Los estados que llegan del backend ('En Cocina 🍳') y los avisos ✅/⚠️ son datos y
+//   mensajes, no decoración: se muestran con su etiqueta o se mantienen por contrato.
 // Revisa el código de los componentes, así que es un control aproximado: la revisión
 // visual en el navegador (tema claro y oscuro) sigue siendo necesaria.
 import { describe, test, expect } from 'vitest';
@@ -26,7 +29,23 @@ const PROHIBIDOS = [
   ['etiqueta numerada tipo 01/02', />\s*0[1-9]\s*</]
 ];
 
+/** El código sin comentarios: los comentarios pueden citar estados con emoji. */
+const sinComentarios = (codigo) =>
+  codigo.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+// Emojis que se usaban como íconos decorativos y se reemplazaron por SVG
+const EMOJIS_DECORATIVOS = /🍽️|📝|🍳|🍷|🪑|⚙️|🔄|🛒|⏳|⏱️|🌙|☀️|✔|✖|🛎️/;
+
 describe.each(componentes)('patrones visuales: %s', (archivo) => {
+  test('no usa emojis como íconos decorativos', () => {
+    // Se ignoran los textos de estado del backend ('Recibido 📝', etc.), que son datos
+    const codigo = sinComentarios(fuente[archivo]).replace(
+      /'(Recibido 📝|En Cocina 🍳|Listo 🍽️)'/g,
+      ''
+    );
+    expect(codigo).not.toMatch(EMOJIS_DECORATIVOS);
+  });
+
   test.each(PROHIBIDOS)('no usa %s', (_nombre, patron) => {
     expect(fuente[archivo]).not.toMatch(patron);
   });

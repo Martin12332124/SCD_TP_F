@@ -10,12 +10,13 @@
 
 const TRAZOS = {
   // Estados de mesa
+  // Silla de frente: respaldo, asiento y patas
   silla: (
     <>
-      <path d="M7 3v9h10V3" />
-      <path d="M6 12h12" />
-      <path d="M7 12v9M17 12v9" />
-      <path d="M7 7h10" />
+      <rect x="7" y="3" width="10" height="7" rx="1.5" />
+      <path d="M8 10v3M16 10v3" />
+      <path d="M5 13h14" />
+      <path d="M7 13v8M17 13v8" />
     </>
   ),
   personas: (

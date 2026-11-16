@@ -256,7 +256,7 @@ function DetalleMesa({
                   disabled={!conectado}
                   style={{ ...estilos.boton, ...estilos.botonSecundario }}
                 >
-                  📝 Tomar pedido
+                  <Icono nombre="libreta" tamano={22} /> Tomar pedido
                 </button>
               </div>
             )}

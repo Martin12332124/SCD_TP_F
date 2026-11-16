@@ -18,6 +18,7 @@ import { useState, useEffect } from 'react';
 import { validarCantidad } from '../validaciones/validaciones';
 import { formatearPrecio } from '../utils/formato';
 import { obtenerMenu } from '../servicios/api';
+import Icono from './Icono';
 
 function TomaPedido({ mesa, onCerrar, socket, conectado }) {
   // Lista de ítems del menú cargados desde el backend
@@ -179,7 +180,7 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
       <div style={estilos.encabezado}>
         <div style={estilos.encabezadoInterior}>
           <div style={estilos.identidad}>
-            <h2 style={estilos.titulo}>📝 Tomar pedido</h2>
+            <h2 style={estilos.titulo}>Tomar pedido</h2>
             <p style={estilos.subtitulo}>Mesa {mesa.numero}</p>
           </div>
           <button
@@ -198,7 +199,7 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
         {/* ── Columna izquierda: lista de productos ─────────────────────── */}
         <div style={estilos.columnaProductos}>
           {/* Estado de carga */}
-          {cargando && <p style={estilos.mensaje}>⏳ Cargando menú...</p>}
+          {cargando && <p style={estilos.mensaje}>Cargando menú...</p>}
 
           {/* Error al cargar */}
           {!cargando && error && (
@@ -270,7 +271,9 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
 
         {/* ── Panel lateral derecho: carrito ────────────────────────────── */}
         <div style={estilos.panelCarrito}>
-          <h3 style={estilos.tituloCarrito}>🛒 Pedido</h3>
+          <h3 style={estilos.tituloCarrito}>
+            <Icono nombre="carrito" tamano={24} /> Pedido
+          </h3>
 
           {carritoVacio ? (
             <p style={estilos.carritoVacio}>Selecciona productos del menú para armar el pedido.</p>
@@ -356,7 +359,7 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
                   ...(enviando || !conectado ? estilos.btnConfirmarDeshabilitado : {})
                 }}
               >
-                {enviando ? 'Enviando...' : '✅ Confirmar pedido'}
+                {enviando ? 'Enviando...' : 'Confirmar pedido'}
               </button>
               {!conectado && <p style={estilos.notaConfirmar}>Sin conexión con el servidor.</p>}
             </>

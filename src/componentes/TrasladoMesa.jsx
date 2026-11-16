@@ -10,6 +10,7 @@
 //   onTrasladar {Function} - (origen, destino) => void, con los números de mesa
 
 import { useState } from 'react';
+import Icono from './Icono';
 
 function TrasladoMesa({ mesaOrigen, mesas, conectado, onTrasladar }) {
   // Destino elegido. Se guarda con la mesa de origen para no arrastrarlo a otro panel.
@@ -60,7 +61,8 @@ function TrasladoMesa({ mesaOrigen, mesas, conectado, onTrasladar }) {
         disabled={!conectado || !destino}
         style={estilos.botonTrasladar}
       >
-        {destino ? `🔄 Trasladar a Mesa ${destino.numero}` : '🔄 Trasladar pedido'}
+        <Icono nombre="trasladar" tamano={22} />{' '}
+        {destino ? `Trasladar a Mesa ${destino.numero}` : 'Trasladar pedido'}
       </button>
     </div>
   );

@@ -1,22 +1,28 @@
 // src/componentes/Encabezado.jsx
 // Encabezado de la pantalla principal: identidad del local, estado de la conexión
 // con el backend, selector de tema y acceso a "Configurar mesas".
+// Comparte la pizarra con el riel de comandas que va justo debajo: juntos forman
+// el "pase" de la cocina, de donde cuelgan las comandas.
 //
 // Props:
 //   conectado         {boolean}  - true si el socket está conectado al backend
 //   onConfigurarMesas {Function} - Abre la pantalla para agregar y quitar mesas
 
 import SelectorTema from './SelectorTema';
+import Icono from './Icono';
 
 function Encabezado({ conectado, onConfigurarMesas }) {
   return (
     <header style={estilos.encabezado}>
       <div style={estilos.encabezadoInterior}>
         <div style={estilos.marca}>
-          <span aria-hidden="true" style={estilos.logo}>
-            🍽️
+          <span style={estilos.logo}>
+            <Icono nombre="campana" tamano={28} />
           </span>
-          <h1 style={estilos.titulo}>Monitor de Pedidos en Tiempo Real</h1>
+          <div>
+            <span style={estilos.nombre}>Comanda</span>
+            <h1 style={estilos.titulo}>Monitor de Pedidos en Tiempo Real</h1>
+          </div>
         </div>
 
         <div style={estilos.accionesEncabezado}>
@@ -30,7 +36,8 @@ function Encabezado({ conectado, onConfigurarMesas }) {
               ...(conectado ? estilos.conexionOk : estilos.conexionCaida)
             }}
           >
-            {conectado ? 'Sistema Conectado ✔' : 'Servidor Desconectado ✖'}
+            <Icono nombre={conectado ? 'conectado' : 'desconectado'} tamano={20} />
+            {conectado ? 'Sistema Conectado' : 'Servidor Desconectado'}
           </span>
 
           <SelectorTema />
@@ -41,7 +48,8 @@ function Encabezado({ conectado, onConfigurarMesas }) {
             onClick={onConfigurarMesas}
             style={estilos.botonConfigurar}
           >
-            ⚙️ Configurar mesas
+            <Icono nombre="ajustes" tamano={20} />
+            Configurar mesas
           </button>
         </div>
       </div>
@@ -54,8 +62,7 @@ const estilos = {
   encabezado: {
     background: 'var(--fondo-encabezado)',
     color: 'var(--color-encabezado-texto)',
-    borderBottom: '4px solid var(--color-azafran)',
-    boxShadow: 'var(--sombra-2)'
+    borderBottom: '1px solid rgba(243, 238, 228, 0.12)'
   },
   encabezadoInterior: {
     maxWidth: '1200px',
@@ -75,16 +82,27 @@ const estilos = {
   logo: {
     display: 'grid',
     placeItems: 'center',
-    width: '48px',
-    height: '48px',
+    width: '52px',
+    height: '52px',
     borderRadius: 'var(--radio-m)',
-    background: 'var(--color-azafran)',
-    fontSize: '26px',
+    background: 'var(--laton)',
+    color: 'var(--pizarra)',
     flexShrink: 0
   },
+  // Nombre del sistema, en la tipografía de la marca
+  nombre: {
+    display: 'block',
+    fontFamily: 'var(--fuente-titulo)',
+    fontSize: '26px',
+    fontWeight: 700,
+    lineHeight: 1,
+    color: 'var(--laton)'
+  },
   titulo: {
-    margin: 0,
-    fontSize: 'clamp(22px, 3vw, 28px)',
+    margin: '4px 0 0',
+    fontFamily: 'var(--fuente-texto)',
+    fontSize: '17px',
+    fontWeight: 600,
     color: 'var(--color-encabezado-texto)'
   },
   accionesEncabezado: {
@@ -96,6 +114,7 @@ const estilos = {
   conexion: {
     display: 'inline-flex',
     alignItems: 'center',
+    gap: '8px',
     minHeight: '44px',
     padding: '8px 14px',
     borderRadius: 'var(--radio-m)',
@@ -112,6 +131,9 @@ const estilos = {
     color: 'var(--mesa-ocupada-texto)'
   },
   botonConfigurar: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
     minHeight: '44px',
     padding: '8px 14px',
     border: '2px solid var(--color-encabezado-texto)',
