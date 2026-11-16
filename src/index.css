@@ -27,13 +27,37 @@
   --color-sobre-primario: #ffffff;
 
   /* Estados */
-  --color-exito: #6e6212;
-  --color-exito-texto: #5c5210;
-  --color-exito-suave: #efebcf;
+  --color-exito: #16834a;
+  --color-exito-texto: #0f6b3b;
+  --color-exito-suave: #dff3e6;
   --color-peligro: #b4231a;
   --color-peligro-texto: #a3221a;
   --color-peligro-suave: #fbe1dc;
   --color-neutro: #7a6a5f;
+
+  /*
+   * Estados de mesa: un color sólido por estado y el color del texto que va encima.
+   * Cada par tiene contraste >= 4.5 (lo comprueba src/test/colores-estado.test.js).
+   * Los usan el mapa de sala, el panel de la mesa y la franja de último cambio.
+   */
+  --mesa-libre: #16834a;
+  --mesa-libre-texto: #ffffff;
+  --mesa-ocupada: #c9302a;
+  --mesa-ocupada-texto: #ffffff;
+  --mesa-recibido: #7446d6;
+  --mesa-recibido-texto: #ffffff;
+  --mesa-cocina: #f5a300;
+  --mesa-cocina-texto: #2b1a00;
+  --mesa-listo: #1b6fcc;
+  --mesa-listo-texto: #ffffff;
+
+  /* Plano de sala: piso y sillas */
+  --piso: #eadcc9;
+  --piso-linea: rgba(90, 30, 8, 0.08);
+  --mesa-silla: #8a6b52;
+
+  /* Tamaño mínimo de botones y zonas táctiles (uso en tablet) */
+  --toque: 52px;
 
   /* Encabezado */
   --fondo-encabezado: linear-gradient(135deg, #3d1405 0%, #5a1e08 60%, #7a2a0c 100%);
@@ -77,9 +101,22 @@
     --color-primario-suave: #3a1e15;
     --color-acento-texto: #f5a04a;
     --color-azafran: #e9b949;
-    --color-exito: #8a7c18;
-    --color-exito-texto: #d4c75a;
-    --color-exito-suave: #2f2c14;
+    --color-exito: #34c277;
+    --color-exito-texto: #6fdc9f;
+    --color-exito-suave: #12301f;
+    --mesa-libre: #34c277;
+    --mesa-libre-texto: #062414;
+    --mesa-ocupada: #f0584a;
+    --mesa-ocupada-texto: #2a0703;
+    --mesa-recibido: #a283f2;
+    --mesa-recibido-texto: #1b0b45;
+    --mesa-cocina: #ffb829;
+    --mesa-cocina-texto: #2b1a00;
+    --mesa-listo: #56a5f5;
+    --mesa-listo-texto: #04213f;
+    --piso: #1b1512;
+    --piso-linea: rgba(255, 255, 255, 0.05);
+    --mesa-silla: #6b5546;
     --color-peligro-texto: #ff8e7d;
     --color-peligro-suave: #3b1d18;
     --color-neutro: #5e5149;
@@ -106,9 +143,22 @@
   --color-primario-suave: #3a1e15;
   --color-acento-texto: #f5a04a;
   --color-azafran: #e9b949;
-  --color-exito: #8a7c18;
-  --color-exito-texto: #d4c75a;
-  --color-exito-suave: #2f2c14;
+  --color-exito: #34c277;
+  --color-exito-texto: #6fdc9f;
+  --color-exito-suave: #12301f;
+  --mesa-libre: #34c277;
+  --mesa-libre-texto: #062414;
+  --mesa-ocupada: #f0584a;
+  --mesa-ocupada-texto: #2a0703;
+  --mesa-recibido: #a283f2;
+  --mesa-recibido-texto: #1b0b45;
+  --mesa-cocina: #ffb829;
+  --mesa-cocina-texto: #2b1a00;
+  --mesa-listo: #56a5f5;
+  --mesa-listo-texto: #04213f;
+  --piso: #1b1512;
+  --piso-linea: rgba(255, 255, 255, 0.05);
+  --mesa-silla: #6b5546;
   --color-peligro-texto: #ff8e7d;
   --color-peligro-suave: #3b1d18;
   --color-neutro: #5e5149;
