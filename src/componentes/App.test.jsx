@@ -372,20 +372,23 @@ describe('App: interfaz visual (#77)', () => {
     expect(within(encabezado).getByRole('button', { name: /Modo (claro|oscuro)/ })).toBeVisible();
   });
 
-  test('sin pedidos la píldora usa el tono neutro y no hay contador', async () => {
+  test('sin pedidos el estado usa el tono neutro y no hay contador', async () => {
     await renderizarConectado();
-    expect(screen.getByText('Sin Pedidos').style.borderColor).toBe('var(--color-borde)');
+    expect(screen.getByText('Sin Pedidos').style.background).toBe('var(--color-superficie-alt)');
     expect(screen.queryByText(/⏱️/)).not.toBeInTheDocument();
   });
 
   test.each([
-    ['Recibido 📝', 'var(--color-azafran)'],
-    ['En Cocina 🍳', 'var(--color-acento)'],
-    ['Listo 🍽️', 'var(--color-exito)']
-  ])('la píldora del estado "%s" usa su color propio', async (estado, borde) => {
+    ['Recibido 📝', 'recibido'],
+    ['En Cocina 🍳', 'cocina'],
+    ['Listo 🍽️', 'listo']
+  ])('el último estado "%s" usa el mismo color que la mesa en el plano', async (estado, clave) => {
     await renderizarConectado();
     await servidor('cambio_estado_pedido', { mesa: 'Mesa 4', estado });
-    expect(screen.getByText(estado).style.borderColor).toBe(borde);
+    const bloque = document.getElementById('ultimo-estado');
+    expect(bloque).toHaveTextContent(estado);
+    expect(bloque.style.background).toBe(`var(--mesa-${clave})`);
+    expect(bloque.style.color).toBe(`var(--mesa-${clave}-texto)`);
   });
 
   test('un rechazo del backend sin panel abierto se anuncia como alerta', async () => {

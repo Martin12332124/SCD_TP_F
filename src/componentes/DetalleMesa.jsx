@@ -468,8 +468,8 @@ const estilos = {
     color: 'var(--color-texto)'
   },
   nota: {
-    fontSize: '15px',
-    color: 'var(--color-texto-suave)'
+    fontSize: '16px',
+    color: 'var(--color-texto)'
   },
   // La cuenta se presenta como un ticket de restaurante
   ticket: {

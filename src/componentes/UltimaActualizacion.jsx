@@ -1,50 +1,53 @@
 // src/componentes/UltimaActualizacion.jsx
-// Recuadro con el último pedido que cambió de estado y el tiempo que lleva en ese estado.
+// Franja con el último pedido que cambió de estado y el tiempo que lleva en ese estado.
+// El estado se muestra en un bloque con el mismo color que usa esa mesa en el plano.
 //
 // Props:
 //   ultimoPedido {{ mesa: string, estado: string }} - Última mesa y estado recibidos del backend
 //   segundos     {number} - Segundos transcurridos desde ese cambio (lo cuenta App)
 
 import { formatearTiempo } from '../utils/formato';
+import { estadoVisualPedido } from '../utils/estadoMesa';
 
 function UltimaActualizacion({ ultimoPedido, segundos }) {
-  const tonoEstado = TONOS_ESTADO[ultimoPedido.estado] ?? TONO_NEUTRO;
+  // null cuando todavía no hay pedidos ("Sin Pedidos"): se usa el tono neutro
+  const visual = estadoVisualPedido(ultimoPedido.estado);
+  const tono = visual
+    ? { background: `var(--mesa-${visual.clave})`, color: `var(--mesa-${visual.clave}-texto)` }
+    : estilos.estadoNeutro;
+  const alerta = segundos > 900; // más de 15 minutos en el mismo estado
 
   return (
-    <section style={estilos.destacado} aria-live="polite">
-      <span aria-hidden="true" style={estilos.iconoDestacado}>
-        🛎️
-      </span>
-      <div style={estilos.destacadoTexto}>
-        <p style={estilos.etiqueta}>Última actualización</p>
+    <section
+      aria-live="polite"
+      aria-label="Último cambio"
+      style={{
+        ...estilos.franja,
+        borderLeftColor: visual ? `var(--mesa-${visual.clave})` : 'var(--color-borde)'
+      }}
+    >
+      <div style={estilos.texto}>
+        <h2 style={estilos.titulo}>Último cambio</h2>
         <div style={estilos.ultimoPedido}>
           <span style={estilos.ultimaMesa}>{ultimoPedido.mesa}</span>
           <span aria-hidden="true" style={estilos.flecha}>
             →
           </span>
-          <span
-            style={{
-              ...estilos.pildoraEstado,
-              background: tonoEstado.fondo,
-              color: tonoEstado.texto,
-              borderColor: tonoEstado.borde
-            }}
-          >
+          <span id="ultimo-estado" style={{ ...estilos.estado, ...tono }}>
             {ultimoPedido.estado}
           </span>
         </div>
       </div>
 
-      {/* Visualización del contador compacto */}
+      {/* Cronómetro del estado actual */}
       {ultimoPedido.estado !== 'Sin Pedidos' && (
         <span
           title="Tiempo en el estado actual"
           style={{
             ...estilos.contador,
-            background:
-              segundos > 900 ? 'var(--color-peligro-suave)' : 'var(--color-superficie-alt)',
-            color: segundos > 900 ? 'var(--color-peligro-texto)' : 'var(--color-acento-texto)',
-            borderColor: segundos > 900 ? 'var(--color-peligro)' : 'var(--color-azafran)'
+            background: alerta ? 'var(--color-peligro-suave)' : 'var(--color-superficie-alt)',
+            color: alerta ? 'var(--color-peligro-texto)' : 'var(--color-acento-texto)',
+            borderColor: alerta ? 'var(--color-peligro)' : 'var(--color-azafran)'
           }}
         >
           ⏱️ {formatearTiempo(segundos)}
@@ -54,97 +57,66 @@ function UltimaActualizacion({ ultimoPedido, segundos }) {
   );
 }
 
-// Colores de la píldora de "Última actualización" según el estado del pedido
-const TONOS_ESTADO = {
-  'Recibido 📝': {
-    fondo: 'var(--color-superficie-alt)',
-    texto: 'var(--color-acento-texto)',
-    borde: 'var(--color-azafran)'
-  },
-  'En Cocina 🍳': {
-    fondo: 'var(--color-primario-suave)',
-    texto: 'var(--color-primario-texto)',
-    borde: 'var(--color-acento)'
-  },
-  'Listo 🍽️': {
-    fondo: 'var(--color-exito-suave)',
-    texto: 'var(--color-exito-texto)',
-    borde: 'var(--color-exito)'
-  }
-};
-const TONO_NEUTRO = {
-  fondo: 'var(--color-superficie-alt)',
-  texto: 'var(--color-texto-suave)',
-  borde: 'var(--color-borde)'
-};
-
 // ── Estilos en línea: leen los tokens de index.css (modo claro y oscuro) ─────
 const estilos = {
-  destacado: {
+  franja: {
     display: 'flex',
     flexWrap: 'wrap',
     alignItems: 'center',
-    gap: '18px',
-    padding: '20px 24px',
+    justifyContent: 'space-between',
+    gap: '14px 24px',
+    padding: '16px 22px',
     background: 'var(--color-superficie)',
     border: '1px solid var(--color-borde)',
-    borderLeft: '5px solid var(--color-azafran)',
+    borderLeft: '10px solid',
     borderRadius: 'var(--radio-l)',
     boxShadow: 'var(--sombra-1)'
   },
-  iconoDestacado: {
-    display: 'grid',
-    placeItems: 'center',
-    width: '52px',
-    height: '52px',
-    borderRadius: '50%',
-    background: 'var(--color-superficie-alt)',
-    fontSize: '26px',
-    flexShrink: 0
-  },
-  destacadoTexto: {
-    flex: '1 1 220px',
+  texto: {
+    flex: '1 1 260px',
     minWidth: 0
   },
-  etiqueta: {
-    fontSize: '11px',
-    fontWeight: 700,
-    letterSpacing: '0.16em',
-    textTransform: 'uppercase',
-    color: 'var(--color-acento-texto)',
-    marginBottom: '4px'
+  titulo: {
+    margin: '0 0 6px',
+    fontSize: '18px',
+    color: 'var(--color-texto)'
   },
   ultimoPedido: {
     display: 'flex',
     flexWrap: 'wrap',
     alignItems: 'center',
-    gap: '10px'
+    gap: '12px'
   },
   ultimaMesa: {
     fontFamily: 'var(--fuente-titulo)',
-    fontSize: '26px',
-    fontWeight: 600,
+    fontSize: '30px',
+    fontWeight: 700,
     color: 'var(--color-texto)'
   },
   flecha: {
-    color: 'var(--color-texto-tenue)',
-    fontSize: '20px'
+    color: 'var(--color-texto)',
+    fontSize: '24px'
   },
-  pildoraEstado: {
+  // Bloque rectangular con el color sólido del estado
+  estado: {
     display: 'inline-block',
-    padding: '4px 14px',
-    borderRadius: '999px',
-    border: '1px solid',
-    fontSize: '14px',
+    padding: '6px 14px',
+    borderRadius: 'var(--radio-s)',
+    fontSize: '20px',
     fontWeight: 700
   },
+  estadoNeutro: {
+    background: 'var(--color-superficie-alt)',
+    color: 'var(--color-texto)',
+    border: '2px solid var(--color-borde)'
+  },
   contador: {
-    padding: '8px 14px',
-    borderRadius: '999px',
-    border: '1px solid',
+    padding: '10px 16px',
+    borderRadius: 'var(--radio-m)',
+    border: '2px solid',
     fontFamily: 'var(--fuente-mono)',
-    fontSize: '15px',
-    fontWeight: 600,
+    fontSize: '22px',
+    fontWeight: 700,
     fontVariantNumeric: 'tabular-nums'
   }
 };

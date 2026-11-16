@@ -1,6 +1,6 @@
 // src/componentes/Encabezado.jsx
 // Encabezado de la pantalla principal: identidad del local, estado de la conexión
-// con el backend y selector de tema.
+// con el backend, selector de tema y acceso a "Configurar mesas".
 //
 // Props:
 //   conectado         {boolean}  - true si el socket está conectado al backend
@@ -16,29 +16,20 @@ function Encabezado({ conectado, onConfigurarMesas }) {
           <span aria-hidden="true" style={estilos.logo}>
             🍽️
           </span>
-          <div>
-            <p style={estilos.marcaEtiqueta}>Sala · Cocina · Caja</p>
-            <h1 style={estilos.titulo}>Monitor de Pedidos en Tiempo Real</h1>
-          </div>
+          <h1 style={estilos.titulo}>Monitor de Pedidos en Tiempo Real</h1>
         </div>
 
         <div style={estilos.accionesEncabezado}>
+          {/* Conexión: bloque de color sólido con ícono y texto (no un puntito) */}
           <span
             role="status"
             title="Control de conexión con el servidor"
+            data-conectado={conectado}
             style={{
               ...estilos.conexion,
-              borderColor: conectado ? 'rgba(181, 196, 74, 0.55)' : 'rgba(255, 107, 74, 0.6)'
+              ...(conectado ? estilos.conexionOk : estilos.conexionCaida)
             }}
           >
-            <span
-              aria-hidden="true"
-              style={{
-                ...estilos.puntoConexion,
-                background: conectado ? '#b5c44a' : '#ff6b4a',
-                animation: conectado ? 'pulso 2s ease-in-out infinite' : 'none'
-              }}
-            />
             {conectado ? 'Sistema Conectado ✔' : 'Servidor Desconectado ✖'}
           </span>
 
@@ -63,18 +54,18 @@ const estilos = {
   encabezado: {
     background: 'var(--fondo-encabezado)',
     color: 'var(--color-encabezado-texto)',
-    borderBottom: '3px solid var(--color-azafran)',
+    borderBottom: '4px solid var(--color-azafran)',
     boxShadow: 'var(--sombra-2)'
   },
   encabezadoInterior: {
     maxWidth: '1200px',
     margin: '0 auto',
-    padding: '18px clamp(16px, 4vw, 40px)',
+    padding: '14px clamp(16px, 4vw, 40px)',
     display: 'flex',
     flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: '16px'
+    gap: '14px'
   },
   marca: {
     display: 'flex',
@@ -86,35 +77,15 @@ const estilos = {
     placeItems: 'center',
     width: '48px',
     height: '48px',
-    borderRadius: '50%',
+    borderRadius: 'var(--radio-m)',
     background: 'var(--color-azafran)',
-    boxShadow: 'inset 0 0 0 3px rgba(90, 30, 8, 0.25)',
-    fontSize: '24px',
+    fontSize: '26px',
     flexShrink: 0
   },
-  marcaEtiqueta: {
-    fontSize: '11px',
-    fontWeight: 600,
-    letterSpacing: '0.18em',
-    textTransform: 'uppercase',
-    color: 'var(--color-azafran)'
-  },
   titulo: {
-    margin: '2px 0 0',
-    fontSize: 'clamp(20px, 3vw, 26px)',
+    margin: 0,
+    fontSize: 'clamp(22px, 3vw, 28px)',
     color: 'var(--color-encabezado-texto)'
-  },
-  conexion: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '7px 14px',
-    borderRadius: '999px',
-    border: '1px solid',
-    background: 'rgba(244, 236, 227, 0.08)',
-    fontSize: '13px',
-    fontWeight: 600,
-    whiteSpace: 'nowrap'
   },
   accionesEncabezado: {
     display: 'flex',
@@ -122,22 +93,35 @@ const estilos = {
     alignItems: 'center',
     gap: '10px'
   },
+  conexion: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    minHeight: '44px',
+    padding: '8px 14px',
+    borderRadius: 'var(--radio-m)',
+    fontSize: '16px',
+    fontWeight: 700,
+    whiteSpace: 'nowrap'
+  },
+  conexionOk: {
+    background: 'var(--mesa-libre)',
+    color: 'var(--mesa-libre-texto)'
+  },
+  conexionCaida: {
+    background: 'var(--mesa-ocupada)',
+    color: 'var(--mesa-ocupada-texto)'
+  },
   botonConfigurar: {
     minHeight: '44px',
     padding: '8px 14px',
-    border: '2px solid rgba(244, 236, 227, 0.55)',
+    border: '2px solid var(--color-encabezado-texto)',
     borderRadius: 'var(--radio-m)',
     background: 'transparent',
     color: 'var(--color-encabezado-texto)',
-    fontSize: '15px',
+    fontSize: '16px',
     fontWeight: 700,
     cursor: 'pointer',
     whiteSpace: 'nowrap'
-  },
-  puntoConexion: {
-    width: '9px',
-    height: '9px',
-    borderRadius: '50%'
   }
 };
 
