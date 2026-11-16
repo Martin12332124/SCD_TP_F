@@ -274,6 +274,77 @@ describe('App: avanzar el pedido desde el panel de la mesa', () => {
   });
 });
 
+describe('App: trasladar desde el panel de la mesa (US-05)', () => {
+  const mesasConPedido = [
+    { id: 'Mesa 1', numero: 1, estado: 'libre', estadoPedido: null },
+    { id: 'Mesa 2', numero: 2, estado: 'ocupada', estadoPedido: 'En Cocina 🍳' },
+    { id: 'Mesa 3', numero: 3, estado: 'libre', estadoPedido: null }
+  ];
+
+  async function abrirPanelMesa2() {
+    await renderizarConectado();
+    await servidor('estado_mesas', mesasConPedido);
+    await userEvent.click(screen.getByTitle(/Mesa 2 —/));
+  }
+
+  test('elegir el destino y trasladar emite trasladar_pedido con números', async () => {
+    await abrirPanelMesa2();
+    await userEvent.click(screen.getByRole('button', { name: '3' }));
+    await userEvent.click(screen.getByRole('button', { name: /Trasladar a Mesa 3/ }));
+    expect(socket.emitirMock).toHaveBeenCalledWith('trasladar_pedido', { origen: 2, destino: 3 });
+  });
+
+  test('si el destino desaparece antes de confirmar, no se emite y se avisa', async () => {
+    await abrirPanelMesa2();
+    await userEvent.click(screen.getByRole('button', { name: '3' }));
+    // Otra tablet quita la mesa 3: el destino ya no se ofrece y no se puede trasladar
+    await servidor('estado_mesas', mesasConPedido.slice(0, 2));
+    expect(screen.getByRole('button', { name: /Trasladar pedido/ })).toBeDisabled();
+    expect(socket.emitirMock).not.toHaveBeenCalledWith('trasladar_pedido', expect.anything());
+  });
+
+  test('el resultado sigue visible cuando la mesa de origen queda libre', async () => {
+    await abrirPanelMesa2();
+    await servidor('respuesta_traslado', {
+      ok: true,
+      origen: 'Mesa 2',
+      destino: 'Mesa 3',
+      estado: 'En Cocina 🍳'
+    });
+    // El backend avisa el nuevo estado: la mesa 2 queda libre y la 3 ocupada
+    await servidor('estado_mesas', [
+      mesasConPedido[0],
+      { ...mesasConPedido[1], estado: 'libre', estadoPedido: null },
+      { ...mesasConPedido[2], estado: 'ocupada', estadoPedido: 'En Cocina 🍳' }
+    ]);
+    expect(document.getElementById('estado-mesa')).toHaveTextContent('Libre');
+    expect(document.getElementById('mensaje-traslado')).toHaveTextContent(
+      '✅ Pedido trasladado: Mesa 2 → Mesa 3 (En Cocina 🍳)'
+    );
+  });
+
+  test('un rechazo del backend se muestra en el panel con tipo, motivo y lo esperado', async () => {
+    await abrirPanelMesa2();
+    await servidor('respuesta_traslado', {
+      ok: false,
+      tipo: 'ESTADO_NO_PERMITIDO',
+      error: 'La mesa 3 no está disponible para recibir el traslado.',
+      esperado: 'Mesa de destino en estado "libre"'
+    });
+    expect(document.getElementById('mensaje-traslado')).toHaveTextContent(
+      /ESTADO_NO_PERMITIDO.*no está disponible.*Esperado: Mesa de destino/
+    );
+  });
+
+  test('al abrir otra mesa no aparece el resultado del traslado anterior', async () => {
+    await abrirPanelMesa2();
+    await servidor('respuesta_traslado', { ok: false, tipo: 'X', error: 'fallo' });
+    await userEvent.click(screen.getByRole('button', { name: 'Cerrar panel' }));
+    await userEvent.click(screen.getByTitle(/Mesa 1 —/));
+    expect(document.getElementById('mensaje-traslado')).not.toBeInTheDocument();
+  });
+});
+
 describe('App: traslado de mesa (US-05)', () => {
   const rellenar = (origen, destino) => {
     fireEvent.change(document.getElementById('input-mesa-origen'), { target: { value: origen } });

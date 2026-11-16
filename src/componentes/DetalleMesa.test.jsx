@@ -318,6 +318,50 @@ describe('DetalleMesa: avanzar el pedido desde la mesa', () => {
   });
 });
 
+describe('DetalleMesa: trasladar el pedido (US-05)', () => {
+  const mesas = [
+    { id: 'Mesa 1', numero: 1, estado: 'libre', estadoPedido: null },
+    { id: 'Mesa 2', numero: 2, estado: 'ocupada', estadoPedido: 'En Cocina 🍳' }
+  ];
+
+  test('con pedido muestra el bloque de traslado y traslada a la mesa elegida', async () => {
+    const onTrasladar = vi.fn();
+    renderizar(mesas[1], { mesas, onTrasladar });
+    expect(screen.getByRole('heading', { name: 'Trasladar pedido' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '1' }));
+    await userEvent.click(screen.getByRole('button', { name: /Trasladar a Mesa 1/ }));
+    expect(onTrasladar).toHaveBeenCalledWith(2, 1);
+  });
+
+  test('una mesa ocupada sin pedido no ofrece trasladar (no hay nada que mover)', () => {
+    renderizar({ ...mesas[1], estadoPedido: null }, { mesas });
+    expect(screen.queryByRole('heading', { name: 'Trasladar pedido' })).not.toBeInTheDocument();
+  });
+
+  test('una mesa libre no ofrece trasladar', () => {
+    renderizar(mesas[0], { mesas });
+    expect(screen.queryByRole('heading', { name: 'Trasladar pedido' })).not.toBeInTheDocument();
+  });
+
+  test('el resultado del traslado se muestra aunque la mesa de origen ya quedó libre', () => {
+    renderizar(mesas[0], {
+      mesas,
+      mensajeTraslado: '✅ Pedido trasladado: Mesa 2 → Mesa 1 (En Cocina 🍳)'
+    });
+    const aviso = document.getElementById('mensaje-traslado');
+    expect(aviso).toHaveAttribute('role', 'status');
+    expect(aviso).toHaveTextContent('Pedido trasladado: Mesa 2 → Mesa 1');
+    expect(aviso.style.borderColor).toBe('var(--color-exito)');
+  });
+
+  test('un rechazo del traslado se muestra con tono de error', () => {
+    renderizar(mesas[1], { mesas, mensajeTraslado: '⚠️ [ESTADO_NO_PERMITIDO] destino ocupado' });
+    expect(document.getElementById('mensaje-traslado').style.borderColor).toBe(
+      'var(--color-peligro)'
+    );
+  });
+});
+
 describe('DetalleMesa: los datos de una mesa no se mezclan con los de otra', () => {
   test('el resultado de abrir una mesa no aparece en el panel de otra mesa', async () => {
     simularBackend({ '/api/mesas/1/abrir': { ok: true } });

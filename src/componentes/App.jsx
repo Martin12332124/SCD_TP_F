@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
-import { validarNumeroMesa } from '../validaciones/validaciones';
+import { validarNumeroMesa, validarTraslado } from '../validaciones/validaciones';
 import { API_URL, obtenerMesas } from '../servicios/api';
 import MapaMesas from './MapaMesas';
 import DetalleMesa from './DetalleMesa';
@@ -194,6 +194,20 @@ function App() {
     socket.emit('actualizar_pedido', { mesa: `Mesa ${resultadoMesa.numero}`, estado: nuevoEstado });
   };
 
+  // US-05: traslada el pedido de una mesa a otra, desde el panel de la mesa de origen.
+  // Mismas validaciones defensivas que antes (números válidos, mesas distintas) más que
+  // ambas mesas existan; el resto (origen con pedido, destino libre) lo valida el backend.
+  const enviarTraslado = (origen, destino) => {
+    setMensajeTraslado(''); // Limpiar mensajes previos
+    const resultado = validarTraslado(origen, destino, mesas);
+    if (!resultado.esValido) {
+      setMensajeTraslado(resultado.mensajeError);
+      return;
+    }
+    console.log(`Enviando traslado: Mesa ${resultado.origen} → Mesa ${resultado.destino}`);
+    socket.emit('trasladar_pedido', { origen: resultado.origen, destino: resultado.destino });
+  };
+
   // Operación 3 (US-05): Traslada el pedido activo de una mesa a otra
   const trasladarPedido = () => {
     setMensajeTraslado(''); // Limpiar mensajes previos
@@ -250,7 +264,9 @@ function App() {
               mesaSeleccionada={mesaSeleccionada}
               onSeleccionar={(m) => {
                 setIdSeleccionada(m.id);
-                setErrorValidacion(''); // el aviso anterior no pertenece a esta mesa
+                // los avisos anteriores no pertenecen a esta mesa
+                setErrorValidacion('');
+                setMensajeTraslado('');
               }}
             />
           </section>
@@ -378,6 +394,9 @@ function App() {
           onCerrar={() => setIdSeleccionada(null)}
           onTomarPedido={(m) => setMesaTomandoPedido(m)}
           onCambiarEstado={actualizarPedido}
+          mesas={mesas}
+          onTrasladar={enviarTraslado}
+          mensajeTraslado={mensajeTraslado}
         />
 
         {/* Vista "Tomar pedido" — se muestra encima de todo cuando hay una mesa activa */}

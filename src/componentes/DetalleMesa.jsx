@@ -12,6 +12,9 @@
 //   onCambiarEstado {Function}    - (numeroMesa, estado) => void. Pide avanzar el pedido
 //   errorPedido     {string}      - Rechazo del último cambio de estado (validación o backend)
 //   versionPedidos  {number}      - Cambia cuando se actualiza algún pedido (refresca la cuenta)
+//   mesas           {Array}       - Todas las mesas (para elegir el destino de un traslado)
+//   onTrasladar     {Function}    - (origen, destino) => void. Pide trasladar el pedido (US-05)
+//   mensajeTraslado {string}      - Resultado del último traslado (éxito o rechazo)
 
 import { useState, useEffect } from 'react';
 import { formatearPrecio } from '../utils/formato';
@@ -23,6 +26,7 @@ import {
   cerrarMesa as cerrarMesaApi
 } from '../servicios/api';
 import AvancePedido from './AvancePedido';
+import TrasladoMesa from './TrasladoMesa';
 
 function DetalleMesa({
   mesa,
@@ -31,7 +35,10 @@ function DetalleMesa({
   onTomarPedido,
   onCambiarEstado = () => {},
   errorPedido = '',
-  versionPedidos = 0
+  versionPedidos = 0,
+  mesas = [],
+  onTrasladar = () => {},
+  mensajeTraslado = ''
 }) {
   const estaOcupada = mesa?.estado === 'ocupada';
   const numeroMesa = mesa?.numero;
@@ -216,6 +223,20 @@ function DetalleMesa({
               </div>
             )}
 
+            {/* US-05: resultado del traslado. Se muestra aunque la mesa de origen ya quedó libre */}
+            {mensajeTraslado && (
+              <div
+                id="mensaje-traslado"
+                role="status"
+                style={{
+                  ...estilos.aviso,
+                  ...(mensajeTraslado.startsWith('✅') ? estilos.tonoExito : estilos.tonoPeligro)
+                }}
+              >
+                {mensajeTraslado}
+              </div>
+            )}
+
             {/* Mesa libre: abrirla, o tomar el pedido directamente (el backend la abre al confirmar) */}
             {!estaOcupada && (
               <div style={estilos.bloque}>
@@ -283,6 +304,19 @@ function DetalleMesa({
                 <p style={estilos.texto}>Sin cuenta abierta.</p>
               )}
             </div>
+
+            {/* US-05: trasladar el pedido a otra mesa (solo si la mesa tiene un pedido) */}
+            {estaOcupada && (estadoPedido || mesa.estadoPedido === undefined) && (
+              <div style={estilos.bloque}>
+                <h3 style={estilos.subtitulo}>Trasladar pedido</h3>
+                <TrasladoMesa
+                  mesaOrigen={mesa}
+                  mesas={mesas}
+                  conectado={conectado}
+                  onTrasladar={onTrasladar}
+                />
+              </div>
+            )}
 
             {/* US-09 CA4: liberar la mesa. CA3: el backend lo impide si hay un pedido en curso */}
             {estaOcupada && (
