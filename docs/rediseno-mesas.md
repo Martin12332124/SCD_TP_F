@@ -21,7 +21,7 @@ Rama `feat/rediseno-mesas`, creada desde `dev` en `313b8ee`. Necesita la rama
 | Funcionalidad | Antes | Después |
 | --- | --- | --- |
 | Encabezado: título, conexión, tema | Etiqueta "Sala · Cocina · Caja"; conexión con puntito de color | Sin etiqueta; conexión como bloque de color con texto; botón "Configurar mesas" |
-| Último cambio y cronómetro (alerta a 15 min, tope 99:59) | Recuadro con etiqueta en mayúsculas y estado en píldora | Franja "Último cambio" con el estado en el color de la mesa; mismo cronómetro |
+| Último cambio y cronómetro (alerta a 15 min, tope 99:59) | Recuadro con etiqueta en mayúsculas y estado en píldora | Franja "Último cambio": a la izquierda el color sólido del estado con "Mesa 5 → En Cocina 🍳" en grande; a la derecha el cronómetro en grande |
 | Mapa de mesas (ver, seleccionar, resaltar, conteo) | Grilla verde/rojo, solo libre u ocupada | Plano de sala con 5 estados (color + ícono + texto); resumen "10 mesas: 6 libres, 4 ocupadas, 1 en cocina…" |
 | "Tomar Pedido 📝" (pedido vacío en Recibido) | Botón del panel de control, con número escrito | Panel de la mesa: "Registrar pedido sin productos" |
 | "Empezar Cocina 🍳" | Botón del panel de control | Panel de la mesa: "Enviar a cocina" (solo si el pedido está Recibido) |
@@ -134,10 +134,13 @@ Los mismos colores se usan en el plano, en la franja del panel, en la barra de p
 - El texto chico y gris tenue (mínimo 14 px, sin `--color-texto-tenue`).
 
 El test revisa el código fuente, así que es un control aproximado. Por eso además se revisó la
-interfaz en Chrome, en tema claro y oscuro y a ~830 y ~1000 px de ancho.
+interfaz en Chrome, en tema claro y oscuro, con ventanas de unos 830 y 1660 px de ancho. Esa
+revisión encontró dos cosas que el test no ve, ya corregidas: el estado de "Último cambio" y los
+pasos de la barra de progreso seguían siendo cajitas de color con texto.
 
-**Zonas táctiles.** Botones de al menos 52 px de alto (`--toque`), mesas del plano de al menos
-128 × 128 px y botones de cantidad de 44 px.
+**Zonas táctiles.** Los botones de la sala, el panel de la mesa, la toma de pedido y
+"Configurar mesas" miden al menos 52 px de alto (`--toque`); las mesas del plano, al menos
+128 × 128 px; los botones del encabezado y los de cantidad, 44 px.
 
 ## 6. Resultados de los tests
 
@@ -147,10 +150,10 @@ Ejecutado con `npm run test:coverage` (el mismo que usa el CI) y `npm run lint`,
 | --- | --- | --- |
 | Archivos de test | 8 pasan | 15 pasan |
 | Tests | 163 / 163 | 406 / 406 |
-| Statements | 97.55 % (319/327) | 97.64 % (456/467) |
-| Branches | 94.40 % (253/268) | 95.64 % (373/390) |
+| Statements | 97.55 % (319/327) | 97.64 % (457/468) |
+| Branches | 94.40 % (253/268) | 95.59 % (369/386) |
 | Functions | 98.85 % (86/87) | 98.48 % (130/132) |
-| Lines | 98.32 % (294/299) | 98.09 % (411/419) |
+| Lines | 98.32 % (294/299) | 98.09 % (412/420) |
 | Umbrales (85/85/80/75) | cumplen | cumplen |
 | `npm run lint` / `npm run build` | sin problemas | sin problemas |
 
@@ -196,8 +199,13 @@ temporal):
 | `ab7d5d5` | feat(mesas): pantalla para agregar y quitar mesas |
 | `e7e9460` | style: quitar etiquetas, píldoras y chips de toda la interfaz |
 | `bfbaa8f` | fix(estilos): no mezclar border con borderColor o borderWidth |
+| `706d2fc` | style: franja de último cambio y barra de progreso sin cajitas de texto |
 
-Más el commit de esta documentación: `docs: documentar el rediseño de mesas`.
+Más la documentación: `bc26174` (docs: documentar el rediseño de mesas) y el commit que la
+actualiza con la revisión final.
+
+`bfbaa8f` y `706d2fc` no estaban en la lista del plan: salieron de la revisión en el navegador (un aviso
+de React en la consola y los dos elementos con forma de cajita).
 
 ## 8. Puntos frágiles y pendientes
 
@@ -215,9 +223,15 @@ Más el commit de esta documentación: `docs: documentar el rediseño de mesas`.
 - **No se probó en tablets reales** (Android/iOS, REF-14); se revisó en Chrome a ~830 y ~1000 px.
   "En cocina" usa texto oscuro sobre ámbar (contraste 8.1): conviene confirmar en la pantalla de
   cocina real que se distingue bien de "Libre" y "Pedido listo" a 2 metros (REF-05).
-- **`npm run test:integracion` no se corrió en local:** usa el puerto 3000, donde estaba el
-  servidor de desarrollo, y dejaría un pedido en esa base. Lo corre el CI.
+- **Script de integración del CI (`test-verificacion.js`):** no se modificó. Se corrió a mano
+  contra el backend nuevo (puerto 3101, base temporal) y pasó completo. No se usó
+  `npm run test:integracion` porque levanta el backend en el puerto 3000, donde estaba el servidor
+  de desarrollo.
 - **`docs/guia-unidad-3.md`** describe los módulos como estaban al entregar esa guía (por ejemplo,
   `App.jsx` como consumidor de `validarNumeroMesa`). No se tocó porque es una entrega anterior.
+- **Límite de 99 mesas duplicado:** está en `NUMERO_MESA_MAXIMO` del backend y del frontend; si
+  se cambia, hay que cambiarlo en los dos.
+- **Barra de progreso:** quedó como barra continua con el nombre de cada paso dentro. Si se
+  prefiere aún más simple (solo colores, sin texto), es un ajuste de estilos en `AvancePedido.jsx`.
 - **Formato:** `App.jsx`, `TomaPedido.jsx` y algunos tests ya no seguían Prettier antes de esta
   tarea; no se reformatearon para no mezclar cambios ajenos en el diff.
