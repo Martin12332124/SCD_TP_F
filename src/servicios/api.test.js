@@ -6,6 +6,8 @@ import {
   obtenerPedidoMesa,
   abrirMesa,
   cerrarMesa,
+  agregarMesa,
+  quitarMesa,
   obtenerMenu
 } from './api.js';
 
@@ -75,6 +77,47 @@ describe('api: operaciones POST', () => {
       method: 'POST'
     });
     expect(datos.tipo).toBe('PEDIDO_ACTIVO');
+  });
+});
+
+describe('api: configuración de mesas', () => {
+  test('agregarMesa sin número hace POST a /api/mesas con un cuerpo vacío', async () => {
+    const fetchFalso = simularRespuesta({ ok: true, mesa: { id: 'Mesa 11', numero: 11 } });
+    const datos = await agregarMesa();
+    expect(fetchFalso).toHaveBeenCalledWith('http://localhost:3000/api/mesas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}'
+    });
+    expect(datos.mesa.numero).toBe(11);
+  });
+
+  test('agregarMesa con número lo envía en el cuerpo', async () => {
+    const fetchFalso = simularRespuesta({ ok: true });
+    await agregarMesa(20);
+    expect(fetchFalso).toHaveBeenCalledWith(
+      'http://localhost:3000/api/mesas',
+      expect.objectContaining({ method: 'POST', body: '{"numero":20}' })
+    );
+  });
+
+  test('agregarMesa devuelve DUPLICADO sin lanzar', async () => {
+    simularRespuesta({ ok: false, tipo: 'DUPLICADO', error: 'La mesa 3 ya existe.' });
+    await expect(agregarMesa(3)).resolves.toMatchObject({ ok: false, tipo: 'DUPLICADO' });
+  });
+
+  test('quitarMesa hace DELETE a /api/mesas/:numero', async () => {
+    const fetchFalso = simularRespuesta({ ok: true, mesa: 'Mesa 7' });
+    const datos = await quitarMesa(7);
+    expect(fetchFalso).toHaveBeenCalledWith('http://localhost:3000/api/mesas/7', {
+      method: 'DELETE'
+    });
+    expect(datos.mesa).toBe('Mesa 7');
+  });
+
+  test('quitarMesa devuelve el rechazo del backend sin lanzar', async () => {
+    simularRespuesta({ ok: false, tipo: 'ESTADO_NO_PERMITIDO', error: 'La mesa 2 está ocupada.' });
+    await expect(quitarMesa(2)).resolves.toMatchObject({ tipo: 'ESTADO_NO_PERMITIDO' });
   });
 });
 

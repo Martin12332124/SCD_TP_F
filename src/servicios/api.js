@@ -21,8 +21,9 @@ async function pedirJson(ruta, opciones) {
 }
 
 /**
- * Lista todas las mesas con su estado.
- * @returns {Promise<{ ok: boolean, mesas?: Array<{ id: string, numero: number, estado: string }> }>}
+ * Lista todas las mesas con su estado. `estadoPedido` es el estado del pedido vigente de la mesa
+ * ("Recibido 📝", "En Cocina 🍳", "Listo 🍽️") o null; puede faltar si el backend es anterior.
+ * @returns {Promise<{ ok: boolean, mesas?: Array<{ id: string, numero: number, estado: string, estadoPedido?: string|null }> }>}
  */
 export const obtenerMesas = () => pedirJson('/api/mesas');
 
@@ -46,6 +47,28 @@ export const abrirMesa = (numero) => pedirJson(`/api/mesas/${numero}/abrir`, { m
  * @returns {Promise<{ ok: boolean, tipo?: string, error?: string }>}
  */
 export const cerrarMesa = (numero) => pedirJson(`/api/mesas/${numero}/cerrar`, { method: 'POST' });
+
+/**
+ * Agrega una mesa libre. Sin `numero` se crea la siguiente a la más alta que exista.
+ * El backend la rechaza si el número no es un entero de 1 a 99 (tipo ENTRADA_INVALIDA)
+ * o si ya existe (tipo DUPLICADO).
+ * @param {number} [numero]
+ * @returns {Promise<{ ok: boolean, mesa?: { id: string, numero: number, estado: string }, tipo?: string, error?: string }>}
+ */
+export const agregarMesa = (numero) =>
+  pedirJson('/api/mesas', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(numero === undefined ? {} : { numero })
+  });
+
+/**
+ * Quita una mesa. El backend la rechaza si está ocupada (tipo ESTADO_NO_PERMITIDO),
+ * si tiene un pedido vigente (tipo PEDIDO_ACTIVO) o si es la última mesa.
+ * @param {number} numero
+ * @returns {Promise<{ ok: boolean, mesa?: string, tipo?: string, error?: string }>}
+ */
+export const quitarMesa = (numero) => pedirJson(`/api/mesas/${numero}`, { method: 'DELETE' });
 
 /**
  * Carta del restaurante.
