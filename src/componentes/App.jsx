@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
-import { validarNumeroMesa, validarTraslado } from '../validaciones/validaciones';
+import { validarMesaExistente, validarTraslado } from '../validaciones/validaciones';
+import { FLUJO_PEDIDO } from '../utils/flujoPedido';
 import { API_URL, obtenerMesas } from '../servicios/api';
 import MapaMesas from './MapaMesas';
 import DetalleMesa from './DetalleMesa';
@@ -13,11 +14,9 @@ const socket = io(API_URL);
 
 function App() {
   const [conectado, setConectado] = useState(false);
-  // Estado para capturar la mesa seleccionada en el formulario
-  const [mesa, setMesa] = useState('');
   // Estado para mostrar el último pedido actualizado que llega del backend
   const [ultimoPedido, setUltimoPedido] = useState({ mesa: 'Ninguna', estado: 'Sin Pedidos' });
-  // Estado para capturar errores de validación en pantalla
+  // Rechazo del último cambio de estado del pedido (validación del frontend o del backend)
   const [errorValidacion, setErrorValidacion] = useState('');
 
   // NUEVO: Estado para el contador de tiempo en segundos
@@ -26,9 +25,7 @@ function App() {
   // NUEVO: Estado para el estado de las mesas en tiempo real
   const [mesas, setMesas] = useState([]);
 
-  // Operación 3 (US-05): estados para el traslado de mesa
-  const [mesaOrigen, setMesaOrigen] = useState('');
-  const [mesaDestino, setMesaDestino] = useState('');
+  // US-05: resultado del último traslado, que se muestra en el panel de la mesa
   const [mensajeTraslado, setMensajeTraslado] = useState('');
 
   // US-08: mesa seleccionada para mostrar su panel lateral. Se guarda solo el id y la mesa
@@ -90,8 +87,6 @@ function App() {
         setMensajeTraslado(
           `✅ Pedido trasladado: ${resultado.origen} → ${resultado.destino} (${resultado.estado})`
         );
-        setMesaOrigen('');
-        setMesaDestino('');
       } else {
         setMensajeTraslado(
           `⚠️ [${resultado.tipo}] ${resultado.error}` +
@@ -147,33 +142,13 @@ function App() {
   }, [conectado, ultimoPedido.estado]);
 
 
-  // Función para manejar el cambio en el input de la mesa de forma controlada
-  const manejarCambioMesa = (valor) => {
-    // 1. Conservar siempre la entrada en el estado para que el campo no se borre silenciosamente
-    setMesa(valor);
-
-    // 2. Si el usuario vacía el input, limpiamos los mensajes de error
-    if (valor.trim() === '') {
-      setErrorValidacion('');
-      return;
-    }
-
-    // 3. Validación defensiva en la frontera de entrada del componente
-    const resultado = validarNumeroMesa(valor);
-    if (!resultado.esValido) {
-      setErrorValidacion(resultado.mensajeError);
-    } else {
-      setErrorValidacion('');
-    }
-  };
-
-  // Pide al backend pasar el pedido de una mesa a un estado. La mesa llega desde el panel
-  // de la mesa (su número) o, por ahora, desde el campo del panel de control.
+  // Pide al backend pasar el pedido de una mesa a un estado, desde el panel de esa mesa.
   const actualizarPedido = (valorMesa, nuevoEstado) => {
     setErrorValidacion(''); // Limpiar errores previos
 
-    // 1. VALIDACIÓN DEFENSIVA: Verificar que la mesa sea válida
-    const resultadoMesa = validarNumeroMesa(valorMesa);
+    // 1. VALIDACIÓN DEFENSIVA: la mesa es un número válido y existe
+    //    (la cantidad de mesas es configurable, ya no basta con "entero mayor a 0")
+    const resultadoMesa = validarMesaExistente(valorMesa, mesas);
     if (!resultadoMesa.esValido) {
       setErrorValidacion(
         resultadoMesa.mensajeError ||
@@ -183,8 +158,7 @@ function App() {
     }
 
     // 2. VALIDACIÓN: Lista estricta de estados permitidos en el restaurante
-    const ESTADOS_PERMITIDOS = ['Recibido 📝', 'En Cocina 🍳', 'Listo 🍽️'];
-    if (!ESTADOS_PERMITIDOS.includes(nuevoEstado)) {
+    if (!FLUJO_PEDIDO.includes(nuevoEstado)) {
       setErrorValidacion('⚠️ Estado de pedido no reconocido.');
       return; // Frena el envío por socket
     }
@@ -208,39 +182,6 @@ function App() {
     socket.emit('trasladar_pedido', { origen: resultado.origen, destino: resultado.destino });
   };
 
-  // Operación 3 (US-05): Traslada el pedido activo de una mesa a otra
-  const trasladarPedido = () => {
-    setMensajeTraslado(''); // Limpiar mensajes previos
-
-    // 1. VALIDACIÓN DEFENSIVA: verificar mesa origen
-    const resOrigen = validarNumeroMesa(mesaOrigen);
-    if (!resOrigen.esValido) {
-      setMensajeTraslado(
-        resOrigen.mensajeError || '⚠️ Mesa origen inválida (debe ser entero mayor a 0).'
-      );
-      return;
-    }
-
-    // 2. VALIDACIÓN DEFENSIVA: verificar mesa destino
-    const resDestino = validarNumeroMesa(mesaDestino);
-    if (!resDestino.esValido) {
-      setMensajeTraslado(
-        resDestino.mensajeError || '⚠️ Mesa destino inválida (debe ser entero mayor a 0).'
-      );
-      return;
-    }
-
-    // 3. VALIDACIÓN: origen y destino deben ser distintos (primera barrera cliente)
-    if (resOrigen.numero === resDestino.numero) {
-      setMensajeTraslado('⚠️ [ENTRADA_INVALIDA] origen y destino deben ser mesas distintas.');
-      return;
-    }
-
-    // 4. Envío seguro al backend
-    console.log(`Enviando traslado: Mesa ${resOrigen.numero} → Mesa ${resDestino.numero}`);
-    socket.emit('trasladar_pedido', { origen: resOrigen.numero, destino: resDestino.numero });
-  };
-
   return (
     <div style={estilos.app}>
       <Encabezado conectado={conectado} />
@@ -256,134 +197,19 @@ function App() {
           </div>
         )}
 
-        <div style={estilos.columnas}>
-          {/* US-08: Mapa interactivo de mesas con panel lateral de detalle */}
-          <section style={{ ...estilos.tarjeta, ...estilos.columnaPrincipal }}>
-            <MapaMesas
-              mesas={mesas}
-              mesaSeleccionada={mesaSeleccionada}
-              onSeleccionar={(m) => {
-                setIdSeleccionada(m.id);
-                // los avisos anteriores no pertenecen a esta mesa
-                setErrorValidacion('');
-                setMensajeTraslado('');
-              }}
-            />
-          </section>
-
-          <aside style={estilos.columnaLateral}>
-            {/* Formulario de Simulación */}
-            <section style={estilos.tarjeta}>
-              <p style={estilos.etiqueta}>Mozo · Cocina</p>
-              <h3 style={estilos.tituloTarjeta}>Panel de control</h3>
-
-              <label htmlFor="input-mesa" style={estilos.rotulo}>
-                Número de mesa
-              </label>
-              <input
-                id="input-mesa"
-                type="number"
-                step="1"
-                placeholder="Ej: 5"
-                value={mesa}
-                onChange={(e) => manejarCambioMesa(e.target.value)}
-                disabled={!conectado}
-                style={estilos.campo}
-              />
-
-              <p style={{ ...estilos.rotulo, marginTop: '18px' }}>Cambiar estado a</p>
-              {/* Los botones se deshabilitan automáticamente si el servidor cae */}
-              <div style={estilos.grupoEstados}>
-                <button
-                  disabled={!conectado}
-                  onClick={() => actualizarPedido(mesa, 'Recibido 📝')}
-                  style={{ ...estilos.botonEstado, borderLeftColor: 'var(--color-azafran)' }}
-                >
-                  Tomar Pedido 📝
-                </button>
-                <button
-                  disabled={!conectado}
-                  onClick={() => actualizarPedido(mesa, 'En Cocina 🍳')}
-                  style={{ ...estilos.botonEstado, borderLeftColor: 'var(--color-acento)' }}
-                >
-                  Empezar Cocina 🍳
-                </button>
-                <button
-                  disabled={!conectado}
-                  onClick={() => actualizarPedido(mesa, 'Listo 🍽️')}
-                  style={{ ...estilos.botonEstado, borderLeftColor: 'var(--color-exito)' }}
-                >
-                  Pedido Listo 🍽️
-                </button>
-              </div>
-            </section>
-
-            {/* Operación 3 (US-05): Traslado de Mesa */}
-            <section style={estilos.tarjeta}>
-              <p style={estilos.etiqueta}>Sala</p>
-              <h3 style={estilos.tituloTarjeta}>Traslado de mesa</h3>
-
-              {/* Banner de resultado del traslado */}
-              {mensajeTraslado && (
-                <div
-                  role="status"
-                  style={{
-                    ...estilos.aviso,
-                    ...(mensajeTraslado.startsWith('✅') ? estilos.avisoExito : estilos.avisoError)
-                  }}
-                >
-                  {mensajeTraslado}
-                </div>
-              )}
-
-              <div style={estilos.filaCampos}>
-                <div style={{ flex: 1 }}>
-                  <label htmlFor="input-mesa-origen" style={estilos.rotulo}>
-                    Mesa origen
-                  </label>
-                  <input
-                    id="input-mesa-origen"
-                    type="number"
-                    step="1"
-                    placeholder="Ej: 2"
-                    value={mesaOrigen}
-                    onChange={(e) => {
-                      setMesaOrigen(e.target.value);
-                      setMensajeTraslado('');
-                    }}
-                    disabled={!conectado}
-                    style={estilos.campo}
-                  />
-                </div>
-                <span aria-hidden="true" style={estilos.flechaTraslado}>
-                  ⇄
-                </span>
-                <div style={{ flex: 1 }}>
-                  <label htmlFor="input-mesa-destino" style={estilos.rotulo}>
-                    Mesa destino
-                  </label>
-                  <input
-                    id="input-mesa-destino"
-                    type="number"
-                    step="1"
-                    placeholder="Ej: 6"
-                    value={mesaDestino}
-                    onChange={(e) => {
-                      setMesaDestino(e.target.value);
-                      setMensajeTraslado('');
-                    }}
-                    disabled={!conectado}
-                    style={estilos.campo}
-                  />
-                </div>
-              </div>
-
-              <button disabled={!conectado} onClick={trasladarPedido} style={estilos.botonPrimario}>
-                🔄 Trasladar Mesa
-              </button>
-            </section>
-          </aside>
-        </div>
+        {/* US-08: plano de sala; al tocar una mesa se abre su panel con todas sus acciones */}
+        <section style={estilos.tarjeta}>
+          <MapaMesas
+            mesas={mesas}
+            mesaSeleccionada={mesaSeleccionada}
+            onSeleccionar={(m) => {
+              setIdSeleccionada(m.id);
+              // los avisos anteriores no pertenecen a esta mesa
+              setErrorValidacion('');
+              setMensajeTraslado('');
+            }}
+          />
+        </section>
 
         {/* US-08 CA5 / US-09: Panel lateral deslizable con el detalle de la mesa seleccionada */}
         <DetalleMesa
@@ -429,19 +255,11 @@ const estilos = {
     flexDirection: 'column',
     gap: '24px'
   },
-  etiqueta: {
-    fontSize: '11px',
-    fontWeight: 700,
-    letterSpacing: '0.16em',
-    textTransform: 'uppercase',
-    color: 'var(--color-acento-texto)',
-    marginBottom: '4px'
-  },
   aviso: {
     padding: '12px 16px',
     borderRadius: 'var(--radio-m)',
-    border: '1px solid',
-    fontSize: '14px',
+    border: '2px solid',
+    fontSize: '16px',
     fontWeight: 600,
     lineHeight: 1.5
   },
@@ -450,98 +268,12 @@ const estilos = {
     color: 'var(--color-peligro-texto)',
     borderColor: 'var(--color-peligro)'
   },
-  avisoExito: {
-    background: 'var(--color-exito-suave)',
-    color: 'var(--color-exito-texto)',
-    borderColor: 'var(--color-exito)'
-  },
-  // Dos columnas que se apilan solas en pantallas angostas (flex-wrap)
-  columnas: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    alignItems: 'flex-start',
-    gap: '24px'
-  },
-  columnaPrincipal: {
-    flex: '2 1 480px',
-    minWidth: 0
-  },
-  columnaLateral: {
-    flex: '1 1 320px',
-    minWidth: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '24px'
-  },
   tarjeta: {
     background: 'var(--color-superficie)',
     border: '1px solid var(--color-borde)',
     borderRadius: 'var(--radio-l)',
     boxShadow: 'var(--sombra-1)',
     padding: '24px'
-  },
-  tituloTarjeta: {
-    margin: '0 0 18px',
-    fontSize: '20px'
-  },
-  rotulo: {
-    display: 'block',
-    marginBottom: '6px',
-    fontSize: '13px',
-    fontWeight: 600,
-    color: 'var(--color-texto-suave)'
-  },
-  campo: {
-    width: '100%',
-    padding: '10px 14px',
-    fontSize: '16px',
-    color: 'var(--color-texto)',
-    background: 'var(--color-fondo)',
-    border: '1px solid var(--color-borde)',
-    borderRadius: 'var(--radio-s)'
-  },
-  grupoEstados: {
-    display: 'grid',
-    gap: '10px'
-  },
-  botonEstado: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    padding: '12px 16px',
-    fontSize: '15px',
-    fontWeight: 600,
-    textAlign: 'left',
-    color: 'var(--color-texto)',
-    background: 'var(--color-superficie-alt)',
-    border: '1px solid var(--color-borde)',
-    borderLeft: '5px solid',
-    borderRadius: 'var(--radio-m)',
-    cursor: 'pointer'
-  },
-  filaCampos: {
-    display: 'flex',
-    alignItems: 'flex-end',
-    gap: '12px',
-    marginBottom: '16px'
-  },
-  flechaTraslado: {
-    paddingBottom: '10px',
-    fontSize: '20px',
-    color: 'var(--color-texto-tenue)'
-  },
-  botonPrimario: {
-    width: '100%',
-    padding: '12px 18px',
-    fontSize: '15px',
-    fontWeight: 700,
-    color: 'var(--color-sobre-primario)',
-    background: 'var(--color-primario)',
-    border: 'none',
-    borderRadius: 'var(--radio-m)',
-    boxShadow: '0 2px 0 rgba(90, 30, 8, 0.25)',
-    cursor: 'pointer'
   }
 };
 

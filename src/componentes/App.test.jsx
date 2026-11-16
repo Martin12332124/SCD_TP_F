@@ -2,7 +2,7 @@
 // mapa de mesas (US-08) y traslado de mesa (US-05).
 // socket.io-client y fetch se sustituyen por dobles: no se usa red ni backend real.
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act, fireEvent, within } from '@testing-library/react';
+import { render, screen, act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // vi.hoisted: el doble debe existir antes de que App.jsx cree su conexión al importarse.
@@ -50,10 +50,12 @@ async function renderizarConectado() {
 }
 
 describe('App: conexión', () => {
-  test('arranca desconectada y deshabilita el formulario', () => {
+  test('arranca desconectada y deshabilita las acciones de la mesa', async () => {
     render(<App />);
     expect(screen.getByText(/Servidor Desconectado/)).toBeInTheDocument();
-    expect(document.getElementById('input-mesa')).toBeDisabled();
+    await userEvent.click(await screen.findByTitle(/Mesa 2 —/));
+    expect(screen.getByRole('button', { name: 'Registrar pedido sin productos' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Liberar mesa' })).toBeDisabled();
   });
 
   test('connect/disconnect actualizan el indicador', async () => {
@@ -65,42 +67,25 @@ describe('App: conexión', () => {
   });
 });
 
-describe('App: validación defensiva del número de mesa', () => {
-  test.each(['-1', '0', '1.5'])(
-    'un valor inválido "%s" muestra error y conserva el campo',
-    async (valor) => {
-      await renderizarConectado();
-      const input = document.getElementById('input-mesa');
-      fireEvent.change(input, { target: { value: valor } });
-      expect(screen.getByText(/⚠️/)).toBeInTheDocument();
-      expect(input).toHaveValue(Number(valor));
-    }
-  );
-
-  test('corregir a un valor válido limpia el error; vaciar también', async () => {
+describe('App: sin escribir números de mesa', () => {
+  test('la pantalla principal no tiene campos para escribir números de mesa', async () => {
     await renderizarConectado();
-    const input = document.getElementById('input-mesa');
-    fireEvent.change(input, { target: { value: '-1' } });
-    fireEvent.change(input, { target: { value: '5' } });
-    expect(screen.queryByText(/⚠️/)).not.toBeInTheDocument();
-    fireEvent.change(input, { target: { value: '-1' } });
-    fireEvent.change(input, { target: { value: '' } });
-    expect(screen.queryByText(/⚠️/)).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('spinbutton')).toHaveLength(0);
+    expect(screen.queryAllByRole('textbox')).toHaveLength(0);
+    expect(screen.queryByText('Panel de control')).not.toBeInTheDocument();
+    expect(screen.queryByText('Traslado de mesa')).not.toBeInTheDocument();
   });
 
-  test('enviar un estado con mesa inválida NO emite por socket', async () => {
+  test('el cambio de estado se emite con la mesa del panel en formato "Mesa N"', async () => {
     await renderizarConectado();
-    await userEvent.click(screen.getByText(/Tomar Pedido 📝/));
-    expect(screen.getByText(/⚠️/)).toBeInTheDocument();
-    expect(socket.emitirMock).not.toHaveBeenCalled();
-  });
-
-  test('con mesa válida emite actualizar_pedido con formato "Mesa N"', async () => {
-    await renderizarConectado();
-    fireEvent.change(document.getElementById('input-mesa'), { target: { value: '5' } });
-    await userEvent.click(screen.getByText(/Empezar Cocina/));
+    await servidor('estado_mesas', [
+      mesasBase[0],
+      { ...mesasBase[1], estadoPedido: 'Recibido 📝' }
+    ]);
+    await userEvent.click(screen.getByTitle(/Mesa 2 —/));
+    await userEvent.click(screen.getByRole('button', { name: /Enviar a cocina/ }));
     expect(socket.emitirMock).toHaveBeenCalledWith('actualizar_pedido', {
-      mesa: 'Mesa 5',
+      mesa: 'Mesa 2',
       estado: 'En Cocina 🍳'
     });
   });
@@ -345,58 +330,6 @@ describe('App: trasladar desde el panel de la mesa (US-05)', () => {
   });
 });
 
-describe('App: traslado de mesa (US-05)', () => {
-  const rellenar = (origen, destino) => {
-    fireEvent.change(document.getElementById('input-mesa-origen'), { target: { value: origen } });
-    fireEvent.change(document.getElementById('input-mesa-destino'), { target: { value: destino } });
-  };
-  const trasladar = () => userEvent.click(screen.getByText(/Trasladar Mesa/));
-
-  test('traslado válido emite trasladar_pedido con números', async () => {
-    await renderizarConectado();
-    rellenar('2', '6');
-    await trasladar();
-    expect(socket.emitirMock).toHaveBeenCalledWith('trasladar_pedido', { origen: 2, destino: 6 });
-  });
-
-  test.each([
-    ['0', '3', /mayor a 0/],
-    ['2', '-1', /mayor a 0/],
-    ['', '3', /válido/],
-    ['4', '4', /distintas/]
-  ])('origen "%s" y destino "%s" se rechazan sin emitir', async (o, d, mensaje) => {
-    await renderizarConectado();
-    rellenar(o, d);
-    await trasladar();
-    expect(screen.getByText(mensaje)).toBeInTheDocument();
-    expect(socket.emitirMock).not.toHaveBeenCalled();
-  });
-
-  test('respuesta_traslado ok muestra confirmación y limpia los campos', async () => {
-    await renderizarConectado();
-    rellenar('2', '6');
-    await servidor('respuesta_traslado', {
-      ok: true,
-      origen: 'Mesa 2',
-      destino: 'Mesa 6',
-      estado: 'En Cocina 🍳'
-    });
-    expect(screen.getByText(/Pedido trasladado: Mesa 2 → Mesa 6/)).toBeInTheDocument();
-    expect(document.getElementById('input-mesa-origen')).toHaveValue(null);
-  });
-
-  test('respuesta_traslado con error muestra tipo y motivo', async () => {
-    await renderizarConectado();
-    await servidor('respuesta_traslado', {
-      ok: false,
-      tipo: 'DESTINO_OCUPADO',
-      error: 'La mesa destino no está libre',
-      esperado: 'mesa libre'
-    });
-    expect(screen.getByText(/DESTINO_OCUPADO.*no está libre.*mesa libre/)).toBeInTheDocument();
-  });
-});
-
 describe('App: interfaz visual (#77)', () => {
   test('el encabezado reúne título, indicador de conexión y selector de tema', async () => {
     await renderizarConectado();
@@ -406,15 +339,6 @@ describe('App: interfaz visual (#77)', () => {
     ).toBeInTheDocument();
     expect(within(encabezado).getByRole('status')).toHaveTextContent('Sistema Conectado');
     expect(within(encabezado).getByRole('button', { name: /Modo (claro|oscuro)/ })).toBeVisible();
-  });
-
-  test('los campos se identifican por su rótulo', async () => {
-    await renderizarConectado();
-    expect(screen.getByLabelText('Número de mesa')).toBe(document.getElementById('input-mesa'));
-    expect(screen.getByLabelText('Mesa origen')).toBe(document.getElementById('input-mesa-origen'));
-    expect(screen.getByLabelText('Mesa destino')).toBe(
-      document.getElementById('input-mesa-destino')
-    );
   });
 
   test('sin pedidos la píldora usa el tono neutro y no hay contador', async () => {
@@ -433,14 +357,15 @@ describe('App: interfaz visual (#77)', () => {
     expect(screen.getByText(estado).style.borderColor).toBe(borde);
   });
 
-  test('un error de validación se anuncia como alerta', async () => {
+  test('un rechazo del backend sin panel abierto se anuncia como alerta', async () => {
     await renderizarConectado();
-    fireEvent.change(document.getElementById('input-mesa'), { target: { value: '-1' } });
+    await servidor('respuesta_pedido', { ok: false, tipo: 'ENTRADA_INVALIDA', error: 'mesa' });
     expect(screen.getByRole('alert')).toHaveTextContent('⚠️');
   });
 
   test('el resultado del traslado se anuncia con tono de éxito', async () => {
     await renderizarConectado();
+    await userEvent.click(screen.getByTitle(/Mesa 1 —/));
     await servidor('respuesta_traslado', {
       ok: true,
       origen: 'Mesa 2',
