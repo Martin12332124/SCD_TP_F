@@ -31,8 +31,10 @@ function App() {
   const [mesaDestino, setMesaDestino] = useState('');
   const [mensajeTraslado, setMensajeTraslado] = useState('');
 
-  // US-08: mesa seleccionada para mostrar el panel lateral de detalle
-  const [mesaSeleccionada, setMesaSeleccionada] = useState(null);
+  // US-08: mesa seleccionada para mostrar su panel lateral. Se guarda solo el id y la mesa
+  // se toma de la lista: así el panel siempre muestra el estado más reciente (CA3).
+  const [idSeleccionada, setIdSeleccionada] = useState(null);
+  const mesaSeleccionada = mesas.find((m) => m.id === idSeleccionada) ?? null;
 
   // Vista "Tomar pedido" (Paso 1): mesa para la que se está tomando el pedido
   // null = vista cerrada; objeto mesa = vista abierta para esa mesa
@@ -58,18 +60,16 @@ function App() {
       setMesas((prev) =>
         prev.map((m) => (m.id === datos.mesa ? { ...m, estadoPedido: datos.estado } : m))
       );
+      // La cuenta del panel abierto se vuelve a cargar con el pedido actualizado
+      setVersionPedidos((v) => v + 1);
     });
 
     // NUEVO: escuchar el evento de estado de mesas que ya emite el backend
     // US-08 CA3: reflejar cambios en tiempo real también en la mesa seleccionada
     socket.on('estado_mesas', (datos) => {
       setMesas(datos);
-      // Sincronizar el estado de la mesa seleccionada si cambió
-      setMesaSeleccionada((prev) => {
-        if (!prev) return null;
-        const actualizada = datos.find((m) => m.id === prev.id);
-        return actualizada ?? null;
-      });
+      // Si la mesa seleccionada ya no existe (la quitaron), su panel se cierra
+      setIdSeleccionada((prev) => (datos.some((m) => m.id === prev) ? prev : null));
     });
 
     socket.on('pedido_items_actualizado', () => setVersionPedidos((v) => v + 1));
@@ -167,12 +167,13 @@ function App() {
     }
   };
 
-  // Función para simular el envío o actualización de un pedido
-  const actualizarPedido = (nuevoEstado) => {
+  // Pide al backend pasar el pedido de una mesa a un estado. La mesa llega desde el panel
+  // de la mesa (su número) o, por ahora, desde el campo del panel de control.
+  const actualizarPedido = (valorMesa, nuevoEstado) => {
     setErrorValidacion(''); // Limpiar errores previos
 
-    // 1. VALIDACIÓN DEFENSIVA: Verificar que se haya ingresado una mesa válida
-    const resultadoMesa = validarNumeroMesa(mesa);
+    // 1. VALIDACIÓN DEFENSIVA: Verificar que la mesa sea válida
+    const resultadoMesa = validarNumeroMesa(valorMesa);
     if (!resultadoMesa.esValido) {
       setErrorValidacion(
         resultadoMesa.mensajeError ||
@@ -233,8 +234,9 @@ function App() {
       <main style={estilos.contenido}>
         <UltimaActualizacion ultimoPedido={ultimoPedido} segundos={segundos} />
 
-        {/* Alerta de validación del Frontend */}
-        {errorValidacion && (
+        {/* Alerta de validación o de rechazo del backend. Con el panel de una mesa abierto,
+            el aviso se muestra dentro del panel (que tapa esta zona). */}
+        {errorValidacion && !mesaSeleccionada && (
           <div role="alert" style={{ ...estilos.aviso, ...estilos.avisoError }}>
             {errorValidacion}
           </div>
@@ -246,7 +248,10 @@ function App() {
             <MapaMesas
               mesas={mesas}
               mesaSeleccionada={mesaSeleccionada}
-              onSeleccionar={(m) => setMesaSeleccionada(m)}
+              onSeleccionar={(m) => {
+                setIdSeleccionada(m.id);
+                setErrorValidacion(''); // el aviso anterior no pertenece a esta mesa
+              }}
             />
           </section>
 
@@ -275,21 +280,21 @@ function App() {
               <div style={estilos.grupoEstados}>
                 <button
                   disabled={!conectado}
-                  onClick={() => actualizarPedido('Recibido 📝')}
+                  onClick={() => actualizarPedido(mesa, 'Recibido 📝')}
                   style={{ ...estilos.botonEstado, borderLeftColor: 'var(--color-azafran)' }}
                 >
                   Tomar Pedido 📝
                 </button>
                 <button
                   disabled={!conectado}
-                  onClick={() => actualizarPedido('En Cocina 🍳')}
+                  onClick={() => actualizarPedido(mesa, 'En Cocina 🍳')}
                   style={{ ...estilos.botonEstado, borderLeftColor: 'var(--color-acento)' }}
                 >
                   Empezar Cocina 🍳
                 </button>
                 <button
                   disabled={!conectado}
-                  onClick={() => actualizarPedido('Listo 🍽️')}
+                  onClick={() => actualizarPedido(mesa, 'Listo 🍽️')}
                   style={{ ...estilos.botonEstado, borderLeftColor: 'var(--color-exito)' }}
                 >
                   Pedido Listo 🍽️
@@ -369,8 +374,10 @@ function App() {
           mesa={mesaSeleccionada}
           conectado={conectado}
           versionPedidos={versionPedidos}
-          onCerrar={() => setMesaSeleccionada(null)}
+          errorPedido={errorValidacion}
+          onCerrar={() => setIdSeleccionada(null)}
           onTomarPedido={(m) => setMesaTomandoPedido(m)}
+          onCambiarEstado={actualizarPedido}
         />
 
         {/* Vista "Tomar pedido" — se muestra encima de todo cuando hay una mesa activa */}

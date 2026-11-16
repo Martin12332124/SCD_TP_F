@@ -182,17 +182,17 @@ describe('App: mapa de mesas (US-08)', () => {
   test('CA3: estado_mesas actualiza la mesa seleccionada abierta en el panel', async () => {
     await renderizarConectado();
     await userEvent.click(screen.getByTitle(/Mesa 1/));
-    expect(await screen.findByText(/🟢 Libre/)).toBeInTheDocument();
+    expect(document.getElementById('estado-mesa')).toHaveTextContent('Libre');
     await servidor('estado_mesas', [{ id: 'Mesa 1', numero: 1, estado: 'ocupada' }, mesasBase[1]]);
-    expect(await screen.findByText(/🔴 Ocupada/)).toBeInTheDocument();
+    expect(document.getElementById('estado-mesa')).toHaveTextContent('Ocupada');
   });
 
   test('si la mesa seleccionada desaparece de estado_mesas, el panel se cierra', async () => {
     await renderizarConectado();
     await userEvent.click(screen.getByTitle(/Mesa 1/));
-    await screen.findByText(/🟢 Libre/);
+    expect(screen.getByRole('dialog', { name: 'Detalle de la mesa 1' })).toBeInTheDocument();
     await servidor('estado_mesas', [mesasBase[1]]);
-    expect(screen.queryByText(/🟢 Libre/)).not.toBeInTheDocument();
+    expect(document.getElementById('detalle-mesa-panel')).toBeEmptyDOMElement();
   });
 
   test('"Tomar pedido" abre la vista de toma de pedido de la mesa ocupada', async () => {
@@ -202,6 +202,75 @@ describe('App: mapa de mesas (US-08)', () => {
     expect(await screen.findByText('Mesa 2', { selector: 'p' })).toBeInTheDocument();
     await userEvent.click(screen.getByText(/✕ Cerrar/));
     expect(screen.queryByText(/Tomar pedido$/)).not.toBeInTheDocument();
+  });
+});
+
+describe('App: avanzar el pedido desde el panel de la mesa', () => {
+  const abrirPanel = async (numero) => {
+    await userEvent.click(screen.getByTitle(new RegExp(`Mesa ${numero} —`)));
+    return screen.getByRole('dialog', { name: `Detalle de la mesa ${numero}` });
+  };
+
+  test('registrar el pedido emite actualizar_pedido con la mesa del panel', async () => {
+    await renderizarConectado();
+    await abrirPanel(2);
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar pedido sin productos' }));
+    expect(socket.emitirMock).toHaveBeenCalledWith('actualizar_pedido', {
+      mesa: 'Mesa 2',
+      estado: 'Recibido 📝'
+    });
+  });
+
+  test('al llegar cambio_estado_pedido el panel abierto ofrece el paso siguiente', async () => {
+    await renderizarConectado();
+    await abrirPanel(2);
+    expect(screen.queryByRole('button', { name: /Enviar a cocina/ })).not.toBeInTheDocument();
+
+    await servidor('cambio_estado_pedido', { mesa: 'Mesa 2', estado: 'Recibido 📝' });
+    await userEvent.click(screen.getByRole('button', { name: /Enviar a cocina/ }));
+    expect(socket.emitirMock).toHaveBeenLastCalledWith('actualizar_pedido', {
+      mesa: 'Mesa 2',
+      estado: 'En Cocina 🍳'
+    });
+
+    await servidor('cambio_estado_pedido', { mesa: 'Mesa 2', estado: 'En Cocina 🍳' });
+    await userEvent.click(screen.getByRole('button', { name: /Marcar pedido listo/ }));
+    expect(socket.emitirMock).toHaveBeenLastCalledWith('actualizar_pedido', {
+      mesa: 'Mesa 2',
+      estado: 'Listo 🍽️'
+    });
+  });
+
+  test('un rechazo del backend se muestra dentro del panel abierto, una sola vez', async () => {
+    await renderizarConectado();
+    const panel = await abrirPanel(2);
+    await servidor('respuesta_pedido', {
+      ok: false,
+      tipo: 'ESTADO_NO_PERMITIDO',
+      error: 'Transición no permitida: En Cocina 🍳 → En Cocina 🍳',
+      esperado: 'Listo 🍽️'
+    });
+    expect(within(panel).getByRole('alert')).toHaveTextContent(
+      /ESTADO_NO_PERMITIDO.*Transición no permitida.*Esperado: Listo/
+    );
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+  });
+
+  test('al abrir el panel de otra mesa no aparece el aviso de la anterior', async () => {
+    await renderizarConectado();
+    await abrirPanel(2);
+    await servidor('respuesta_pedido', { ok: false, tipo: 'ESTADO_NO_PERMITIDO', error: 'no' });
+    await userEvent.click(screen.getByRole('button', { name: 'Cerrar panel' }));
+    await abrirPanel(1);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  test('sin conexión las acciones del panel quedan deshabilitadas', async () => {
+    await renderizarConectado();
+    await abrirPanel(2);
+    await servidor('disconnect');
+    expect(screen.getByRole('button', { name: 'Registrar pedido sin productos' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Liberar mesa' })).toBeDisabled();
   });
 });
 

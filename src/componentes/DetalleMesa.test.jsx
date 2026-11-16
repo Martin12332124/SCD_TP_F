@@ -52,13 +52,13 @@ beforeEach(() => {
 describe('DetalleMesa: visualización (US-08 CA5)', () => {
   test('sin mesa seleccionada no renderiza contenido del panel', () => {
     renderizar(null);
-    expect(screen.queryByText(/Acciones/)).not.toBeInTheDocument();
+    expect(document.getElementById('detalle-mesa-panel')).toBeEmptyDOMElement();
   });
 
   test('mesa libre: muestra número, estado Libre y "Sin cuenta abierta"', () => {
     renderizar(libre);
     expect(screen.getByRole('heading', { name: 'Mesa 1' })).toBeInTheDocument();
-    expect(screen.getByText(/🟢 Libre/)).toBeInTheDocument();
+    expect(document.getElementById('estado-mesa')).toHaveTextContent('Libre');
     expect(screen.getByText('Sin cuenta abierta.')).toBeInTheDocument();
   });
 
@@ -67,7 +67,7 @@ describe('DetalleMesa: visualización (US-08 CA5)', () => {
     renderizar(ocupada);
     expect(await screen.findByText(/Pizza Margarita/)).toBeInTheDocument();
     expect(screen.getByText(/2 × Coca-Cola 500 ml/)).toBeInTheDocument();
-    expect(screen.getByText(/En Cocina/)).toBeInTheDocument();
+    expect(document.getElementById('estado-mesa')).toHaveTextContent('En cocina');
     expect(screen.getByText(/12\.500/)).toBeInTheDocument();
   });
 
@@ -202,14 +202,18 @@ describe('DetalleMesa: presentación y accesibilidad (#77)', () => {
     expect(onCerrar).toHaveBeenCalled();
   });
 
-  test('el estado usa tono oliva si está libre y tomate si está ocupada', () => {
+  test('la franja de estado usa el color de mesa libre o el de mesa ocupada', () => {
     const { unmount } = render(
       <DetalleMesa mesa={libre} conectado onCerrar={() => {}} onTomarPedido={() => {}} />
     );
-    expect(screen.getByText(/🟢 Libre/).style.borderColor).toBe('var(--color-exito)');
+    const franjaLibre = document.getElementById('estado-mesa');
+    expect(franjaLibre).toHaveAttribute('data-estado', 'libre');
+    expect(franjaLibre.style.background).toBe('var(--mesa-libre)');
     unmount();
     renderizar(ocupada);
-    expect(screen.getByText(/🔴 Ocupada/).style.borderColor).toBe('var(--color-peligro)');
+    const franjaOcupada = document.getElementById('estado-mesa');
+    expect(franjaOcupada).toHaveTextContent('Ocupada');
+    expect(franjaOcupada.style.background).toBe('var(--mesa-ocupada)');
   });
 
   test('"Tomar pedido" es la acción principal en mesas ocupadas', () => {
@@ -224,20 +228,124 @@ describe('DetalleMesa: presentación y accesibilidad (#77)', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Mesa marcada como Ocupada');
   });
 
-  test('la cuenta se muestra como ticket con ítems, estado y total', async () => {
+  test('la cuenta se muestra como ticket con ítems y total; el estado va en el progreso', async () => {
     simularBackend({ '/api/mesas/2/pedido': resumenConItems });
     renderizar(ocupada);
     const ticket = await screen
       .findByText(/Pizza Margarita/)
       .then((el) => el.closest('#resumen-pedido'));
     expect(within(ticket).getAllByRole('listitem')).toHaveLength(2);
-    expect(within(ticket).getByText('En Cocina 🍳')).toBeInTheDocument();
+    const progreso = screen.getByRole('list', { name: 'Progreso del pedido' });
+    expect(within(progreso).getByText('En cocina')).toHaveAttribute('aria-current', 'step');
     const total = document.getElementById('resumen-total');
     expect(total).toHaveTextContent('Total acumulado');
     expect(total).toHaveTextContent(/12\.500/);
   });
 });
 
+
+describe('DetalleMesa: avanzar el pedido desde la mesa', () => {
+  const conPedido = (estadoPedido) => ({ ...ocupada, estadoPedido });
+
+  test('pedido Recibido: "Enviar a cocina" pide el cambio para esa mesa', async () => {
+    const onCambiarEstado = vi.fn();
+    renderizar(conPedido('Recibido 📝'), { onCambiarEstado });
+    await userEvent.click(screen.getByRole('button', { name: /Enviar a cocina/ }));
+    expect(onCambiarEstado).toHaveBeenCalledWith(2, 'En Cocina 🍳');
+  });
+
+  test('pedido En Cocina: "Marcar pedido listo" pide el cambio para esa mesa', async () => {
+    const onCambiarEstado = vi.fn();
+    renderizar(conPedido('En Cocina 🍳'), { onCambiarEstado });
+    await userEvent.click(screen.getByRole('button', { name: /Marcar pedido listo/ }));
+    expect(onCambiarEstado).toHaveBeenCalledWith(2, 'Listo 🍽️');
+  });
+
+  test('sin pedido: "Registrar pedido sin productos" pide el estado Recibido', async () => {
+    const onCambiarEstado = vi.fn();
+    renderizar(conPedido(null), { onCambiarEstado });
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar pedido sin productos' }));
+    expect(onCambiarEstado).toHaveBeenCalledWith(2, 'Recibido 📝');
+  });
+
+  test('cuando el estado del pedido cambia con el panel abierto, el botón pasa al paso siguiente', () => {
+    // El estado llega en la propia mesa (lo actualiza App con cambio_estado_pedido),
+    // así que no depende de volver a cargar la cuenta.
+    const props = { conectado: true, onCerrar: () => {}, onTomarPedido: () => {} };
+    const { rerender } = render(<DetalleMesa mesa={conPedido('Recibido 📝')} {...props} />);
+    expect(screen.getByRole('button', { name: /Enviar a cocina/ })).toBeInTheDocument();
+
+    rerender(<DetalleMesa mesa={conPedido('En Cocina 🍳')} {...props} />);
+    expect(screen.queryByRole('button', { name: /Enviar a cocina/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Marcar pedido listo/ })).toBeInTheDocument();
+    expect(document.getElementById('estado-mesa')).toHaveAttribute('data-estado', 'cocina');
+  });
+
+  test('si la mesa no trae estadoPedido (backend anterior) usa el estado de la cuenta', async () => {
+    simularBackend({ '/api/mesas/2/pedido': resumenConItems });
+    renderizar(ocupada);
+    expect(await screen.findByRole('button', { name: /Marcar pedido listo/ })).toBeInTheDocument();
+  });
+
+  test('pedido Listo: la franja lo indica, no hay avance y avisa qué hace liberar la mesa', () => {
+    renderizar(conPedido('Listo 🍽️'));
+    expect(document.getElementById('estado-mesa')).toHaveTextContent('Pedido listo');
+    expect(document.getElementById('btn-avanzar-pedido')).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Al liberar la mesa se cierra su pedido y su cuenta/)
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Liberar mesa' })).toBeEnabled();
+  });
+
+  test('un rechazo del cambio de estado se muestra dentro del panel como alerta', () => {
+    renderizar(conPedido('En Cocina 🍳'), {
+      errorPedido: '⚠️ [ESTADO_NO_PERMITIDO] Transición no permitida'
+    });
+    const panel = screen.getByRole('dialog', { name: 'Detalle de la mesa 2' });
+    expect(within(panel).getByRole('alert')).toHaveTextContent('Transición no permitida');
+  });
+
+  test('mesa libre: no muestra el progreso del pedido', () => {
+    renderizar(libre);
+    expect(screen.queryByRole('list', { name: 'Progreso del pedido' })).not.toBeInTheDocument();
+  });
+
+  test('mesa libre: "Tomar pedido" también abre la carta (el backend abre la mesa al confirmar)', async () => {
+    const { onCerrar, onTomarPedido } = renderizar(libre);
+    await userEvent.click(screen.getByRole('button', { name: /Tomar pedido/ }));
+    expect(onTomarPedido).toHaveBeenCalledWith(libre);
+    expect(onCerrar).toHaveBeenCalled();
+  });
+});
+
+describe('DetalleMesa: los datos de una mesa no se mezclan con los de otra', () => {
+  test('el resultado de abrir una mesa no aparece en el panel de otra mesa', async () => {
+    simularBackend({ '/api/mesas/1/abrir': { ok: true } });
+    const props = { conectado: true, onCerrar: () => {}, onTomarPedido: () => {} };
+    const { rerender } = render(<DetalleMesa mesa={libre} {...props} />);
+    await userEvent.click(screen.getByText(/Abrir mesa/));
+    expect(await screen.findByText(/Mesa marcada como Ocupada/)).toBeInTheDocument();
+
+    rerender(<DetalleMesa mesa={ocupada} {...props} />);
+    expect(screen.queryByText(/Mesa marcada como Ocupada/)).not.toBeInTheDocument();
+  });
+
+  test('al cambiar de mesa no se muestra la cuenta de la anterior', async () => {
+    simularBackend({ '/api/mesas/2/pedido': resumenConItems });
+    const props = { conectado: true, onCerrar: () => {}, onTomarPedido: () => {} };
+    const { rerender } = render(<DetalleMesa mesa={ocupada} {...props} />);
+    await screen.findByText(/Pizza Margarita/);
+
+    rerender(<DetalleMesa mesa={{ id: 'Mesa 3', numero: 3, estado: 'ocupada' }} {...props} />);
+    expect(screen.queryByText(/Pizza Margarita/)).not.toBeInTheDocument();
+    expect(await screen.findByText(/Aún no se ha pedido nada/)).toBeInTheDocument();
+  });
+
+  test('el panel ya no repite el ID interno ni el estado en una sección aparte', () => {
+    renderizar(ocupada);
+    expect(screen.queryByText('ID interno')).not.toBeInTheDocument();
+  });
+});
 
 // Guía U3 · Protección previa a la refactorización de formatearPrecio.
 describe('DetalleMesa: formato de precios (protección refactor U3)', () => {

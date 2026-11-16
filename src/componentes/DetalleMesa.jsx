@@ -1,37 +1,55 @@
-// src/DetalleMesa.jsx
-// Panel lateral deslizable que muestra el detalle de la mesa seleccionada.
-// US-08 CA5: mostrar número, estado y cuenta abierta al seleccionar una mesa.
-// US-09:     botones para abrir (marcar ocupada) o liberar (marcar libre) la mesa.
+// src/componentes/DetalleMesa.jsx
+// Panel lateral deslizable de una mesa: todo lo que se hace con la mesa está aquí.
+// US-08 CA5: número, estado y cuenta abierta al seleccionar una mesa.
+// US-09:     abrir (marcar ocupada) o liberar (marcar libre) la mesa.
+// Además:    avanzar el pedido de la mesa (Recibido → En cocina → Listo).
 //
 // Props:
-//   mesa              {object|null} - Mesa seleccionada { id, numero, estado } o null
-//   conectado         {boolean}     - Estado de conexión con el backend
-//   onCerrar          {Function}    - Callback para cerrar el panel
-//   onTomarPedido     {Function}    - Callback para abrir la vista "Tomar pedido" con la mesa
-//   versionPedidos    {number}      - Cambia cuando se actualiza algún pedido (refresca el resumen)
+//   mesa            {object|null} - Mesa seleccionada { id, numero, estado, estadoPedido? } o null
+//   conectado       {boolean}     - Estado de conexión con el backend
+//   onCerrar        {Function}    - Cierra el panel
+//   onTomarPedido   {Function}    - (mesa) => void. Abre la vista "Tomar pedido" para la mesa
+//   onCambiarEstado {Function}    - (numeroMesa, estado) => void. Pide avanzar el pedido
+//   errorPedido     {string}      - Rechazo del último cambio de estado (validación o backend)
+//   versionPedidos  {number}      - Cambia cuando se actualiza algún pedido (refresca la cuenta)
 
 import { useState, useEffect } from 'react';
 import { formatearPrecio } from '../utils/formato';
+import { estadoVisualMesa } from '../utils/estadoMesa';
+import { ESTADO_LISTO } from '../utils/flujoPedido';
 import {
   obtenerPedidoMesa,
   abrirMesa as abrirMesaApi,
   cerrarMesa as cerrarMesaApi
 } from '../servicios/api';
+import AvancePedido from './AvancePedido';
 
-function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos = 0 }) {
+function DetalleMesa({
+  mesa,
+  conectado,
+  onCerrar,
+  onTomarPedido,
+  onCambiarEstado = () => {},
+  errorPedido = '',
+  versionPedidos = 0
+}) {
   const estaOcupada = mesa?.estado === 'ocupada';
-
-  // US-09: estado local para mostrar el resultado de abrir/liberar
-  const [mensajeAccion, setMensajeAccion] = useState('');
-  const [cargando, setCargando] = useState(false);
-
-  // Resumen de lo pedido por la mesa (ítems acumulados y total)
-  const [resumen, setResumen] = useState(null);
-  const [errorResumen, setErrorResumen] = useState('');
   const numeroMesa = mesa?.numero;
   const estadoMesa = mesa?.estado;
 
-  // Carga el resumen al seleccionar la mesa y cada vez que cambia un pedido o el estado de la mesa
+  // US-09: resultado de abrir/liberar. Se guarda con la mesa a la que pertenece,
+  // para que no aparezca al abrir el panel de otra mesa.
+  const [accion, setAccion] = useState({ mesaId: null, texto: '' });
+  const mensajeAccion = accion.mesaId === mesa?.id ? accion.texto : '';
+  const [cargando, setCargando] = useState(false);
+
+  // Cuenta de la mesa (ítems acumulados y total). También se guarda con su número de mesa:
+  // al cambiar de mesa no se muestra la cuenta de la anterior mientras carga la nueva.
+  const [carga, setCarga] = useState({ numero: null, resumen: null, error: '' });
+  const resumen = carga.numero === numeroMesa ? carga.resumen : null;
+  const errorResumen = carga.numero === numeroMesa ? carga.error : '';
+
+  // Carga la cuenta al seleccionar la mesa y cada vez que cambia un pedido o el estado de la mesa
   useEffect(() => {
     if (numeroMesa === undefined) return undefined;
     let cancelado = false;
@@ -39,59 +57,83 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
       .then((data) => {
         if (cancelado) return;
         if (data.ok) {
-          setResumen(data);
-          setErrorResumen('');
+          setCarga({ numero: numeroMesa, resumen: data, error: '' });
         } else {
-          setErrorResumen(data.error || 'No se pudo cargar el resumen del pedido.');
+          setCarga({
+            numero: numeroMesa,
+            resumen: null,
+            error: data.error || 'No se pudo cargar el resumen del pedido.'
+          });
         }
       })
       .catch(() => {
-        if (!cancelado) setErrorResumen('Error de red al cargar el resumen del pedido.');
+        if (!cancelado) {
+          setCarga({
+            numero: numeroMesa,
+            resumen: null,
+            error: 'Error de red al cargar el resumen del pedido.'
+          });
+        }
       });
     return () => {
       cancelado = true;
     };
   }, [numeroMesa, estadoMesa, versionPedidos]);
 
+  // Estado del pedido: lo trae la mesa (se actualiza al instante con los eventos del backend).
+  // Si el backend es anterior y no envía ese campo, se usa el de la cuenta.
+  const estadoPedido = !estaOcupada
+    ? null
+    : mesa.estadoPedido !== undefined
+      ? mesa.estadoPedido
+      : resumen?.estado || null;
+  const visual = estadoVisualMesa({ estado: estadoMesa, estadoPedido });
 
   // ── US-09 CA1: Marcar una mesa libre como ocupada ───────────────────────────
   const abrirMesa = async () => {
-    setMensajeAccion('');
+    const mesaId = mesa.id;
+    setAccion({ mesaId, texto: '' });
     setCargando(true);
     try {
       const data = await abrirMesaApi(mesa.numero);
       if (data.ok) {
         // CA5: el cambio se refleja vía socket 'estado_mesas' desde el backend;
         // solo mostramos confirmación local
-        setMensajeAccion('✅ Mesa marcada como Ocupada.');
+        setAccion({ mesaId, texto: '✅ Mesa marcada como Ocupada.' });
       } else {
         // CA1 implica: si ya estaba ocupada el backend retorna ESTADO_NO_PERMITIDO
-        setMensajeAccion(`⚠️ [${data.tipo}] ${data.error}`);
+        setAccion({ mesaId, texto: `⚠️ [${data.tipo}] ${data.error}` });
       }
     } catch {
-      setMensajeAccion('⚠️ Error de red al intentar abrir la mesa.');
+      setAccion({ mesaId, texto: '⚠️ Error de red al intentar abrir la mesa.' });
     } finally {
       setCargando(false);
     }
   };
 
-  // ── US-09 CA4: Liberar una mesa ocupada (sin actividad) ─────────────────────
+  // ── US-09 CA4: Liberar una mesa ocupada (sin pedido en curso) ───────────────
   const liberarMesa = async () => {
-    setMensajeAccion('');
+    const mesaId = mesa.id;
+    setAccion({ mesaId, texto: '' });
     setCargando(true);
     try {
       const data = await cerrarMesaApi(mesa.numero);
       if (data.ok) {
-        setMensajeAccion('✅ Mesa liberada correctamente.');
+        setAccion({ mesaId, texto: '✅ Mesa liberada correctamente.' });
       } else {
-        // CA3: si hay pedido activo, el backend devuelve tipo PEDIDO_ACTIVO con el motivo
-        setMensajeAccion(`⚠️ [${data.tipo}] ${data.error}`);
+        // CA3: con un pedido en curso, el backend devuelve tipo PEDIDO_ACTIVO con el motivo
+        setAccion({ mesaId, texto: `⚠️ [${data.tipo}] ${data.error}` });
       }
     } catch {
-      setMensajeAccion('⚠️ Error de red al intentar liberar la mesa.');
+      setAccion({ mesaId, texto: '⚠️ Error de red al intentar liberar la mesa.' });
     } finally {
       setCargando(false);
     }
+  };
+
+  const tomarPedido = () => {
+    onCerrar(); // cierra el panel lateral
+    onTomarPedido(mesa); // abre la vista de toma de pedido
   };
 
   const exito = mensajeAccion.startsWith('✅');
@@ -124,10 +166,7 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
           <>
             {/* Cabecera del panel */}
             <div style={estilos.cabecera}>
-              <div>
-                <p style={estilos.etiqueta}>Detalle de mesa</p>
-                <h2 style={estilos.titulo}>Mesa {mesa.numero}</h2>
-              </div>
+              <h2 style={estilos.titulo}>Mesa {mesa.numero}</h2>
               <button
                 id="btn-cerrar-panel"
                 onClick={onCerrar}
@@ -139,14 +178,17 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
               </button>
             </div>
 
-            {/* US-08 CA2: estado de la mesa con color distintivo */}
+            {/* US-08 CA2: estado de la mesa, con el mismo color, ícono y texto que en el mapa */}
             <div
+              id="estado-mesa"
+              data-estado={visual.clave}
               style={{
-                ...estilos.badgeEstado,
-                ...(estaOcupada ? estilos.tonoPeligro : estilos.tonoExito)
+                ...estilos.franjaEstado,
+                background: `var(--mesa-${visual.clave})`,
+                color: `var(--mesa-${visual.clave}-texto)`
               }}
             >
-              {estaOcupada ? '🔴 Ocupada' : '🟢 Libre'}
+              <span aria-hidden="true">{visual.icono}</span> {visual.etiqueta}
             </div>
 
             {/* US-09: resultado de la última acción (abrir/liberar) */}
@@ -155,7 +197,7 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
                 id="mensaje-accion-mesa"
                 role="status"
                 style={{
-                  ...estilos.mensajeAccion,
+                  ...estilos.aviso,
                   ...(exito ? estilos.tonoExito : estilos.tonoPeligro)
                 }}
               >
@@ -163,70 +205,61 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
               </div>
             )}
 
-            {/* US-09: acciones de apertura/liberación de mesa */}
-            <div style={estilos.seccion}>
-              <h4 style={estilos.subtitulo}>Acciones</h4>
+            {/* Rechazo de un cambio de estado del pedido (otra tablet pudo cambiarlo antes) */}
+            {errorPedido && (
+              <div
+                id="error-pedido-mesa"
+                role="alert"
+                style={{ ...estilos.aviso, ...estilos.tonoPeligro }}
+              >
+                {errorPedido}
+              </div>
+            )}
 
-              {/* CA1: botón Abrir mesa — solo visible si está libre */}
-              {!estaOcupada && (
+            {/* Mesa libre: abrirla, o tomar el pedido directamente (el backend la abre al confirmar) */}
+            {!estaOcupada && (
+              <div style={estilos.bloque}>
+                {/* CA1: botón Abrir mesa — solo visible si está libre */}
                 <button
                   id={`btn-abrir-mesa-${mesa.numero}`}
                   onClick={abrirMesa}
                   disabled={!conectado || cargando}
-                  style={{ ...estilos.btnAccion, ...estilos.tonoExito }}
+                  style={{ ...estilos.boton, ...estilos.botonAbrir }}
                 >
-                  {cargando ? 'Procesando...' : '🟢 Abrir mesa'}
+                  {cargando ? 'Procesando...' : 'Abrir mesa'}
                 </button>
-              )}
-
-              {/* CA4: botón Liberar mesa — solo visible si está ocupada */}
-              {/* CA3: el backend impide liberar si hay pedido activo (respuesta con error) */}
-              {estaOcupada && (
-                <button
-                  id={`btn-liberar-mesa-${mesa.numero}`}
-                  onClick={liberarMesa}
-                  disabled={!conectado || cargando}
-                  style={{ ...estilos.btnAccion, ...estilos.tonoPeligro }}
-                >
-                  {cargando ? 'Procesando...' : '🔴 Liberar mesa'}
-                </button>
-              )}
-
-              {/* Botón "Tomar pedido" — visible solo si la mesa está ocupada */}
-              {estaOcupada && (
                 <button
                   id={`btn-tomar-pedido-${mesa.numero}`}
-                  onClick={() => {
-                    onCerrar(); // cierra el panel lateral
-                    onTomarPedido(mesa); // abre la vista de toma de pedido
-                  }}
+                  onClick={tomarPedido}
                   disabled={!conectado}
-                  style={{ ...estilos.btnAccion, ...estilos.btnPrimario }}
+                  style={{ ...estilos.boton, ...estilos.botonSecundario }}
                 >
                   📝 Tomar pedido
                 </button>
-              )}
+              </div>
+            )}
 
-              {/* CA2: aclaración explícita: abrir la mesa no crea una cuenta */}
-              <p style={estilos.nota}>
-                Nota: abrir la mesa no crea una cuenta. La cuenta se gestiona por separado (US-12).
-              </p>
-            </div>
+            {/* Mesa ocupada: en qué va el pedido y el siguiente paso válido */}
+            {estaOcupada && (
+              <div style={estilos.bloque}>
+                <h3 style={estilos.subtitulo}>Pedido</h3>
+                <AvancePedido
+                  estadoPedido={estadoPedido}
+                  conectado={conectado}
+                  onCambiarEstado={(estado) => onCambiarEstado(mesa.numero, estado)}
+                  onTomarPedido={tomarPedido}
+                />
+              </div>
+            )}
 
             {/* US-08 CA5: cuenta abierta si la tiene */}
-            <div style={estilos.seccion}>
-              <h4 style={estilos.subtitulo}>Cuenta</h4>
+            <div style={estilos.bloque}>
+              <h3 style={estilos.subtitulo}>Cuenta</h3>
               {errorResumen && (
-                <p style={{ ...estilos.mensajeAccion, ...estilos.tonoPeligro }}>
-                  ⚠️ {errorResumen}
-                </p>
+                <p style={{ ...estilos.aviso, ...estilos.tonoPeligro }}>⚠️ {errorResumen}</p>
               )}
               {estaOcupada && resumen && resumen.items.length > 0 ? (
                 <div id="resumen-pedido" style={estilos.ticket}>
-                  <p style={estilos.filaTicket}>
-                    <span style={estilos.textoSuave}>Estado del pedido</span>
-                    <span style={estilos.pildora}>{resumen.estado}</span>
-                  </p>
                   <ul style={estilos.listaTicket}>
                     {resumen.items.map((i) => (
                       <li key={i.id} style={estilos.itemTicket}>
@@ -245,23 +278,33 @@ function DetalleMesa({ mesa, conectado, onCerrar, onTomarPedido, versionPedidos 
                   </p>
                 </div>
               ) : estaOcupada ? (
-                <p style={estilos.vacio}>Aún no se ha pedido nada en esta mesa.</p>
+                <p style={estilos.texto}>Aún no se ha pedido nada en esta mesa.</p>
               ) : (
-                <p style={estilos.vacio}>Sin cuenta abierta.</p>
+                <p style={estilos.texto}>Sin cuenta abierta.</p>
               )}
             </div>
 
-            {/* Información general */}
-            <div style={estilos.seccion}>
-              <h4 style={estilos.subtitulo}>Información</h4>
-              <p style={estilos.filaInfo}>
-                <span style={estilos.textoSuave}>ID interno</span> <strong>{mesa.id}</strong>
-              </p>
-              <p style={estilos.filaInfo}>
-                <span style={estilos.textoSuave}>Estado</span>{' '}
-                <strong>{estaOcupada ? 'Ocupada' : 'Libre'}</strong>
-              </p>
-            </div>
+            {/* US-09 CA4: liberar la mesa. CA3: el backend lo impide si hay un pedido en curso */}
+            {estaOcupada && (
+              <div style={estilos.bloque}>
+                {estadoPedido === ESTADO_LISTO && (
+                  <p style={estilos.texto}>Al liberar la mesa se cierra su pedido y su cuenta.</p>
+                )}
+                <button
+                  id={`btn-liberar-mesa-${mesa.numero}`}
+                  onClick={liberarMesa}
+                  disabled={!conectado || cargando}
+                  style={{ ...estilos.boton, ...estilos.botonLiberar }}
+                >
+                  {cargando ? 'Procesando...' : 'Liberar mesa'}
+                </button>
+              </div>
+            )}
+
+            {/* CA2: aclaración explícita: abrir la mesa no crea una cuenta */}
+            <p style={estilos.nota}>
+              Nota: abrir la mesa no crea una cuenta. La cuenta se gestiona por separado (US-12).
+            </p>
           </>
         )}
       </div>
@@ -283,57 +326,61 @@ const estilos = {
     position: 'fixed',
     top: 0,
     right: 0,
-    width: 'min(380px, 100vw)',
+    width: 'min(440px, 100vw)',
     height: '100vh',
     background: 'var(--color-superficie)',
     borderLeft: '4px solid var(--color-azafran)',
     boxShadow: 'var(--sombra-panel)',
     zIndex: 101,
-    padding: '28px 24px',
+    padding: '24px 22px 32px',
     transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
     overflowY: 'auto',
     color: 'var(--color-texto)',
-    lineHeight: 1.6,
+    lineHeight: 1.5,
     textAlign: 'left'
   },
   cabecera: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: '16px'
-  },
-  etiqueta: {
-    fontSize: '11px',
-    fontWeight: 700,
-    letterSpacing: '0.16em',
-    textTransform: 'uppercase',
-    color: 'var(--color-acento-texto)'
+    alignItems: 'center',
+    gap: '12px',
+    marginBottom: '14px'
   },
   titulo: {
-    margin: '2px 0 0',
-    fontSize: '30px'
+    margin: 0,
+    fontSize: '34px'
   },
   btnCerrar: {
     display: 'grid',
     placeItems: 'center',
-    width: '36px',
-    height: '36px',
+    width: 'var(--toque)',
+    height: 'var(--toque)',
+    flexShrink: 0,
     background: 'var(--color-superficie-alt)',
-    border: '1px solid var(--color-borde)',
-    borderRadius: '50%',
-    fontSize: '15px',
+    border: '2px solid var(--color-texto-suave)',
+    borderRadius: 'var(--radio-m)',
+    fontSize: '20px',
+    fontWeight: 700,
     cursor: 'pointer',
-    color: 'var(--color-texto-suave)',
+    color: 'var(--color-texto)',
     padding: 0
   },
-  badgeEstado: {
-    display: 'inline-block',
-    fontWeight: 700,
-    fontSize: '14px',
-    padding: '5px 14px',
-    borderRadius: '999px',
-    border: '1px solid',
-    marginBottom: '20px'
+  // Franja a todo el ancho con el color sólido del estado
+  franjaEstado: {
+    padding: '12px 16px',
+    marginBottom: '16px',
+    borderRadius: 'var(--radio-m)',
+    fontSize: '22px',
+    fontWeight: 700
+  },
+  aviso: {
+    padding: '12px 14px',
+    borderRadius: 'var(--radio-m)',
+    border: '2px solid',
+    fontSize: '16px',
+    fontWeight: 600,
+    margin: '0 0 16px',
+    lineHeight: 1.45
   },
   tonoExito: {
     background: 'var(--color-exito-suave)',
@@ -345,82 +392,68 @@ const estilos = {
     color: 'var(--color-peligro-texto)',
     borderColor: 'var(--color-peligro)'
   },
-  mensajeAccion: {
-    padding: '10px 14px',
-    borderRadius: 'var(--radio-m)',
-    border: '1px solid',
-    fontSize: '13px',
-    fontWeight: 600,
-    margin: '0 0 16px',
-    lineHeight: 1.5
-  },
-  seccion: {
-    borderTop: '1px solid var(--color-borde)',
-    paddingTop: '18px',
-    marginBottom: '20px'
+  bloque: {
+    borderTop: '2px solid var(--color-borde)',
+    paddingTop: '16px',
+    marginBottom: '18px'
   },
   subtitulo: {
-    margin: '0 0 12px 0',
-    fontFamily: 'var(--fuente-texto)',
-    fontSize: '12px',
-    fontWeight: 700,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    color: 'var(--color-texto-suave)'
+    margin: '0 0 12px',
+    fontSize: '22px'
   },
-  btnAccion: {
+  boton: {
     display: 'block',
     width: '100%',
-    padding: '12px',
-    border: '1px solid',
+    minHeight: 'var(--toque)',
+    padding: '12px 14px',
+    marginBottom: '10px',
+    border: '2px solid',
     borderRadius: 'var(--radio-m)',
+    fontSize: '17px',
     fontWeight: 700,
-    fontSize: '14px',
-    cursor: 'pointer',
-    marginBottom: '10px'
+    cursor: 'pointer'
   },
-  btnPrimario: {
-    background: 'var(--color-primario)',
-    color: 'var(--color-sobre-primario)',
-    borderColor: 'var(--color-primario)'
+  botonAbrir: {
+    background: 'var(--mesa-libre)',
+    color: 'var(--mesa-libre-texto)',
+    borderColor: 'var(--mesa-libre)'
+  },
+  botonSecundario: {
+    background: 'var(--color-superficie)',
+    color: 'var(--color-texto)',
+    borderColor: 'var(--color-texto-suave)'
+  },
+  botonLiberar: {
+    background: 'var(--color-superficie)',
+    color: 'var(--color-peligro-texto)',
+    borderColor: 'var(--color-peligro)'
+  },
+  texto: {
+    margin: '0 0 12px',
+    fontSize: '16px',
+    color: 'var(--color-texto)'
   },
   nota: {
-    marginTop: '8px',
-    fontSize: '13px',
-    fontStyle: 'italic',
-    color: 'var(--color-texto-tenue)'
+    fontSize: '15px',
+    color: 'var(--color-texto-suave)'
   },
   // La cuenta se presenta como un ticket de restaurante
   ticket: {
     background: 'var(--color-superficie-alt)',
     border: '1px solid var(--color-borde)',
     borderRadius: 'var(--radio-m)',
-    padding: '14px 16px'
-  },
-  filaTicket: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '8px',
-    fontSize: '13px'
-  },
-  pildora: {
-    padding: '2px 10px',
-    borderRadius: '999px',
-    background: 'var(--color-primario-suave)',
-    color: 'var(--color-primario-texto)',
-    fontWeight: 700
+    padding: '12px 16px'
   },
   listaTicket: {
     listStyle: 'none',
-    margin: '12px 0',
+    margin: '0 0 8px',
     padding: 0
   },
   itemTicket: {
     display: 'flex',
     justifyContent: 'space-between',
     gap: '8px',
-    fontSize: '14px',
+    fontSize: '16px',
     padding: '8px 0',
     borderBottom: '1px dashed var(--color-borde)'
   },
@@ -433,26 +466,11 @@ const estilos = {
     justifyContent: 'space-between',
     fontFamily: 'var(--fuente-titulo)',
     fontWeight: 700,
-    fontSize: '18px',
-    color: 'var(--color-primario-texto)',
+    fontSize: '20px',
+    color: 'var(--color-texto)',
     margin: '4px 0 0',
     paddingTop: '10px',
     borderTop: '2px solid var(--color-borde)'
-  },
-  vacio: {
-    fontSize: '14px',
-    fontStyle: 'italic',
-    color: 'var(--color-texto-tenue)'
-  },
-  textoSuave: {
-    color: 'var(--color-texto-suave)'
-  },
-  filaInfo: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: '8px',
-    margin: '6px 0',
-    fontSize: '14px'
   }
 };
 
