@@ -530,7 +530,9 @@ const estilos = {
     background: 'var(--color-superficie-alt)',
     color: 'var(--color-peligro-texto)',
     border: '2px solid var(--color-peligro)',
-    cursor: 'not-allowed'
+    cursor: 'not-allowed',
+    // La tarjeta ya se atenúa; sin esto se sumaría la opacidad de todo botón deshabilitado
+    opacity: 1
   },
   // ── Panel carrito: tarjeta fija al hacer scroll en pantallas anchas
   panelCarrito: {

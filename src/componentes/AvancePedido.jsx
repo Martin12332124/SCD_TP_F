@@ -138,12 +138,18 @@ function AvancePedido({ estadoPedido, conectado, onCambiarEstado, onTomarPedido 
 
 // ── Estilos en línea: leen los tokens de index.css (modo claro y oscuro) ─────
 const estilos = {
+  // Barra continua dividida en tres segmentos: los cumplidos y el actual se rellenan
+  // con el color de su estado; los pendientes quedan con el fondo de la barra.
   pasos: {
     display: 'flex',
-    gap: '4px',
     listStyle: 'none',
     margin: '0 0 14px',
-    padding: 0
+    padding: 0,
+    borderRadius: 'var(--radio-s)',
+    overflow: 'hidden',
+    borderStyle: 'solid',
+    borderWidth: '2px',
+    borderColor: 'var(--color-texto-suave)'
   },
   paso: {
     flex: 1,
@@ -152,23 +158,17 @@ const estilos = {
     justifyContent: 'center',
     minHeight: '46px',
     padding: '6px 4px',
-    fontSize: '15px',
+    fontSize: '16px',
     fontWeight: 700,
-    textAlign: 'center',
-    borderRadius: 'var(--radio-s)',
-    borderStyle: 'solid',
-    borderWidth: '2px',
-    borderColor: 'transparent'
+    textAlign: 'center'
   },
   pasoPendiente: {
-    background: 'var(--color-superficie-alt)',
-    color: 'var(--color-texto-suave)',
-    borderColor: 'var(--color-borde)'
+    background: 'var(--color-superficie)',
+    color: 'var(--color-texto)'
   },
-  // El paso en el que está el pedido se marca con un borde grueso
+  // El paso en el que está el pedido se marca con un subrayado grueso
   pasoActual: {
-    borderColor: 'var(--color-texto)',
-    borderWidth: '3px'
+    boxShadow: 'inset 0 -6px 0 var(--color-texto)'
   },
   boton: {
     display: 'block',

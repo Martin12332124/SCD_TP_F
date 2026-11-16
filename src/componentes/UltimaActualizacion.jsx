@@ -1,6 +1,7 @@
 // src/componentes/UltimaActualizacion.jsx
 // Franja con el último pedido que cambió de estado y el tiempo que lleva en ese estado.
-// El estado se muestra en un bloque con el mismo color que usa esa mesa en el plano.
+// La parte izquierda toma el color sólido del estado (el mismo que la mesa en el plano)
+// y la derecha muestra el cronómetro en grande.
 //
 // Props:
 //   ultimoPedido {{ mesa: string, estado: string }} - Última mesa y estado recibidos del backend
@@ -14,47 +15,39 @@ function UltimaActualizacion({ ultimoPedido, segundos }) {
   const visual = estadoVisualPedido(ultimoPedido.estado);
   const tono = visual
     ? { background: `var(--mesa-${visual.clave})`, color: `var(--mesa-${visual.clave}-texto)` }
-    : estilos.estadoNeutro;
+    : { background: 'var(--color-superficie-alt)', color: 'var(--color-texto)' };
   const alerta = segundos > 900; // más de 15 minutos en el mismo estado
+  const hayPedido = ultimoPedido.estado !== 'Sin Pedidos';
 
   return (
-    <section
-      aria-live="polite"
-      aria-label="Último cambio"
-      style={{
-        ...estilos.franja,
-        // Franja izquierda gruesa con el color del estado; el resto del borde, neutro
-        borderColor: `var(--color-borde) var(--color-borde) var(--color-borde) ${
-          visual ? `var(--mesa-${visual.clave})` : 'var(--color-borde)'
-        }`
-      }}
-    >
-      <div style={estilos.texto}>
+    <section aria-live="polite" aria-label="Último cambio" style={estilos.franja}>
+      <div id="ultimo-estado" style={{ ...estilos.estado, ...tono }}>
         <h2 style={estilos.titulo}>Último cambio</h2>
-        <div style={estilos.ultimoPedido}>
-          <span style={estilos.ultimaMesa}>{ultimoPedido.mesa}</span>
-          <span aria-hidden="true" style={estilos.flecha}>
-            →
-          </span>
-          <span id="ultimo-estado" style={{ ...estilos.estado, ...tono }}>
-            {ultimoPedido.estado}
-          </span>
-        </div>
+        <p style={estilos.linea}>
+          <span>{ultimoPedido.mesa}</span>
+          <span aria-hidden="true"> → </span>
+          <span>{ultimoPedido.estado}</span>
+        </p>
       </div>
 
-      {/* Cronómetro del estado actual */}
-      {ultimoPedido.estado !== 'Sin Pedidos' && (
-        <span
-          title="Tiempo en el estado actual"
+      {/* Cronómetro del estado actual: texto grande, rojo pasados 15 minutos */}
+      {hayPedido && (
+        <div
           style={{
-            ...estilos.contador,
-            background: alerta ? 'var(--color-peligro-suave)' : 'var(--color-superficie-alt)',
-            color: alerta ? 'var(--color-peligro-texto)' : 'var(--color-acento-texto)',
-            borderColor: alerta ? 'var(--color-peligro)' : 'var(--color-azafran)'
+            ...estilos.reloj,
+            background: alerta ? 'var(--color-peligro-suave)' : 'var(--color-superficie)'
           }}
         >
-          ⏱️ {formatearTiempo(segundos)}
-        </span>
+          <span
+            title="Tiempo en el estado actual"
+            style={{
+              ...estilos.contador,
+              color: alerta ? 'var(--color-peligro-texto)' : 'var(--color-acento-texto)'
+            }}
+          >
+            ⏱️ {formatearTiempo(segundos)}
+          </span>
+        </div>
       )}
     </section>
   );
@@ -65,63 +58,36 @@ const estilos = {
   franja: {
     display: 'flex',
     flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '14px 24px',
-    padding: '16px 22px',
-    background: 'var(--color-superficie)',
-    borderStyle: 'solid',
-    borderWidth: '1px 1px 1px 10px',
+    overflow: 'hidden',
     borderRadius: 'var(--radio-l)',
     boxShadow: 'var(--sombra-1)'
   },
-  texto: {
-    flex: '1 1 260px',
-    minWidth: 0
+  estado: {
+    flex: '1 1 300px',
+    minWidth: 0,
+    padding: '14px 22px'
   },
   titulo: {
-    margin: '0 0 6px',
+    margin: '0 0 2px',
     fontSize: '18px',
-    color: 'var(--color-texto)'
+    color: 'inherit'
   },
-  ultimoPedido: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: '12px'
-  },
-  ultimaMesa: {
+  linea: {
     fontFamily: 'var(--fuente-titulo)',
-    fontSize: '30px',
+    fontSize: 'clamp(24px, 3.4vw, 32px)',
     fontWeight: 700,
-    color: 'var(--color-texto)'
+    lineHeight: 1.2
   },
-  flecha: {
-    color: 'var(--color-texto)',
-    fontSize: '24px'
-  },
-  // Bloque rectangular con el color sólido del estado
-  estado: {
-    display: 'inline-block',
-    padding: '6px 14px',
-    borderRadius: 'var(--radio-s)',
-    fontSize: '20px',
-    fontWeight: 700
-  },
-  estadoNeutro: {
-    background: 'var(--color-superficie-alt)',
-    color: 'var(--color-texto)',
-    borderStyle: 'solid',
-    borderWidth: '2px',
-    borderColor: 'var(--color-borde)'
+  reloj: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: '0 1 220px',
+    padding: '14px 22px'
   },
   contador: {
-    padding: '10px 16px',
-    borderRadius: 'var(--radio-m)',
-    borderStyle: 'solid',
-    borderWidth: '2px',
     fontFamily: 'var(--fuente-mono)',
-    fontSize: '22px',
+    fontSize: '32px',
     fontWeight: 700,
     fontVariantNumeric: 'tabular-nums'
   }

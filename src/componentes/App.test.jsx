@@ -374,7 +374,9 @@ describe('App: interfaz visual (#77)', () => {
 
   test('sin pedidos el estado usa el tono neutro y no hay contador', async () => {
     await renderizarConectado();
-    expect(screen.getByText('Sin Pedidos').style.background).toBe('var(--color-superficie-alt)');
+    expect(document.getElementById('ultimo-estado').style.background).toBe(
+      'var(--color-superficie-alt)'
+    );
     expect(screen.queryByText(/⏱️/)).not.toBeInTheDocument();
   });
 
