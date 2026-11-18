@@ -33,7 +33,9 @@ async function main() {
   const backend = spawn(process.execPath, [backendPath], {
     cwd: repoRoot,
     stdio: ['ignore', 'inherit', 'inherit'],
-    env: { ...process.env, NODE_ENV: 'test' }
+    // DB_PATH=':memory:' hace que el backend use una base SQLite temporal: la prueba
+    // parte siempre con las 10 mesas libres y no escribe en data/restaurante.db.
+    env: { ...process.env, NODE_ENV: 'test', DB_PATH: ':memory:' }
   });
 
   try {
