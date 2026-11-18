@@ -3,6 +3,7 @@ import { describe, test, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MapaMesas from './MapaMesas';
+import { ESTADOS_MESA } from '../utils/estadoMesa';
 
 const mesas = [
   { id: 'Mesa 1', numero: 1, estado: 'libre' },
@@ -20,8 +21,9 @@ describe('MapaMesas (US-08)', () => {
     render(<MapaMesas mesas={mesas} mesaSeleccionada={null} onSeleccionar={() => {}} />);
     expect(screen.getByText('Libre')).toBeInTheDocument();
     expect(screen.getByText('Ocupada')).toBeInTheDocument();
-    expect(screen.getByTitle(/Mesa 1/)).toHaveStyle({ backgroundColor: 'rgb(40, 167, 69)' });
-    expect(screen.getByTitle(/Mesa 2/)).toHaveStyle({ backgroundColor: 'rgb(220, 53, 69)' });
+    // Los colores ya no están fijos en el componente: salen de las variables del tema
+    expect(screen.getByTitle(/Mesa 1/).style.backgroundColor).toBe('var(--mesa-libre)');
+    expect(screen.getByTitle(/Mesa 2/).style.backgroundColor).toBe('var(--mesa-ocupada)');
   });
 
   test('sin mesas muestra el aviso de lista vacía', () => {
@@ -79,5 +81,74 @@ describe('MapaMesas: leyenda y accesibilidad (#77)', () => {
     expect(seleccionada.style.boxShadow).toContain('var(--color-azafran)');
     expect(seleccionada.style.outline).toBe('');
     expect(screen.getByTitle(/Mesa 2/).style.boxShadow).not.toContain('var(--color-azafran)');
+  });
+});
+
+describe('MapaMesas: estado del pedido de cada mesa', () => {
+  const conPedidos = [
+    { id: 'Mesa 1', numero: 1, estado: 'libre', estadoPedido: null },
+    { id: 'Mesa 2', numero: 2, estado: 'ocupada', estadoPedido: null },
+    { id: 'Mesa 3', numero: 3, estado: 'ocupada', estadoPedido: 'Recibido 📝' },
+    { id: 'Mesa 4', numero: 4, estado: 'ocupada', estadoPedido: 'En Cocina 🍳' },
+    { id: 'Mesa 5', numero: 5, estado: 'ocupada', estadoPedido: 'Listo 🍽️' }
+  ];
+  const renderizar = (lista = conPedidos) =>
+    render(<MapaMesas mesas={lista} mesaSeleccionada={null} onSeleccionar={() => {}} />);
+
+  test.each([
+    [1, 'libre', 'Libre'],
+    [2, 'ocupada', 'Ocupada'],
+    [3, 'recibido', 'Pedido tomado'],
+    [4, 'cocina', 'En cocina'],
+    [5, 'listo', 'Pedido listo']
+  ])('la mesa %i se muestra como "%s": texto, color y título propios', (numero, clave, texto) => {
+    renderizar();
+    const mesa = document.getElementById(`mesa-${numero}`);
+    expect(mesa).toHaveAttribute('data-estado', clave);
+    expect(mesa).toHaveAttribute('title', `Mesa ${numero} — ${texto}`);
+    expect(mesa).toHaveTextContent(texto);
+    expect(mesa.style.backgroundColor).toBe(`var(--mesa-${clave})`);
+    expect(mesa.style.color).toBe(`var(--mesa-${clave}-texto)`);
+  });
+
+  test('el estado no depende solo del color: cada mesa lleva el ícono de su estado', () => {
+    renderizar();
+    const claves = ['libre', 'ocupada', 'recibido', 'cocina', 'listo'];
+    claves.forEach((clave, i) => {
+      const mesa = document.getElementById(`mesa-${i + 1}`);
+      expect(mesa.querySelector(`svg[data-icono="${ESTADOS_MESA[clave].icono}"]`)).not.toBeNull();
+    });
+  });
+
+  test('sin el campo estadoPedido (backend anterior) una mesa ocupada se muestra "Ocupada"', () => {
+    renderizar([{ id: 'Mesa 7', numero: 7, estado: 'ocupada' }]);
+    expect(document.getElementById('mesa-7')).toHaveAttribute('data-estado', 'ocupada');
+  });
+
+  test('el resumen cuenta el total, las mesas en cocina y las que tienen el pedido listo', () => {
+    renderizar();
+    const resumen = document.getElementById('resumen-sala');
+    expect(resumen).toHaveTextContent(
+      '5 mesas: 1 libre, 4 ocupadas, 1 en cocina, 1 con pedido listo'
+    );
+  });
+
+  test('el resumen no menciona cocina ni pedidos listos si no hay ninguno', () => {
+    renderizar(conPedidos.slice(0, 2));
+    expect(document.getElementById('resumen-sala')).toHaveTextContent(
+      '2 mesas: 1 libre, 1 ocupada'
+    );
+    expect(screen.queryByText(/en cocina/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/pedido listo/)).not.toBeInTheDocument();
+  });
+
+  test('con una sola mesa el resumen usa el singular', () => {
+    renderizar(conPedidos.slice(0, 1));
+    expect(screen.getByText('1 mesa')).toBeInTheDocument();
+  });
+
+  test('cada mesa es una zona táctil amplia (al menos 128 px de alto)', () => {
+    renderizar();
+    expect(document.getElementById('mesa-1').style.minHeight).toBe('128px');
   });
 });

@@ -95,11 +95,13 @@ describe('TomaPedido: carga del menú', () => {
 });
 
 describe('TomaPedido: disponibilidad (US-04 CA1-CA3)', () => {
-  test('un producto agotado se etiqueta "Agotado" y su botón está deshabilitado', async () => {
+  test('un producto agotado lo dice en su botón, que queda deshabilitado', async () => {
     await renderizar();
     await screen.findByText('Ensalada César');
-    expect(screen.getByText(/🚫 Agotado/)).toBeInTheDocument();
-    expect(document.getElementById('btn-agregar-3')).toBeDisabled();
+    const boton = document.getElementById('btn-agregar-3');
+    expect(boton).toHaveTextContent('Agotado');
+    expect(boton).toBeDisabled();
+    expect(document.getElementById('btn-agregar-1')).toHaveTextContent('+ Agregar');
   });
 
   test('un producto agotado no se puede agregar al pedido', async () => {

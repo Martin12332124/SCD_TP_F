@@ -18,6 +18,7 @@ import { useState, useEffect } from 'react';
 import { validarCantidad } from '../validaciones/validaciones';
 import { formatearPrecio } from '../utils/formato';
 import { obtenerMenu } from '../servicios/api';
+import Icono from './Icono';
 
 function TomaPedido({ mesa, onCerrar, socket, conectado }) {
   // Lista de ítems del menú cargados desde el backend
@@ -179,7 +180,7 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
       <div style={estilos.encabezado}>
         <div style={estilos.encabezadoInterior}>
           <div style={estilos.identidad}>
-            <h2 style={estilos.titulo}>📝 Tomar pedido</h2>
+            <h2 style={estilos.titulo}>Tomar pedido</h2>
             <p style={estilos.subtitulo}>Mesa {mesa.numero}</p>
           </div>
           <button
@@ -198,7 +199,7 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
         {/* ── Columna izquierda: lista de productos ─────────────────────── */}
         <div style={estilos.columnaProductos}>
           {/* Estado de carga */}
-          {cargando && <p style={estilos.mensaje}>⏳ Cargando menú...</p>}
+          {cargando && <p style={estilos.mensaje}>Cargando menú...</p>}
 
           {/* Error al cargar */}
           {!cargando && error && (
@@ -243,16 +244,6 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
                       {/* Precio base */}
                       <p style={estilos.precio}>{formatearPrecio(item.precioBase)}</p>
 
-                      {/* Indicador de disponibilidad — base para US-04 (Paso 3) */}
-                      <span
-                        style={{
-                          ...estilos.badge,
-                          ...(item.disponible ? estilos.tonoExito : estilos.tonoPeligro)
-                        }}
-                      >
-                        {item.disponible ? '✅ Disponible' : '🚫 Agotado'}
-                      </span>
-
                       {/* Paso 2: botón "+ Agregar" */}
                       <button
                         id={`btn-agregar-${item.id}`}
@@ -280,7 +271,9 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
 
         {/* ── Panel lateral derecho: carrito ────────────────────────────── */}
         <div style={estilos.panelCarrito}>
-          <h3 style={estilos.tituloCarrito}>🛒 Pedido</h3>
+          <h3 style={estilos.tituloCarrito}>
+            <Icono nombre="carrito" tamano={24} /> Pedido
+          </h3>
 
           {carritoVacio ? (
             <p style={estilos.carritoVacio}>Selecciona productos del menú para armar el pedido.</p>
@@ -366,7 +359,7 @@ function TomaPedido({ mesa, onCerrar, socket, conectado }) {
                   ...(enviando || !conectado ? estilos.btnConfirmarDeshabilitado : {})
                 }}
               >
-                {enviando ? 'Enviando...' : '✅ Confirmar pedido'}
+                {enviando ? 'Enviando...' : 'Confirmar pedido'}
               </button>
               {!conectado && <p style={estilos.notaConfirmar}>Sin conexión con el servidor.</p>}
             </>
@@ -420,22 +413,21 @@ const estilos = {
     color: 'var(--color-encabezado-texto)'
   },
   subtitulo: {
-    padding: '3px 12px',
-    borderRadius: '999px',
-    background: 'var(--color-azafran)',
-    color: '#2b1a12',
-    fontSize: '13px',
-    fontWeight: 700
+    fontFamily: 'var(--fuente-titulo)',
+    fontSize: 'clamp(20px, 3vw, 24px)',
+    fontWeight: 700,
+    color: 'var(--color-azafran)'
   },
   btnCerrar: {
-    padding: '8px 16px',
-    background: 'rgba(244, 236, 227, 0.1)',
+    minHeight: 'var(--toque)',
+    padding: '10px 18px',
+    background: 'transparent',
     color: 'var(--color-encabezado-texto)',
-    border: '1px solid rgba(244, 236, 227, 0.3)',
-    borderRadius: '999px',
-    fontSize: '14px',
+    border: '2px solid var(--color-encabezado-texto)',
+    borderRadius: 'var(--radio-m)',
+    fontSize: '17px',
     cursor: 'pointer',
-    fontWeight: 600,
+    fontWeight: 700,
     whiteSpace: 'nowrap'
   },
   // Cuerpo en dos columnas que se apilan solas en pantallas angostas (flex-wrap)
@@ -482,8 +474,8 @@ const estilos = {
     fontSize: '24px'
   },
   conteo: {
-    color: 'var(--color-texto-suave)',
-    fontSize: '14px'
+    color: 'var(--color-texto)',
+    fontSize: '16px'
   },
   grilla: {
     display: 'grid',
@@ -523,39 +515,27 @@ const estilos = {
     color: 'var(--color-primario-texto)',
     fontVariantNumeric: 'tabular-nums'
   },
-  badge: {
-    fontSize: '11px',
-    fontWeight: 700,
-    padding: '2px 10px',
-    borderRadius: '999px',
-    border: '1px solid'
-  },
-  tonoExito: {
-    background: 'var(--color-exito-suave)',
-    color: 'var(--color-exito-texto)',
-    borderColor: 'var(--color-exito)'
-  },
-  tonoPeligro: {
-    background: 'var(--color-peligro-suave)',
-    color: 'var(--color-peligro-texto)',
-    borderColor: 'var(--color-peligro)'
-  },
   btnAgregar: {
     marginTop: 'auto',
-    padding: '9px 14px',
+    minHeight: 'var(--toque)',
+    padding: '10px 14px',
     background: 'var(--color-primario)',
     color: 'var(--color-sobre-primario)',
     border: 'none',
     borderRadius: 'var(--radio-m)',
-    fontSize: '14px',
+    fontSize: '17px',
     fontWeight: 700,
     cursor: 'pointer',
     width: '100%'
   },
+  // Agotado: el botón dice "Agotado" con borde de peligro (sin etiqueta aparte)
   btnAgregarDeshabilitado: {
     background: 'var(--color-superficie-alt)',
-    color: 'var(--color-texto-tenue)',
-    cursor: 'not-allowed'
+    color: 'var(--color-peligro-texto)',
+    border: '2px solid var(--color-peligro)',
+    cursor: 'not-allowed',
+    // La tarjeta ya se atenúa; sin esto se sumaría la opacidad de todo botón deshabilitado
+    opacity: 1
   },
   // ── Panel carrito: tarjeta fija al hacer scroll en pantallas anchas
   panelCarrito: {
@@ -576,9 +556,8 @@ const estilos = {
     fontSize: '22px'
   },
   carritoVacio: {
-    color: 'var(--color-texto-tenue)',
-    fontSize: '14px',
-    fontStyle: 'italic',
+    color: 'var(--color-texto)',
+    fontSize: '16px',
     textAlign: 'center',
     padding: '24px 8px',
     border: '1px dashed var(--color-borde)',
@@ -602,12 +581,12 @@ const estilos = {
     gap: '8px'
   },
   itemNombre: {
-    fontSize: '14px',
+    fontSize: '16px',
     fontWeight: 600,
     flex: 1
   },
   itemSubtotal: {
-    fontSize: '14px',
+    fontSize: '16px',
     fontWeight: 700,
     color: 'var(--color-primario-texto)',
     whiteSpace: 'nowrap',
@@ -623,18 +602,18 @@ const estilos = {
     display: 'inline-flex',
     alignItems: 'center',
     border: '1px solid var(--color-borde)',
-    borderRadius: '999px',
+    borderRadius: 'var(--radio-m)',
     background: 'var(--color-superficie-alt)',
-    padding: '2px'
+    padding: '3px'
   },
   btnQty: {
-    width: '30px',
-    height: '30px',
+    width: '44px',
+    height: '44px',
     border: 'none',
-    borderRadius: '50%',
+    borderRadius: 'var(--radio-s)',
     background: 'var(--color-superficie)',
     color: 'var(--color-texto)',
-    fontSize: '16px',
+    fontSize: '22px',
     fontWeight: 700,
     cursor: 'pointer',
     display: 'flex',
@@ -644,20 +623,20 @@ const estilos = {
     padding: 0
   },
   cantidad: {
-    minWidth: '32px',
+    minWidth: '36px',
     textAlign: 'center',
     fontWeight: 700,
-    fontSize: '15px',
+    fontSize: '18px',
     fontVariantNumeric: 'tabular-nums'
   },
   btnQuitar: {
-    width: '30px',
-    height: '30px',
-    border: '1px solid var(--color-borde)',
-    borderRadius: '50%',
+    width: '44px',
+    height: '44px',
+    border: '2px solid var(--color-peligro)',
+    borderRadius: 'var(--radio-s)',
     background: 'transparent',
     color: 'var(--color-peligro-texto)',
-    fontSize: '12px',
+    fontSize: '18px',
     fontWeight: 700,
     cursor: 'pointer',
     display: 'flex',
@@ -693,32 +672,33 @@ const estilos = {
     color: 'var(--color-peligro-texto)',
     border: '1px solid var(--color-peligro)',
     borderRadius: 'var(--radio-m)',
-    fontSize: '13px'
+    fontSize: '16px'
   },
   btnConfirmar: {
     marginTop: '16px',
+    minHeight: 'var(--toque)',
     padding: '14px',
     background: 'var(--color-primario)',
     color: 'var(--color-sobre-primario)',
     border: 'none',
     borderRadius: 'var(--radio-m)',
     boxShadow: '0 2px 0 rgba(90, 30, 8, 0.25)',
-    fontSize: '16px',
+    fontSize: '18px',
     fontWeight: 700,
     cursor: 'pointer',
     width: '100%'
   },
   btnConfirmarDeshabilitado: {
     background: 'var(--color-superficie-alt)',
-    color: 'var(--color-texto-tenue)',
+    color: 'var(--color-texto-suave)',
     boxShadow: 'none',
     cursor: 'not-allowed'
   },
   notaConfirmar: {
     marginTop: '12px',
-    fontSize: '12px',
-    color: 'var(--color-texto-tenue)',
-    fontStyle: 'italic',
+    fontSize: '16px',
+    fontWeight: 600,
+    color: 'var(--color-peligro-texto)',
     textAlign: 'center'
   }
 };

@@ -1,12 +1,15 @@
 /*
  * Tokens visuales del monitor de pedidos.
- * Paleta cálida inspirada en la cocina: tomate, naranja, azafrán, oliva, hueso y chocolate.
+ * Identidad "pase de cocina": encabezado y riel de comandas en pizarra con una barra de
+ * latón, tickets de papel, mantel de lino de fondo y tomate como color de marca.
+ * Tipografías: Fraunces (marca y números de mesa), Barlow (texto) y Barlow Condensed
+ * (temporizadores), empaquetadas con la app en main.jsx.
  * Los componentes usan estilos en línea que leen estas variables (var(--...)),
  * así un único lugar define el modo claro y el modo oscuro.
  */
 :root {
   /* Superficies y texto — modo claro (sala de día) */
-  --color-fondo: #f6efe7;
+  --color-fondo: #f2ece1;
   --color-superficie: #fffbf6;
   --color-superficie-alt: #f1e6da;
   --color-borde: #e4d6c7;
@@ -27,17 +30,57 @@
   --color-sobre-primario: #ffffff;
 
   /* Estados */
-  --color-exito: #6e6212;
-  --color-exito-texto: #5c5210;
-  --color-exito-suave: #efebcf;
+  --color-exito: #16834a;
+  --color-exito-texto: #0f6b3b;
+  --color-exito-suave: #dff3e6;
   --color-peligro: #b4231a;
   --color-peligro-texto: #a3221a;
   --color-peligro-suave: #fbe1dc;
   --color-neutro: #7a6a5f;
 
+  /*
+   * Estados de mesa: un color sólido por estado y el color del texto que va encima.
+   * Cada par tiene contraste >= 4.5 (lo comprueba src/test/colores-estado.test.js).
+   * Los usan el mapa de sala, el panel de la mesa y la franja de último cambio.
+   */
+  --mesa-libre: #16834a;
+  --mesa-libre-texto: #ffffff;
+  --mesa-ocupada: #c9302a;
+  --mesa-ocupada-texto: #ffffff;
+  --mesa-recibido: #7446d6;
+  --mesa-recibido-texto: #ffffff;
+  --mesa-cocina: #f5a300;
+  --mesa-cocina-texto: #2b1a00;
+  --mesa-listo: #1b6fcc;
+  --mesa-listo-texto: #ffffff;
+
+  /* Plano de sala: piso y sillas */
+  --piso: #eadcc9;
+  --piso-linea: rgba(90, 30, 8, 0.08);
+  --mesa-silla: #8a6b52;
+
+  /*
+   * Riel de comandas: el riel es de pizarra con barra de latón, y los tickets son de papel
+   * (papel claro en ambos temas, como un ticket impreso real). Los papeles de alerta
+   * cambian todo el ticket a los 15 y 20 minutos (REF-04). Contrastes: tinta/papel 16.2,
+   * atención 10.4, atraso 6.5, texto/pizarra 13.2, latón/pizarra 7.3.
+   */
+  --pizarra: #1f2723;
+  --pizarra-texto: #f3eee4;
+  --laton: #d4ae5c;
+  --papel: #fffaf0;
+  --tinta: #231c14;
+  --papel-atencion: #ffd66b;
+  --papel-atencion-texto: #3a2600;
+  --papel-atraso: #b3261e;
+  --papel-atraso-texto: #ffffff;
+
+  /* Tamaño mínimo de botones y zonas táctiles (uso en tablet) */
+  --toque: 52px;
+
   /* Encabezado */
-  --fondo-encabezado: linear-gradient(135deg, #3d1405 0%, #5a1e08 60%, #7a2a0c 100%);
-  --color-encabezado-texto: #f4ece3;
+  --fondo-encabezado: var(--pizarra);
+  --color-encabezado-texto: #f3eee4;
 
   /* Elevación, forma y tipografía */
   --sombra-1: 0 1px 2px rgba(90, 30, 8, 0.06), 0 2px 8px rgba(90, 30, 8, 0.06);
@@ -48,9 +91,10 @@
   --radio-m: 12px;
   --radio-l: 18px;
 
-  --fuente-titulo: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
-  --fuente-texto: 'Avenir Next', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --fuente-titulo: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
+  --fuente-texto: 'Barlow', 'Segoe UI', Roboto, sans-serif;
   --fuente-mono: ui-monospace, 'SF Mono', Consolas, monospace;
+  --fuente-condensada: 'Barlow Condensed', 'Arial Narrow', sans-serif;
 
   color-scheme: light;
   font: 16px/1.55 var(--fuente-texto);
@@ -77,13 +121,28 @@
     --color-primario-suave: #3a1e15;
     --color-acento-texto: #f5a04a;
     --color-azafran: #e9b949;
-    --color-exito: #8a7c18;
-    --color-exito-texto: #d4c75a;
-    --color-exito-suave: #2f2c14;
+    --color-exito: #34c277;
+    --color-exito-texto: #6fdc9f;
+    --color-exito-suave: #12301f;
+    --mesa-libre: #34c277;
+    --mesa-libre-texto: #062414;
+    --mesa-ocupada: #f0584a;
+    --mesa-ocupada-texto: #2a0703;
+    --mesa-recibido: #a283f2;
+    --mesa-recibido-texto: #1b0b45;
+    --mesa-cocina: #ffb829;
+    --mesa-cocina-texto: #2b1a00;
+    --mesa-listo: #56a5f5;
+    --mesa-listo-texto: #04213f;
+    --piso: #1b1512;
+    --piso-linea: rgba(255, 255, 255, 0.05);
+    --mesa-silla: #6b5546;
+    --pizarra: #121614;
+    --papel: #efe6d2;
     --color-peligro-texto: #ff8e7d;
     --color-peligro-suave: #3b1d18;
     --color-neutro: #5e5149;
-    --fondo-encabezado: linear-gradient(135deg, #0f0a08 0%, #1f120c 60%, #2e160b 100%);
+    --fondo-encabezado: var(--pizarra);
     --sombra-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
     --sombra-2: 0 4px 12px rgba(0, 0, 0, 0.45), 0 12px 32px rgba(0, 0, 0, 0.35);
     --sombra-panel: -12px 0 40px rgba(0, 0, 0, 0.55);
@@ -106,13 +165,28 @@
   --color-primario-suave: #3a1e15;
   --color-acento-texto: #f5a04a;
   --color-azafran: #e9b949;
-  --color-exito: #8a7c18;
-  --color-exito-texto: #d4c75a;
-  --color-exito-suave: #2f2c14;
+  --color-exito: #34c277;
+  --color-exito-texto: #6fdc9f;
+  --color-exito-suave: #12301f;
+  --mesa-libre: #34c277;
+  --mesa-libre-texto: #062414;
+  --mesa-ocupada: #f0584a;
+  --mesa-ocupada-texto: #2a0703;
+  --mesa-recibido: #a283f2;
+  --mesa-recibido-texto: #1b0b45;
+  --mesa-cocina: #ffb829;
+  --mesa-cocina-texto: #2b1a00;
+  --mesa-listo: #56a5f5;
+  --mesa-listo-texto: #04213f;
+  --piso: #1b1512;
+  --piso-linea: rgba(255, 255, 255, 0.05);
+  --mesa-silla: #6b5546;
+  --pizarra: #121614;
+  --papel: #efe6d2;
   --color-peligro-texto: #ff8e7d;
   --color-peligro-suave: #3b1d18;
   --color-neutro: #5e5149;
-  --fondo-encabezado: linear-gradient(135deg, #0f0a08 0%, #1f120c 60%, #2e160b 100%);
+  --fondo-encabezado: var(--pizarra);
   --sombra-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
   --sombra-2: 0 4px 12px rgba(0, 0, 0, 0.45), 0 12px 32px rgba(0, 0, 0, 0.35);
   --sombra-panel: -12px 0 40px rgba(0, 0, 0, 0.55);
@@ -160,17 +234,6 @@ p {
 button,
 input {
   font: inherit;
-}
-
-/* Latido del indicador de conexión del encabezado */
-@keyframes pulso {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(181, 196, 74, 0.55);
-  }
-  50% {
-    box-shadow: 0 0 0 6px rgba(181, 196, 74, 0);
-  }
 }
 
 /*

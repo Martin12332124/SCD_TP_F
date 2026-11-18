@@ -98,7 +98,7 @@ npm run format
 |---|---|---|---|---|---|
 | 1 | Abrir y liberar mesa | US-09 | `src/dominio/mesa-estado.service.js`, `src/presentacion/mesas.router.js` | `src/componentes/DetalleMesa.jsx` | `test/mesa-estado.service.test.js`, `test/api.test.js` |
 | 2 | Mapa de mesas en tiempo real | US-08 | `GET /api/mesas`, evento `estado_mesas` en `src/app.js` | `src/componentes/MapaMesas.jsx`, `src/componentes/App.jsx` | `test/api.test.js`, `test/socket.test.js` |
-| 3 | Traslado de pedido entre mesas | US-05 | `src/dominio/mesa.service.js`, evento `trasladar_pedido` | formulario de traslado en `src/componentes/App.jsx` | `test/mesa.service.test.js`, `test/socket.test.js` |
+| 3 | Traslado de pedido entre mesas | US-05 | `src/dominio/mesa.service.js`, evento `trasladar_pedido` | panel de la mesa: `src/componentes/TrasladoMesa.jsx` | `test/mesa.service.test.js`, `test/socket.test.js` |
 | 4 | Precio base de productos (crear/editar) | US-07 | `src/dominio/menu-item.service.js`, `src/presentacion/menu-items.router.js` | — | `test/menu-item.service.test.js`, `test/api.test.js` |
 | 5 | Toma de pedido, confirmación y disponibilidad | US-04 (parcial) | `src/dominio/pedido.service.js` (`confirmarPedido`), `PATCH /api/menu-items/:id` | `src/componentes/TomaPedido.jsx` | `test/pedido.service.test.js`, `test/socket.test.js` |
 
@@ -176,7 +176,15 @@ Al ejecutar el comando, Vite te mostrará una dirección local en la terminal.
 Una vez que entres a la página web:
 * **Indicador de Servidor:** Si el Backend está encendido, verás un letrero verde que dice **"Conectado ✔"**. Si el Backend está apagado, dirá **"Desconectado ✖"** en rojo.
 
-* **Botones Interactivos:** Presiona los botones de **Tomar Pedido**, **Empezar Cocina** o **Pedido Listo**. Cada vez que hagas clic en uno, la pantalla le enviará la orden en tiempo real al servidor para actualizar el estado del pedido en el restaurante.
+* **Comandas:** bajo el encabezado cuelga un ticket por cada pedido en curso, con su tiempo. Pasados 15 minutos el ticket se pone ámbar y pasados 20, rojo ("Atrasado"). Tocar un ticket abre su mesa.
+
+* **Sala:** cada mesa del plano muestra su estado con color, ícono y texto: libre, ocupada, pedido tomado, en cocina o pedido listo.
+
+* **Todo dentro de la mesa:** toca una mesa para abrir su panel. Ahí puedes abrirla o liberarla, tomar el pedido (carta), avanzarlo con un solo botón (**Enviar a cocina** → **Marcar pedido listo**), ver la cuenta y trasladar el pedido tocando la mesa de destino.
+
+* **Configurar mesas:** el botón del encabezado abre una pantalla aparte para agregar mesas (la siguiente o con un número elegido) y quitar mesas libres, con confirmación.
+
+Detalles del rediseño: [docs/rediseno-mesas.md](docs/rediseno-mesas.md).
 
 
 ---

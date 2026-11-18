@@ -4,6 +4,7 @@
 // La elección se aplica como data-theme en <html>, que index.css usa para cambiar los tokens.
 
 import { useState, useEffect } from 'react';
+import Icono from './Icono';
 
 const CLAVE_TEMA = 'monitor-pedidos:tema';
 
@@ -46,33 +47,28 @@ function SelectorTema() {
       title={esOscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
       style={estilos.boton}
     >
-      <span aria-hidden="true" style={estilos.icono}>
-        {esOscuro ? '☀️' : '🌙'}
-      </span>
+      <Icono nombre={esOscuro ? 'sol' : 'luna'} tamano={20} />
       {esOscuro ? 'Modo claro' : 'Modo oscuro'}
     </button>
   );
 }
 
-// ── Estilos en línea: pensados para ir sobre el encabezado chocolate ─────────
+// ── Estilos en línea: pensados para ir sobre la pizarra del encabezado ───────
 const estilos = {
   boton: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '8px',
-    padding: '7px 14px',
-    borderRadius: '999px',
-    border: '1px solid rgba(244, 236, 227, 0.3)',
-    background: 'rgba(244, 236, 227, 0.08)',
+    minHeight: '44px',
+    padding: '8px 14px',
+    borderRadius: 'var(--radio-m)',
+    border: '2px solid var(--color-encabezado-texto)',
+    background: 'transparent',
     color: 'var(--color-encabezado-texto)',
-    fontSize: '13px',
+    fontSize: '16px',
     fontWeight: 600,
     cursor: 'pointer',
     whiteSpace: 'nowrap'
-  },
-  icono: {
-    fontSize: '15px',
-    lineHeight: 1
   }
 };
 
