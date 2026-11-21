@@ -1,0 +1,10 @@
+# Despliegue del frontend en Netlify (modo nube).
+# Las variables VITE_MODO=nube, VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY se
+# configuran en el panel de Netlify (Site configuration → Environment variables),
+# no aquí: así este archivo no cambia entre entornos.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
