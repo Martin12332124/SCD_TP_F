@@ -25,3 +25,9 @@ dist-ssr
 
 # Reportes de cobertura generados
 coverage/
+
+# Variables de entorno: llaves y URLs de Supabase (nunca al repo).
+# Se versiona solo .env.example, con los nombres de las variables sin valores.
+.env
+.env.*
+!.env.example
