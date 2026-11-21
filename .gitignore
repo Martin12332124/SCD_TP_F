@@ -31,3 +31,6 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Estado local de Netlify CLI (id del sitio vinculado): no se versiona
+.netlify/
