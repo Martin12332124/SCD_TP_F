@@ -6,13 +6,37 @@
 //   - Leer: de las tablas espejo que el local mantiene en Supabase.
 //   - Escribir: nunca directo. Cada acción se deja como una orden en `ordenes_pendientes`;
 //     el local la aplica con sus reglas y el cambio vuelve por Realtime a las tablas espejo.
-//   Por eso una acción respondida aquí con ok: true significa "orden enviada", no "aplicada":
-//   la respuesta lleva `pendiente: true`.
+//   Después de enviar una orden se espera unos segundos su resultado: si el local la aplica
+//   o la rechaza, se devuelve SU respuesta (la misma forma que en modo local). Si el local
+//   no responde a tiempo (por ejemplo, está sin internet), se responde ok con
+//   `pendiente: true`: la orden quedó en cola y se aplicará cuando el local vuelva.
+//   No se responde error en ese caso, para que nadie la reenvíe y quede duplicada.
+//
+// Sesión: Supabase Auth. El formulario pide "usuario"; aquí se convierte en el correo
+// "usuario@sistema.local", que es como se crean los usuarios en el panel de Supabase.
 
 /** Agrupa avisos seguidos: una subida del local cambia varias tablas a la vez. */
 const ESPERA_RECARGA_MS = 150;
 
 const SIN_CONEXION = 'SIN_CONEXION';
+
+/** Dominio ficticio de los correos de Supabase Auth: "ana" → "ana@sistema.local". */
+export const DOMINIO_USUARIOS = 'sistema.local';
+
+/** Cuánto se espera la respuesta del local a una orden, y cada cuánto se pregunta. */
+const ESPERA_RESULTADO_MS = 8000;
+const INTERVALO_RESULTADO_MS = 1000;
+
+/** "  Ana " → "ana@sistema.local". Misma normalización que el backend (usuario.service.js). */
+export const correoDeUsuario = (usuario) =>
+  `${String(usuario ?? '')
+    .trim()
+    .toLowerCase()}@${DOMINIO_USUARIOS}`;
+
+/** "ana@sistema.local" → "ana" (para mostrar en el encabezado). */
+const usuarioDeCorreo = (correo) => String(correo ?? '').split('@')[0];
+
+const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Lee las mesas con el estado de su pedido, con la misma forma que GET /api/mesas
@@ -43,11 +67,44 @@ async function leerMesas(supabase) {
 /**
  * Crea las operaciones del modo nube sobre un cliente de Supabase ya creado.
  * @param {object} supabase - Cliente de @supabase/supabase-js (o un doble en los tests)
+ * @param {object} [opciones]
+ * @param {number} [opciones.esperaMaximaMs=8000] - cuánto esperar el resultado de una orden
+ * @param {number} [opciones.intervaloMs=1000] - cada cuánto consultarlo
  */
-export function crearApiNube(supabase) {
-  /** Deja una orden en el buzón. Solo se envían tipo y payload: el resto lo pone la base. */
+export function crearApiNube(
+  supabase,
+  { esperaMaximaMs = ESPERA_RESULTADO_MS, intervaloMs = INTERVALO_RESULTADO_MS } = {}
+) {
+  /**
+   * Espera a que el local procese la orden. Devuelve el resultado del servicio de dominio
+   * (aplicada o rechazada) o null si no llegó a tiempo.
+   */
+  async function esperarResultado(id) {
+    for (let esperado = 0; esperado < esperaMaximaMs; esperado += intervaloMs) {
+      await esperar(intervaloMs);
+      const { data, error } = await supabase
+        .from('ordenes_pendientes')
+        .select('estado, resultado')
+        .eq('id', id)
+        .maybeSingle();
+      if (error || !data) return null;
+      if (data.estado !== 'pendiente') {
+        return data.resultado ?? { ok: data.estado === 'aplicada' };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Deja una orden en el buzón (solo tipo y payload: el resto lo pone la base) y espera
+   * la respuesta del local. Ver el comentario del inicio del archivo.
+   */
   async function enviarOrden(tipo, payload) {
-    const { error } = await supabase.from('ordenes_pendientes').insert({ tipo, payload });
+    const { data, error } = await supabase
+      .from('ordenes_pendientes')
+      .insert({ tipo, payload })
+      .select('id')
+      .single();
     if (error) {
       return {
         ok: false,
@@ -55,7 +112,8 @@ export function crearApiNube(supabase) {
         error: `No se pudo enviar la orden a la nube: ${error.message}`
       };
     }
-    return { ok: true, pendiente: true };
+    const resultado = await esperarResultado(data.id);
+    return resultado ?? { ok: true, pendiente: true };
   }
 
   const api = {
@@ -110,10 +168,10 @@ export function crearApiNube(supabase) {
 
     abrirMesa: (numero) => enviarOrden('abrir_mesa', { numero }),
     cerrarMesa: (numero) => enviarOrden('cerrar_mesa', { numero }),
-    quitarMesa: async (numero) => ({
-      ...(await enviarOrden('quitar_mesa', { numero })),
-      mesa: `Mesa ${numero}`
-    }),
+    async quitarMesa(numero) {
+      const r = await enviarOrden('quitar_mesa', { numero });
+      return r.pendiente ? { ...r, mesa: `Mesa ${numero}` } : r;
+    },
 
     /**
      * Sin número, el local elegiría "la siguiente a la más alta". Aquí se calcula con el
@@ -127,11 +185,66 @@ export function crearApiNube(supabase) {
         elegido = Math.max(0, ...actuales.mesas.map((m) => m.numero)) + 1;
       }
       const resultado = await enviarOrden('agregar_mesa', { numero: elegido });
-      if (!resultado.ok) return resultado;
+      if (!resultado.pendiente) return resultado;
       return { ...resultado, mesa: { id: `Mesa ${elegido}`, numero: elegido, estado: 'libre' } };
     },
 
-    enviarOrden
+    enviarOrden,
+
+    // ── Sesión (Supabase Auth). supabase-js guarda la sesión en localStorage y la renueva
+    //    sola: aquí no se copia el token a ningún otro lado. ──
+
+    /** @returns {Promise<{ ok: true, usuario: string } | { ok: false, tipo: string, error: string }>} */
+    async iniciarSesion(usuario, contrasena) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: correoDeUsuario(usuario),
+        password: contrasena
+      });
+      if (error?.code === 'email_not_confirmed') {
+        return {
+          ok: false,
+          tipo: 'CREDENCIALES_INVALIDAS',
+          error: 'El usuario no está confirmado en Supabase (marcar "Auto Confirm User").'
+        };
+      }
+      if (error) {
+        // 400 = credenciales incorrectas; sin status = falló la red.
+        return error.status === 400
+          ? {
+              ok: false,
+              tipo: 'CREDENCIALES_INVALIDAS',
+              error: 'Usuario o contraseña incorrectos.'
+            }
+          : {
+              ok: false,
+              tipo: SIN_CONEXION,
+              error: `No se pudo contactar la nube: ${error.message}`
+            };
+      }
+      return { ok: true, usuario: usuarioDeCorreo(data.user.email) };
+    },
+
+    /** Sesión guardada (de una visita anterior) o null. */
+    async obtenerSesion() {
+      const { data } = await supabase.auth.getSession();
+      const correo = data?.session?.user?.email;
+      return correo ? { usuario: usuarioDeCorreo(correo) } : null;
+    },
+
+    async cerrarSesion() {
+      await supabase.auth.signOut();
+    },
+
+    /**
+     * Avisa cuando Supabase da la sesión por terminada (no se pudo renovar, o se cerró en
+     * otra pestaña). Devuelve la función para dejar de escuchar.
+     */
+    alPerderSesion(fn) {
+      const { data } = supabase.auth.onAuthStateChange((evento) => {
+        if (evento === 'SIGNED_OUT') fn();
+      });
+      return () => data.subscription.unsubscribe();
+    }
   };
   return api;
 }
@@ -197,7 +310,7 @@ export function crearConexionNube(supabase, api) {
       exito: (d) => ({
         origen: `Mesa ${d.origen}`,
         destino: `Mesa ${d.destino}`,
-        estado: 'orden enviada al local'
+        estado: 'orden en cola: el local no responde todavía'
       })
     }
   };
@@ -214,10 +327,12 @@ export function crearConexionNube(supabase, api) {
       const accion = ACCIONES[evento];
       if (!accion) return;
       const r = await accion.enviar(datos);
-      avisar(accion.respuesta, r.ok ? { ...r, ...accion.exito(datos) } : r);
+      // Si el local respondió, se reenvía su respuesta tal cual (igual que en modo local).
+      // Si quedó pendiente, se completan los datos que la vista muestra.
+      avisar(accion.respuesta, r.pendiente ? { ...r, ...accion.exito(datos) } : r);
     },
-    /** Deja de escuchar (no lo usa App, que vive mientras la página esté abierta). */
-    cerrar() {
+    /** Deja de escuchar. Mismo nombre que en socket.io, para cerrar ambas igual al salir. */
+    disconnect() {
       clearTimeout(espera);
       supabase.removeChannel(canal);
     }

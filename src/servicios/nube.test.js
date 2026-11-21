@@ -2,9 +2,13 @@
 // Supabase se reemplaza por un doble en memoria: sin red. Se verifica que las respuestas
 // tengan la misma forma que las del backend local y que las acciones se conviertan en órdenes.
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { crearApiNube, crearConexionNube } from './nube.js';
+import { crearApiNube, crearConexionNube, correoDeUsuario } from './nube.js';
 
-/** Doble de Supabase: tablas en memoria, buzón de órdenes y un canal Realtime controlable. */
+/**
+ * Doble de Supabase: tablas en memoria, buzón de órdenes, Auth y un canal Realtime controlable.
+ * `local` simula el servidor del restaurante: si se define, procesa cada orden al llegar
+ * (devuelve { estado, resultado }); si es null, la orden queda pendiente (local sin internet).
+ */
 function supabaseFalso(tablas = {}) {
   const ordenes = [];
   const errores = {}; // tabla → mensaje, para simular fallas
@@ -18,8 +22,26 @@ function supabaseFalso(tablas = {}) {
     return canal;
   };
 
+  const doble = {
+    ordenes,
+    errores,
+    canal,
+    local: null,
+    from: (tabla) => consulta(tabla),
+    channel: () => canal,
+    removeChannel: vi.fn(),
+    auth: {
+      signInWithPassword: vi.fn(),
+      getSession: vi.fn(async () => ({ data: { session: null } })),
+      signOut: vi.fn(async () => ({ error: null })),
+      onAuthStateChange: vi.fn()
+    },
+    /** Simula un cambio en una tabla espejo que llega por Realtime. */
+    cambio: (tabla) => canal.escuchas.filter((e) => e.tabla === tabla).forEach((e) => e.fn({}))
+  };
+
   function consulta(tabla) {
-    let filas = [...(tablas[tabla] || [])];
+    let filas = [...(tabla === 'ordenes_pendientes' ? ordenes : tablas[tabla] || [])];
     let unica = false;
     const q = {
       select: () => q,
@@ -35,11 +57,18 @@ function supabaseFalso(tablas = {}) {
         unica = true;
         return q;
       },
-      insert: async (fila) => {
-        if (errores[tabla]) return { error: { message: errores[tabla] } };
-        ordenes.push(fila);
-        return { error: null };
-      },
+      // insert(...).select('id').single(): devuelve el id asignado por la base.
+      insert: (fila) => ({
+        select: () => ({
+          single: async () => {
+            if (errores[tabla]) return { data: null, error: { message: errores[tabla] } };
+            const orden = { id: ordenes.length + 1, ...fila, estado: 'pendiente', resultado: null };
+            ordenes.push(orden);
+            if (doble.local) Object.assign(orden, doble.local(orden));
+            return { data: { id: orden.id }, error: null };
+          }
+        })
+      }),
       then: (resolver) => {
         if (errores[tabla]) return resolver({ data: null, error: { message: errores[tabla] } });
         return resolver({ data: unica ? (filas[0] ?? null) : filas, error: null });
@@ -48,17 +77,17 @@ function supabaseFalso(tablas = {}) {
     return q;
   }
 
-  return {
-    ordenes,
-    errores,
-    canal,
-    from: (tabla) => consulta(tabla),
-    channel: () => canal,
-    removeChannel: vi.fn(),
-    /** Simula un cambio en una tabla espejo que llega por Realtime. */
-    cambio: (tabla) => canal.escuchas.filter((e) => e.tabla === tabla).forEach((e) => e.fn({}))
-  };
+  return doble;
 }
+
+/** Tiempos cortos para los tests: el local tiene 30 ms para responder. */
+const RAPIDO = { esperaMaximaMs: 30, intervaloMs: 10 };
+
+/** Solo tipo y payload de las órdenes enviadas (lo que la web puede escribir). */
+const enviadas = (supabase) => supabase.ordenes.map(({ tipo, payload }) => ({ tipo, payload }));
+
+/** Un local que aplica todo y responde como el servicio de dominio. */
+const localQueAplica = (resultado) => () => ({ estado: 'aplicada', resultado });
 
 const TABLAS = {
   mesas: [
@@ -148,32 +177,82 @@ describe('crearApiNube: lecturas con la misma forma que la API REST', () => {
   });
 });
 
-describe('crearApiNube: las acciones se envían como órdenes al buzón', () => {
-  test('abrir, cerrar y quitar mesa dejan su orden y responden pendiente', async () => {
+describe('crearApiNube: las acciones se envían como órdenes y esperan al local', () => {
+  test('si el local aplica la orden, se devuelve su respuesta tal cual', async () => {
     const supabase = supabaseFalso(TABLAS);
-    const api = crearApiNube(supabase);
+    supabase.local = localQueAplica({ ok: true, mesa: 'Mesa 1', estado: 'ocupada' });
+    const api = crearApiNube(supabase, RAPIDO);
+
+    expect(await api.abrirMesa(1)).toEqual({ ok: true, mesa: 'Mesa 1', estado: 'ocupada' });
+    expect(supabase.ordenes[0]).toMatchObject({ estado: 'aplicada' });
+    expect(enviadas(supabase)).toEqual([{ tipo: 'abrir_mesa', payload: { numero: 1 } }]);
+  });
+
+  test('si el local la rechaza, se devuelve el motivo del dominio', async () => {
+    const supabase = supabaseFalso(TABLAS);
+    const rechazo = {
+      ok: false,
+      tipo: 'ESTADO_NO_PERMITIDO',
+      error: 'La mesa 2 ya está ocupada. No se puede abrir dos veces.'
+    };
+    supabase.local = () => ({ estado: 'rechazada', resultado: rechazo });
+    expect(await crearApiNube(supabase, RAPIDO).abrirMesa(2)).toEqual(rechazo);
+  });
+
+  test('una orden procesada sin resultado guardado responde según su estado', async () => {
+    const supabase = supabaseFalso(TABLAS);
+    supabase.local = () => ({ estado: 'rechazada', resultado: null });
+    expect(await crearApiNube(supabase, RAPIDO).cerrarMesa(2)).toEqual({ ok: false });
+  });
+
+  test('si el local no responde a tiempo, queda pendiente (ok, para no reenviarla)', async () => {
+    const supabase = supabaseFalso(TABLAS);
+    const api = crearApiNube(supabase, RAPIDO);
 
     expect(await api.abrirMesa(1)).toEqual({ ok: true, pendiente: true });
     expect(await api.cerrarMesa(2)).toEqual({ ok: true, pendiente: true });
     expect(await api.quitarMesa(1)).toEqual({ ok: true, pendiente: true, mesa: 'Mesa 1' });
-
-    expect(supabase.ordenes).toEqual([
+    expect(enviadas(supabase)).toEqual([
       { tipo: 'abrir_mesa', payload: { numero: 1 } },
       { tipo: 'cerrar_mesa', payload: { numero: 2 } },
       { tipo: 'quitar_mesa', payload: { numero: 1 } }
     ]);
   });
 
+  test('si no se puede consultar el resultado, también queda pendiente', async () => {
+    const supabase = supabaseFalso(TABLAS);
+    const api = crearApiNube(supabase, RAPIDO);
+    const espera = api.abrirMesa(1);
+    supabase.errores.ordenes_pendientes = 'sin red'; // la inserción ya pasó; la consulta falla
+    expect(await espera).toEqual({ ok: true, pendiente: true });
+  });
+
+  test('quitarMesa respondida por el local no se modifica', async () => {
+    const supabase = supabaseFalso(TABLAS);
+    supabase.local = localQueAplica({ ok: true, mesa: 'Mesa 1' });
+    expect(await crearApiNube(supabase, RAPIDO).quitarMesa(1)).toEqual({
+      ok: true,
+      mesa: 'Mesa 1'
+    });
+  });
+
   test('agregarMesa sin número pide la siguiente a la más alta del espejo', async () => {
     const supabase = supabaseFalso(TABLAS);
-    const api = crearApiNube(supabase);
+    const api = crearApiNube(supabase, RAPIDO);
     expect(await api.agregarMesa()).toEqual({
       ok: true,
       pendiente: true,
       mesa: { id: 'Mesa 3', numero: 3, estado: 'libre' }
     });
-    expect(await api.agregarMesa(12)).toMatchObject({ mesa: { numero: 12 } });
-    expect(supabase.ordenes).toEqual([
+    supabase.local = localQueAplica({
+      ok: true,
+      mesa: { id: 'Mesa 12', numero: 12, estado: 'libre' }
+    });
+    expect(await api.agregarMesa(12)).toEqual({
+      ok: true,
+      mesa: { id: 'Mesa 12', numero: 12, estado: 'libre' }
+    });
+    expect(enviadas(supabase)).toEqual([
       { tipo: 'agregar_mesa', payload: { numero: 3 } },
       { tipo: 'agregar_mesa', payload: { numero: 12 } }
     ]);
@@ -181,13 +260,13 @@ describe('crearApiNube: las acciones se envían como órdenes al buzón', () => 
 
   test('agregarMesa sin mesas en el espejo pide la mesa 1', async () => {
     const supabase = supabaseFalso({ mesas: [], pedidos: [] });
-    expect((await crearApiNube(supabase).agregarMesa()).mesa.numero).toBe(1);
+    expect((await crearApiNube(supabase, RAPIDO).agregarMesa()).mesa.numero).toBe(1);
   });
 
   test('si la orden no llega a la nube, responde SIN_CONEXION', async () => {
     const supabase = supabaseFalso(TABLAS);
     supabase.errores.ordenes_pendientes = 'Failed to fetch';
-    const api = crearApiNube(supabase);
+    const api = crearApiNube(supabase, RAPIDO);
     expect(await api.abrirMesa(1)).toEqual({
       ok: false,
       tipo: 'SIN_CONEXION',
@@ -199,8 +278,85 @@ describe('crearApiNube: las acciones se envían como órdenes al buzón', () => 
   test('agregarMesa sin número y sin poder leer el espejo no envía nada', async () => {
     const supabase = supabaseFalso(TABLAS);
     supabase.errores.mesas = 'sin red';
-    expect(await crearApiNube(supabase).agregarMesa()).toMatchObject({ ok: false });
+    expect(await crearApiNube(supabase, RAPIDO).agregarMesa()).toMatchObject({ ok: false });
     expect(supabase.ordenes).toEqual([]);
+  });
+});
+
+describe('crearApiNube: sesión con Supabase Auth', () => {
+  test('correoDeUsuario normaliza y agrega el dominio', () => {
+    expect(correoDeUsuario('  Ana ')).toBe('ana@sistema.local');
+    expect(correoDeUsuario(undefined)).toBe('@sistema.local');
+  });
+
+  test('iniciarSesion usa el correo del usuario y devuelve el nombre corto', async () => {
+    const supabase = supabaseFalso();
+    supabase.auth.signInWithPassword.mockResolvedValue({
+      data: { user: { email: 'ana@sistema.local' } },
+      error: null
+    });
+    expect(await crearApiNube(supabase).iniciarSesion(' Ana', 'clave-1')).toEqual({
+      ok: true,
+      usuario: 'ana'
+    });
+    expect(supabase.auth.signInWithPassword).toHaveBeenCalledWith({
+      email: 'ana@sistema.local',
+      password: 'clave-1'
+    });
+  });
+
+  test('credenciales malas, usuario sin confirmar y falla de red dan mensajes distintos', async () => {
+    const supabase = supabaseFalso();
+    const api = crearApiNube(supabase);
+    const intentar = async (error) => {
+      supabase.auth.signInWithPassword.mockResolvedValueOnce({ data: {}, error });
+      return api.iniciarSesion('ana', 'x');
+    };
+    expect(await intentar({ status: 400, code: 'invalid_credentials', message: 'x' })).toEqual({
+      ok: false,
+      tipo: 'CREDENCIALES_INVALIDAS',
+      error: 'Usuario o contraseña incorrectos.'
+    });
+    expect((await intentar({ status: 400, code: 'email_not_confirmed' })).error).toContain(
+      'no está confirmado'
+    );
+    expect(await intentar({ status: 0, message: 'Failed to fetch' })).toMatchObject({
+      ok: false,
+      tipo: 'SIN_CONEXION'
+    });
+  });
+
+  test('obtenerSesion devuelve el usuario de la sesión guardada o null', async () => {
+    const supabase = supabaseFalso();
+    const api = crearApiNube(supabase);
+    expect(await api.obtenerSesion()).toBeNull();
+    supabase.auth.getSession.mockResolvedValueOnce({
+      data: { session: { user: { email: 'cocina@sistema.local' } } }
+    });
+    expect(await api.obtenerSesion()).toEqual({ usuario: 'cocina' });
+  });
+
+  test('cerrarSesion cierra la sesión de Supabase', async () => {
+    const supabase = supabaseFalso();
+    await crearApiNube(supabase).cerrarSesion();
+    expect(supabase.auth.signOut).toHaveBeenCalled();
+  });
+
+  test('alPerderSesion avisa solo en SIGNED_OUT y se puede cancelar', () => {
+    const supabase = supabaseFalso();
+    const unsubscribe = vi.fn();
+    let alCambio;
+    supabase.auth.onAuthStateChange.mockImplementation((fn) => {
+      alCambio = fn;
+      return { data: { subscription: { unsubscribe } } };
+    });
+    const fn = vi.fn();
+    const dejar = crearApiNube(supabase).alPerderSesion(fn);
+    alCambio('TOKEN_REFRESHED');
+    alCambio('SIGNED_OUT');
+    expect(fn).toHaveBeenCalledTimes(1);
+    dejar();
+    expect(unsubscribe).toHaveBeenCalled();
   });
 });
 
@@ -210,11 +366,18 @@ describe('crearConexionNube: interfaz de socket sobre Supabase Realtime', () => 
   beforeEach(() => {
     vi.useFakeTimers();
     supabase = supabaseFalso(TABLAS);
-    conexion = crearConexionNube(supabase, crearApiNube(supabase));
+    conexion = crearConexionNube(supabase, crearApiNube(supabase, RAPIDO));
   });
   afterEach(() => {
     vi.useRealTimers();
   });
+
+  /** emit espera al local con temporizadores: se avanzan los relojes falsos. */
+  async function emitir(evento, datos) {
+    const promesa = conexion.emit(evento, datos);
+    await vi.runAllTimersAsync();
+    await promesa;
+  }
 
   test('al suscribirse avisa connect y envía estado_mesas; un error avisa disconnect', async () => {
     const connect = vi.fn();
@@ -264,14 +427,25 @@ describe('crearConexionNube: interfaz de socket sobre Supabase Realtime', () => 
     expect(estadoMesas).not.toHaveBeenCalled();
   });
 
-  test('confirmar_pedido y actualizar_pedido se envían como órdenes y responden por respuesta_pedido', async () => {
+  test('con el local respondiendo, respuesta_pedido trae la respuesta real del dominio', async () => {
+    const respuesta = vi.fn();
+    conexion.on('respuesta_pedido', respuesta);
+    const rechazo = { ok: false, tipo: 'ENTRADA_INVALIDA', error: 'Cantidad fuera de rango.' };
+    supabase.local = () => ({ estado: 'rechazada', resultado: rechazo });
+
+    await emitir('confirmar_pedido', { mesa: 'Mesa 1', items: [{ id: 1, cantidad: 0 }] });
+
+    expect(respuesta).toHaveBeenCalledWith(rechazo);
+  });
+
+  test('sin respuesta del local, confirmar y actualizar responden pendiente con la mesa', async () => {
     const respuesta = vi.fn();
     conexion.on('respuesta_pedido', respuesta);
 
-    await conexion.emit('confirmar_pedido', { mesa: 'Mesa 1', items: [{ id: 1, cantidad: 2 }] });
-    await conexion.emit('actualizar_pedido', { mesa: 'Mesa 2', estado: 'Listo 🍽️' });
+    await emitir('confirmar_pedido', { mesa: 'Mesa 1', items: [{ id: 1, cantidad: 2 }] });
+    await emitir('actualizar_pedido', { mesa: 'Mesa 2', estado: 'Listo 🍽️' });
 
-    expect(supabase.ordenes).toEqual([
+    expect(enviadas(supabase)).toEqual([
       { tipo: 'confirmar_pedido', payload: { mesa: 'Mesa 1', items: [{ id: 1, cantidad: 2 }] } },
       { tipo: 'actualizar_estado', payload: { mesa: 'Mesa 2', estado: 'Listo 🍽️' } }
     ]);
@@ -284,38 +458,41 @@ describe('crearConexionNube: interfaz de socket sobre Supabase Realtime', () => 
     });
   });
 
-  test('trasladar_pedido responde por respuesta_traslado con las mesas en formato "Mesa N"', async () => {
+  test('trasladar_pedido responde por respuesta_traslado (real o pendiente)', async () => {
     const respuesta = vi.fn();
     conexion.on('respuesta_traslado', respuesta);
-    await conexion.emit('trasladar_pedido', { origen: 2, destino: 1 });
-    expect(supabase.ordenes).toEqual([
-      { tipo: 'trasladar_pedido', payload: { origen: 2, destino: 1 } }
-    ]);
-    expect(respuesta).toHaveBeenCalledWith({
+
+    await emitir('trasladar_pedido', { origen: 2, destino: 1 });
+    expect(respuesta).toHaveBeenLastCalledWith({
       ok: true,
       pendiente: true,
       origen: 'Mesa 2',
       destino: 'Mesa 1',
-      estado: 'orden enviada al local'
+      estado: 'orden en cola: el local no responde todavía'
     });
+
+    const real = { ok: true, origen: 'Mesa 2', destino: 'Mesa 1', estado: 'En Cocina 🍳' };
+    supabase.local = localQueAplica(real);
+    await emitir('trasladar_pedido', { origen: 2, destino: 1 });
+    expect(respuesta).toHaveBeenLastCalledWith(real);
   });
 
   test('si la orden no se puede enviar, la respuesta es el error', async () => {
     const respuesta = vi.fn();
     conexion.on('respuesta_pedido', respuesta);
     supabase.errores.ordenes_pendientes = 'Failed to fetch';
-    await conexion.emit('confirmar_pedido', { mesa: 'Mesa 1', items: [] });
+    await emitir('confirmar_pedido', { mesa: 'Mesa 1', items: [] });
     expect(respuesta).toHaveBeenCalledWith(
       expect.objectContaining({ ok: false, tipo: 'SIN_CONEXION' })
     );
   });
 
   test('un evento desconocido se ignora', async () => {
-    await conexion.emit('otro_evento', {});
+    await emitir('otro_evento', {});
     expect(supabase.ordenes).toEqual([]);
   });
 
-  test('off quita una escucha concreta o todas las del evento; cerrar libera el canal', () => {
+  test('off quita una escucha concreta o todas las del evento; disconnect libera el canal', () => {
     const a = vi.fn();
     const b = vi.fn();
     conexion.on('connect', a);
@@ -330,7 +507,7 @@ describe('crearConexionNube: interfaz de socket sobre Supabase Realtime', () => 
     supabase.canal.alEstado('SUBSCRIBED');
     expect(b).toHaveBeenCalledTimes(1);
 
-    conexion.cerrar();
+    conexion.disconnect();
     expect(supabase.removeChannel).toHaveBeenCalledWith(supabase.canal);
   });
 });

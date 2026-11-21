@@ -10,18 +10,35 @@ const dobles = vi.hoisted(() => ({
 vi.mock('@supabase/supabase-js', () => ({ createClient: dobles.createClient }));
 vi.mock('socket.io-client', () => ({ io: dobles.io }));
 
-/** Supabase mínimo: cada tabla responde vacía y los insert funcionan. */
+/** Supabase mínimo: tablas vacías; cada orden queda aplicada por el local al instante. */
 function supabaseVacio() {
   const q = {
+    unica: false,
     select: () => q,
     eq: () => q,
     order: () => q,
-    maybeSingle: () => q,
-    insert: async () => ({ error: null }),
+    maybeSingle: () => ({
+      then: (resolver) =>
+        resolver({ data: { estado: 'aplicada', resultado: { ok: true } }, error: null })
+    }),
+    insert: () => ({ select: () => ({ single: async () => ({ data: { id: 1 }, error: null }) }) }),
     then: (resolver) => resolver({ data: [], error: null })
   };
   const canal = { on: () => canal, subscribe: () => canal };
-  return { from: vi.fn(() => q), channel: () => canal, removeChannel: () => {} };
+  return {
+    from: vi.fn(() => q),
+    channel: () => canal,
+    removeChannel: () => {},
+    auth: {
+      signInWithPassword: vi.fn(async () => ({
+        data: { user: { email: 'ana@sistema.local' } },
+        error: null
+      })),
+      getSession: vi.fn(async () => ({ data: { session: null } })),
+      signOut: vi.fn(async () => ({ error: null })),
+      onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } }))
+    }
+  };
 }
 
 async function importarApi(variables) {
@@ -43,7 +60,9 @@ describe('api: modo local (por defecto)', () => {
     const api = await importarApi({});
     expect(api.MODO).toBe('local');
     expect(api.conectarTiempoReal()).toEqual({ tipo: 'socket.io' });
-    expect(dobles.io).toHaveBeenCalledWith('http://localhost:3000');
+    expect(dobles.io).toHaveBeenCalledWith('http://localhost:3000', {
+      auth: { token: undefined }
+    });
     expect(dobles.createClient).not.toHaveBeenCalled();
   });
 
@@ -75,14 +94,34 @@ describe('api: modo nube', () => {
     const fetchFalso = vi.fn();
     vi.stubGlobal('fetch', fetchFalso);
     const api = await importarApi(NUBE);
+    vi.useFakeTimers();
+    // Las acciones esperan la respuesta del local con temporizadores: se avanzan aquí.
+    const conReloj = async (promesa) => {
+      await vi.runAllTimersAsync();
+      return promesa;
+    };
 
     expect(await api.obtenerMesas()).toEqual({ ok: true, mesas: [] });
     expect(await api.obtenerPedidoMesa(1)).toMatchObject({ ok: true, mesa: 'Mesa 1' });
     expect(await api.obtenerMenu()).toEqual({ ok: true, items: [] });
-    expect(await api.abrirMesa(1)).toEqual({ ok: true, pendiente: true });
-    expect(await api.cerrarMesa(1)).toEqual({ ok: true, pendiente: true });
-    expect((await api.agregarMesa(4)).mesa.numero).toBe(4);
-    expect((await api.quitarMesa(4)).mesa).toBe('Mesa 4');
+    expect(await conReloj(api.abrirMesa(1))).toEqual({ ok: true });
+    expect(await conReloj(api.cerrarMesa(1))).toEqual({ ok: true });
+    expect(await conReloj(api.agregarMesa(4))).toEqual({ ok: true });
+    expect(await conReloj(api.quitarMesa(4))).toEqual({ ok: true });
+    vi.useRealTimers();
+
+    // Sesión: Supabase Auth, no el backend local.
+    expect(await api.iniciarSesion('Ana', 'clave-1')).toEqual({ ok: true, usuario: 'ana' });
+    expect(supabase.auth.signInWithPassword).toHaveBeenCalledWith({
+      email: 'ana@sistema.local',
+      password: 'clave-1'
+    });
+    expect(await api.obtenerSesion()).toBeNull();
+    await api.cerrarSesion();
+    expect(supabase.auth.signOut).toHaveBeenCalled();
+    const dejar = api.alPerderSesion(() => {});
+    expect(supabase.auth.onAuthStateChange).toHaveBeenCalled();
+    dejar();
 
     const conexion = api.conectarTiempoReal();
     expect(typeof conexion.on).toBe('function');

@@ -15,6 +15,10 @@
 //   Un `ok: false` NO lanza error: cada vista decide qué mensaje mostrar.
 // - Errores: la promesa se rechaza si falla la red (backend apagado, sin conexión).
 //   obtenerMenu() además se rechaza si el servidor responde con un código HTTP de error.
+// - Sesión: todo, salvo iniciarSesion, exige sesión. En modo local el token (JWT) se guarda
+//   en localStorage y viaja en la cabecera Authorization y en el handshake de Socket.IO;
+//   en modo nube la sesión la guarda y renueva supabase-js. Un 401 (o la sesión perdida
+//   en la nube) avisa a quien se registró con alPerderSesion: la pantalla vuelve al login.
 
 import { io } from 'socket.io-client';
 import { createClient } from '@supabase/supabase-js';
@@ -43,17 +47,121 @@ function crearClienteNube() {
 const supabase = MODO === 'nube' ? crearClienteNube() : null;
 const nube = supabase ? crearApiNube(supabase) : null;
 
-/**
- * Conexión en tiempo real con interfaz de socket (on, off, emit).
- * En modo local es el socket de Socket.IO; en modo nube, Supabase Realtime con los
- * mismos nombres de eventos.
- */
-export const conectarTiempoReal = () => (nube ? crearConexionNube(supabase, nube) : io(API_URL));
+// ── Sesión del modo local ────────────────────────────────────────────────────
 
-async function pedirJson(ruta, opciones) {
+/** Clave de localStorage con { token, usuario } del modo local. */
+export const CLAVE_SESION = 'comanda.sesion';
+
+/** Mensaje que el servidor envía en connect_error cuando el socket no trae token válido. */
+export const SOCKET_NO_AUTORIZADO = 'NO_AUTORIZADO';
+
+// localStorage puede no estar disponible (modo privado estricto): sin él, la sesión dura
+// solo mientras la pestaña esté abierta, pero la app funciona.
+let sesionEnMemoria = null;
+function leerSesionLocal() {
+  try {
+    return JSON.parse(localStorage.getItem(CLAVE_SESION)) ?? sesionEnMemoria;
+  } catch {
+    return sesionEnMemoria;
+  }
+}
+function guardarSesionLocal(sesion) {
+  sesionEnMemoria = sesion;
+  try {
+    if (sesion) localStorage.setItem(CLAVE_SESION, JSON.stringify(sesion));
+    else localStorage.removeItem(CLAVE_SESION);
+  } catch {
+    // sin localStorage: queda solo en memoria
+  }
+}
+
+let alPerder = null;
+/** El token ya no sirve (401): se borra y se avisa para volver al login. */
+function sesionPerdida() {
+  guardarSesionLocal(null);
+  if (alPerder) alPerder();
+}
+
+/**
+ * Registra qué hacer cuando la sesión deja de ser válida (token vencido, 401, sesión de
+ * Supabase cerrada). Devuelve la función para dejar de escuchar.
+ * @param {() => void} fn
+ */
+export function alPerderSesion(fn) {
+  alPerder = fn;
+  const dejarNube = nube ? nube.alPerderSesion(fn) : null;
+  return () => {
+    if (alPerder === fn) alPerder = null;
+    if (dejarNube) dejarNube();
+  };
+}
+
+/**
+ * Inicia sesión con el servidor local (POST /api/auth/login) o con Supabase Auth.
+ * @param {string} usuario
+ * @param {string} contrasena
+ * @returns {Promise<{ ok: true, usuario: string } | { ok: false, tipo: string, error: string }>}
+ */
+export async function iniciarSesion(usuario, contrasena) {
+  if (nube) return nube.iniciarSesion(usuario, contrasena);
+  let res;
+  try {
+    res = await fetch(`${API_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario, contrasena })
+    });
+  } catch {
+    return {
+      ok: false,
+      tipo: 'SIN_CONEXION',
+      error: 'No se pudo contactar el servidor del restaurante.'
+    };
+  }
+  const datos = await res.json();
+  if (!datos.ok) return datos;
+  guardarSesionLocal({ token: datos.token, usuario: datos.usuario });
+  return { ok: true, usuario: datos.usuario };
+}
+
+/** Sesión guardada de una visita anterior: { usuario } o null. */
+export async function obtenerSesion() {
+  if (nube) return nube.obtenerSesion();
+  const sesion = leerSesionLocal();
+  return sesion?.token ? { usuario: sesion.usuario } : null;
+}
+
+export async function cerrarSesion() {
+  if (nube) return nube.cerrarSesion();
+  guardarSesionLocal(null);
+}
+
+/**
+ * Conexión en tiempo real con interfaz de socket (on, off, emit, disconnect).
+ * En modo local es el socket de Socket.IO, que envía el token al conectarse; en modo
+ * nube, Supabase Realtime con los mismos nombres de eventos. Se crea después del login.
+ */
+export const conectarTiempoReal = () =>
+  nube
+    ? crearConexionNube(supabase, nube)
+    : io(API_URL, { auth: { token: leerSesionLocal()?.token } });
+
+/** Agrega Authorization solo si hay token (sin sesión la petición sale igual que antes). */
+function conToken(opciones) {
+  const token = leerSesionLocal()?.token;
+  if (!token) return opciones;
+  return {
+    ...opciones,
+    headers: { ...(opciones?.headers ?? {}), Authorization: `Bearer ${token}` }
+  };
+}
+
+async function pedirJson(ruta, opcionesBase) {
+  const opciones = conToken(opcionesBase);
   const res = opciones
     ? await fetch(`${API_URL}${ruta}`, opciones)
     : await fetch(`${API_URL}${ruta}`);
+  if (res.status === 401) sesionPerdida();
   return res.json();
 }
 
@@ -120,7 +228,11 @@ export const quitarMesa = (numero) =>
  */
 export const obtenerMenu = async () => {
   if (nube) return nube.obtenerMenu();
-  const res = await fetch(`${API_URL}/api/menu-items`);
+  const opciones = conToken();
+  const res = opciones
+    ? await fetch(`${API_URL}/api/menu-items`, opciones)
+    : await fetch(`${API_URL}/api/menu-items`);
+  if (res.status === 401) sesionPerdida();
   if (!res.ok) throw new Error(`Error del servidor: ${res.status}`);
   return res.json();
 };
