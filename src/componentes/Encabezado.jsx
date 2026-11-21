@@ -7,11 +7,13 @@
 // Props:
 //   conectado         {boolean}  - true si el socket está conectado al backend
 //   onConfigurarMesas {Function} - Abre la pantalla para agregar y quitar mesas
+//   usuario           {string}   - Usuario con sesión (opcional)
+//   onCerrarSesion    {Function} - Si viene, se muestra el botón "Cerrar sesión"
 
 import SelectorTema from './SelectorTema';
 import Icono from './Icono';
 
-function Encabezado({ conectado, onConfigurarMesas }) {
+function Encabezado({ conectado, onConfigurarMesas, usuario, onCerrarSesion }) {
   return (
     <header style={estilos.encabezado}>
       <div style={estilos.encabezadoInterior}>
@@ -51,6 +53,19 @@ function Encabezado({ conectado, onConfigurarMesas }) {
             <Icono nombre="ajustes" tamano={20} />
             Configurar mesas
           </button>
+
+          {onCerrarSesion && (
+            <button
+              id="btn-cerrar-sesion"
+              type="button"
+              onClick={onCerrarSesion}
+              title={usuario ? `Sesión de ${usuario}` : undefined}
+              style={estilos.botonConfigurar}
+            >
+              <Icono nombre="salir" tamano={20} />
+              {usuario ? `Cerrar sesión (${usuario})` : 'Cerrar sesión'}
+            </button>
+          )}
         </div>
       </div>
     </header>

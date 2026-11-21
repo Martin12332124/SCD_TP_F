@@ -44,14 +44,14 @@ beforeEach(() => {
 });
 
 async function renderizarConectado() {
-  render(<App />);
+  render(<App socket={socket} />);
   await servidor('connect');
   await screen.findByText('Mesa 1');
 }
 
 describe('App: conexión', () => {
   test('arranca desconectada y deshabilita las acciones de la mesa', async () => {
-    render(<App />);
+    render(<App socket={socket} />);
     expect(screen.getByText(/Servidor Desconectado/)).toBeInTheDocument();
     await userEvent.click(await screen.findByTitle(/Mesa 2 —/));
     expect(screen.getByRole('button', { name: 'Registrar pedido sin productos' })).toBeDisabled();
@@ -59,7 +59,7 @@ describe('App: conexión', () => {
   });
 
   test('connect/disconnect actualizan el indicador', async () => {
-    render(<App />);
+    render(<App socket={socket} />);
     await servidor('connect');
     expect(screen.getByText(/Sistema Conectado/)).toBeInTheDocument();
     await servidor('disconnect');
@@ -160,7 +160,7 @@ describe('App: mapa de mesas (US-08)', () => {
         throw new Error('sin red');
       })
     );
-    render(<App />);
+    render(<App socket={socket} />);
     await servidor('estado_mesas', mesasBase);
     expect(await screen.findByText('Mesa 1')).toBeInTheDocument();
   });
@@ -490,7 +490,7 @@ describe('App: temporizador de cada comanda', () => {
 
   /** Conecta, recibe un pedido en cocina y deja correr el reloj `segundos` segundos. */
   async function pedidoEnCocinaDurante(segundos) {
-    render(<App />);
+    render(<App socket={socket} />);
     await servidor('connect');
     await servidor('estado_mesas', mesasBase);
     await servidor('cambio_estado_pedido', { mesa: 'Mesa 2', estado: 'En Cocina 🍳' });

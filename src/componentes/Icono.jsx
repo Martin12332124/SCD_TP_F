@@ -91,6 +91,19 @@ const TRAZOS = {
       <circle cx="9" cy="19" r="1.5" />
       <circle cx="17" cy="19" r="1.5" />
     </>
+  ),
+  // Sesión: puerta con flecha hacia afuera (cerrar sesión) y candado (iniciar sesión)
+  salir: (
+    <>
+      <path d="M10 4H5v16h5" />
+      <path d="M14 8l4 4-4 4M18 12H9" />
+    </>
+  ),
+  candado: (
+    <>
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </>
   )
 };
 

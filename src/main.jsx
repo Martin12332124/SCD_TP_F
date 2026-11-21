@@ -11,10 +11,10 @@ import '@fontsource/barlow/700.css';
 import '@fontsource/barlow-condensed/600.css';
 import '@fontsource/barlow-condensed/700.css';
 import './index.css';
-import App from './componentes/App.jsx';
+import Sesion from './componentes/Sesion.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <Sesion />
   </StrictMode>
 );

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { validarMesaExistente, validarTraslado } from '../validaciones/validaciones';
 import { FLUJO_PEDIDO } from '../utils/flujoPedido';
-import { conectarTiempoReal, obtenerMesas } from '../servicios/api';
+import { obtenerMesas, SOCKET_NO_AUTORIZADO } from '../servicios/api';
 import MapaMesas from './MapaMesas';
 import DetalleMesa from './DetalleMesa';
 import TomaPedido from './TomaPedido';
@@ -10,11 +10,13 @@ import Encabezado from './Encabezado';
 import RielComandas from './RielComandas';
 import { comandasActivas } from '../utils/tiempoComanda';
 
-// Conexión en tiempo real: Socket.IO en modo local o Supabase Realtime en modo nube.
-// Ambas tienen la interfaz de un socket (on, off, emit); servicios/api.js decide cuál.
-const socket = conectarTiempoReal();
-
-function App() {
+// Props (las entrega Sesion, después del login):
+//   socket          {object}   - Conexión en tiempo real: Socket.IO en modo local o Supabase
+//                                Realtime en modo nube, ambas con interfaz de socket (on, off, emit)
+//   usuario         {string}   - Nombre del usuario con sesión, para el encabezado
+//   onCerrarSesion  {Function} - Botón "Cerrar sesión" del encabezado
+//   onSesionVencida {Function} - El servidor rechazó el token del socket: volver al login
+function App({ socket, usuario, onCerrarSesion, onSesionVencida }) {
   const [conectado, setConectado] = useState(false);
   // Rechazo del último cambio de estado del pedido (validación del frontend o del backend)
   const [errorValidacion, setErrorValidacion] = useState('');
@@ -49,6 +51,11 @@ function App() {
   useEffect(() => {
     socket.on('connect', () => setConectado(true));
     socket.on('disconnect', () => setConectado(false));
+    // Token vencido o inválido: el servidor no acepta el socket. Sin esto, la pantalla
+    // quedaría en "Servidor Desconectado" sin explicar que hay que volver a entrar.
+    socket.on('connect_error', (error) => {
+      if (error?.message === SOCKET_NO_AUTORIZADO && onSesionVencida) onSesionVencida();
+    });
 
     // Escuchar cuando la cocina o el backend actualizan un pedido
     socket.on('cambio_estado_pedido', (datos) => {
@@ -105,13 +112,14 @@ function App() {
     return () => {
       socket.off('connect');
       socket.off('disconnect');
+      socket.off('connect_error');
       socket.off('cambio_estado_pedido');
       socket.off('estado_mesas');
       socket.off('pedido_items_actualizado');
       socket.off('respuesta_pedido');
       socket.off('respuesta_traslado');
     };
-  }, []);
+  }, [socket, onSesionVencida]);
 
   // US-08: carga inicial de mesas vía REST para no depender solo del socket
   useEffect(() => {
@@ -189,6 +197,8 @@ function App() {
     <div style={estilos.app}>
       <Encabezado
         conectado={conectado}
+        usuario={usuario}
+        onCerrarSesion={onCerrarSesion}
         onConfigurarMesas={() => {
           setIdSeleccionada(null); // cierra el panel de la mesa, si estaba abierto
           setConfigurandoMesas(true);
