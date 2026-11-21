@@ -1,6 +1,12 @@
 // src/servicios/api.js
-// Único punto de acceso REST al backend. Los componentes no llaman a fetch directamente
-// ni escriben la URL del servidor: la toman de aquí.
+// Único punto de acceso al backend. Los componentes no llaman a fetch ni a Supabase
+// directamente ni escriben la URL del servidor: todo pasa por aquí.
+//
+// Dos modos, elegidos con VITE_MODO (archivo .env o panel de Netlify):
+// - local (por defecto): API REST y Socket.IO del servidor del restaurante (VITE_API_URL).
+// - nube: réplica en Supabase (VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY). Lee las
+//   tablas espejo y convierte cada acción en una orden para el servidor local (ver nube.js).
+// Las funciones exportadas tienen la misma firma y la misma forma de respuesta en ambos modos.
 //
 // Contrato común de las operaciones:
 // - Entrada: número de mesa (entero) cuando la ruta lo necesita.
@@ -10,8 +16,39 @@
 // - Errores: la promesa se rechaza si falla la red (backend apagado, sin conexión).
 //   obtenerMenu() además se rechaza si el servidor responde con un código HTTP de error.
 
+import { io } from 'socket.io-client';
+import { createClient } from '@supabase/supabase-js';
+import { crearApiNube, crearConexionNube } from './nube.js';
+
 /** URL del backend. Se configura con VITE_API_URL (archivo .env); por defecto, el backend local. */
 export const API_URL = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000';
+
+/** 'nube' solo si VITE_MODO lo dice explícitamente; cualquier otro valor es 'local'. */
+export const MODO = import.meta.env?.VITE_MODO === 'nube' ? 'nube' : 'local';
+
+/**
+ * Cliente de Supabase del modo nube, creado una sola vez y solo en ese modo.
+ * Usa la llave publishable: es pública por diseño; lo que protege los datos son los
+ * GRANT y las políticas RLS de supabase/esquema.sql (repo backend).
+ */
+function crearClienteNube() {
+  const url = import.meta.env?.VITE_SUPABASE_URL;
+  const llave = import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !llave) {
+    throw new Error('Modo nube: faltan VITE_SUPABASE_URL o VITE_SUPABASE_PUBLISHABLE_KEY.');
+  }
+  return createClient(url, llave);
+}
+
+const supabase = MODO === 'nube' ? crearClienteNube() : null;
+const nube = supabase ? crearApiNube(supabase) : null;
+
+/**
+ * Conexión en tiempo real con interfaz de socket (on, off, emit).
+ * En modo local es el socket de Socket.IO; en modo nube, Supabase Realtime con los
+ * mismos nombres de eventos.
+ */
+export const conectarTiempoReal = () => (nube ? crearConexionNube(supabase, nube) : io(API_URL));
 
 async function pedirJson(ruta, opciones) {
   const res = opciones
@@ -25,28 +62,31 @@ async function pedirJson(ruta, opciones) {
  * ("Recibido 📝", "En Cocina 🍳", "Listo 🍽️") o null; puede faltar si el backend es anterior.
  * @returns {Promise<{ ok: boolean, mesas?: Array<{ id: string, numero: number, estado: string, estadoPedido?: string|null }> }>}
  */
-export const obtenerMesas = () => pedirJson('/api/mesas');
+export const obtenerMesas = () => (nube ? nube.obtenerMesas() : pedirJson('/api/mesas'));
 
 /**
  * Resumen del pedido de una mesa: ítems, total y estado.
  * @param {number} numero
  * @returns {Promise<{ ok: boolean, items?: Array, total?: number, estado?: string, tipo?: string, error?: string }>}
  */
-export const obtenerPedidoMesa = (numero) => pedirJson(`/api/mesas/${numero}/pedido`);
+export const obtenerPedidoMesa = (numero) =>
+  nube ? nube.obtenerPedidoMesa(numero) : pedirJson(`/api/mesas/${numero}/pedido`);
 
 /**
  * Marca una mesa libre como ocupada.
  * @param {number} numero
  * @returns {Promise<{ ok: boolean, tipo?: string, error?: string }>}
  */
-export const abrirMesa = (numero) => pedirJson(`/api/mesas/${numero}/abrir`, { method: 'POST' });
+export const abrirMesa = (numero) =>
+  nube ? nube.abrirMesa(numero) : pedirJson(`/api/mesas/${numero}/abrir`, { method: 'POST' });
 
 /**
  * Libera una mesa ocupada. El backend la rechaza (tipo PEDIDO_ACTIVO) si tiene un pedido vigente.
  * @param {number} numero
  * @returns {Promise<{ ok: boolean, tipo?: string, error?: string }>}
  */
-export const cerrarMesa = (numero) => pedirJson(`/api/mesas/${numero}/cerrar`, { method: 'POST' });
+export const cerrarMesa = (numero) =>
+  nube ? nube.cerrarMesa(numero) : pedirJson(`/api/mesas/${numero}/cerrar`, { method: 'POST' });
 
 /**
  * Agrega una mesa libre. Sin `numero` se crea la siguiente a la más alta que exista.
@@ -56,11 +96,13 @@ export const cerrarMesa = (numero) => pedirJson(`/api/mesas/${numero}/cerrar`, {
  * @returns {Promise<{ ok: boolean, mesa?: { id: string, numero: number, estado: string }, tipo?: string, error?: string }>}
  */
 export const agregarMesa = (numero) =>
-  pedirJson('/api/mesas', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(numero === undefined ? {} : { numero })
-  });
+  nube
+    ? nube.agregarMesa(numero)
+    : pedirJson('/api/mesas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(numero === undefined ? {} : { numero })
+      });
 
 /**
  * Quita una mesa. El backend la rechaza si está ocupada (tipo ESTADO_NO_PERMITIDO),
@@ -68,7 +110,8 @@ export const agregarMesa = (numero) =>
  * @param {number} numero
  * @returns {Promise<{ ok: boolean, mesa?: string, tipo?: string, error?: string }>}
  */
-export const quitarMesa = (numero) => pedirJson(`/api/mesas/${numero}`, { method: 'DELETE' });
+export const quitarMesa = (numero) =>
+  nube ? nube.quitarMesa(numero) : pedirJson(`/api/mesas/${numero}`, { method: 'DELETE' });
 
 /**
  * Carta del restaurante.
@@ -76,6 +119,7 @@ export const quitarMesa = (numero) => pedirJson(`/api/mesas/${numero}`, { method
  * @returns {Promise<{ ok: boolean, items?: Array<{ id: number, nombre: string, precioBase: number, disponible: boolean }> }>}
  */
 export const obtenerMenu = async () => {
+  if (nube) return nube.obtenerMenu();
   const res = await fetch(`${API_URL}/api/menu-items`);
   if (!res.ok) throw new Error(`Error del servidor: ${res.status}`);
   return res.json();

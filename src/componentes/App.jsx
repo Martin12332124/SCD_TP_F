@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { io } from 'socket.io-client';
 import { validarMesaExistente, validarTraslado } from '../validaciones/validaciones';
 import { FLUJO_PEDIDO } from '../utils/flujoPedido';
-import { API_URL, obtenerMesas } from '../servicios/api';
+import { conectarTiempoReal, obtenerMesas } from '../servicios/api';
 import MapaMesas from './MapaMesas';
 import DetalleMesa from './DetalleMesa';
 import TomaPedido from './TomaPedido';
@@ -11,8 +10,9 @@ import Encabezado from './Encabezado';
 import RielComandas from './RielComandas';
 import { comandasActivas } from '../utils/tiempoComanda';
 
-// Conexión socket.io al backend (la URL viene de servicios/api.js)
-const socket = io(API_URL);
+// Conexión en tiempo real: Socket.IO en modo local o Supabase Realtime en modo nube.
+// Ambas tienen la interfaz de un socket (on, off, emit); servicios/api.js decide cuál.
+const socket = conectarTiempoReal();
 
 function App() {
   const [conectado, setConectado] = useState(false);
