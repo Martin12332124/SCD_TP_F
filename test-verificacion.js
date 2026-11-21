@@ -143,6 +143,8 @@ console.log('\n--- 3. Pruebas de Integración con el Servidor Backend (Socket.io
 async function testBackendIntegration() {
   const socket = io('http://localhost:3000', {
     transports: ['websocket'],
+    // Token de la sesión que abre scripts/ci-frontend.js (vacío si el backend no tiene login).
+    auth: { token: process.env.BACKEND_TOKEN },
     reconnection: false,
     autoConnect: false
   });
