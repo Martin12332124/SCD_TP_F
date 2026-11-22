@@ -166,6 +166,19 @@ export function crearApiNube(
       };
     },
 
+    /**
+     * Hora de la última subida exitosa del local (fila única de estado_sincronizacion).
+     * `ultima` es un texto ISO, o null si el local nunca ha sincronizado.
+     */
+    async obtenerUltimaSincronizacion() {
+      const { data, error } = await supabase
+        .from('estado_sincronizacion')
+        .select('ultima_sincronizacion')
+        .maybeSingle();
+      if (error) return { ok: false, tipo: SIN_CONEXION, error: error.message };
+      return { ok: true, ultima: data?.ultima_sincronizacion ?? null };
+    },
+
     abrirMesa: (numero) => enviarOrden('abrir_mesa', { numero }),
     cerrarMesa: (numero) => enviarOrden('cerrar_mesa', { numero }),
     async quitarMesa(numero) {
@@ -255,6 +268,8 @@ export function crearApiNube(
  *   - 'connect' / 'disconnect': estado del canal de Supabase Realtime.
  *   - 'estado_mesas': mesas con su pedido, al conectar y cada vez que cambia el espejo.
  *   - 'pedido_items_actualizado': cambió algún pedido o sus ítems.
+ *   - 'estado_sincronizacion': hora (ISO o null) de la última sincronización del local,
+ *     al conectar y cada vez que el local la actualiza.
  *   - emit('confirmar_pedido' | 'actualizar_pedido' | 'trasladar_pedido') → orden en el buzón,
  *     respondida por 'respuesta_pedido' o 'respuesta_traslado'.
  *
@@ -273,6 +288,10 @@ export function crearConexionNube(supabase, api) {
       if (r.ok) avisar('estado_mesas', r.mesas);
     }, ESPERA_RECARGA_MS);
   };
+  const recargarSincronizacion = async () => {
+    const r = await api.obtenerUltimaSincronizacion();
+    if (r.ok) avisar('estado_sincronizacion', r.ultima);
+  };
   const cambioDePedido = () => {
     avisar('pedido_items_actualizado', {});
     recargarMesas();
@@ -283,9 +302,15 @@ export function crearConexionNube(supabase, api) {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'mesas' }, recargarMesas)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' }, cambioDePedido)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'pedido_items' }, cambioDePedido)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'estado_sincronizacion' },
+      recargarSincronizacion
+    )
     .subscribe((estado) => {
       if (estado === 'SUBSCRIBED') {
         avisar('connect');
+        recargarSincronizacion();
         recargarMesas(); // igual que el backend: al conectar se envía el estado de las mesas
       } else if (estado === 'CHANNEL_ERROR' || estado === 'TIMED_OUT' || estado === 'CLOSED') {
         avisar('disconnect');
@@ -316,6 +341,8 @@ export function crearConexionNube(supabase, api) {
   };
 
   return {
+    /** Distingue esta conexión de Socket.IO: solo en modo nube existe el aviso del local. */
+    modo: 'nube',
     on(evento, fn) {
       escuchas[evento] = [...(escuchas[evento] || []), fn];
     },

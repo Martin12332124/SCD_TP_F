@@ -24,6 +24,7 @@ function supabaseFalso(tablas = {}) {
 
   const doble = {
     ordenes,
+    tablas,
     errores,
     canal,
     local: null,
@@ -174,6 +175,33 @@ describe('crearApiNube: lecturas con la misma forma que la API REST', () => {
     expect(await api.obtenerMesas()).toEqual({ ok: false, tipo: 'SIN_CONEXION', error: 'sin red' });
     expect(await api.obtenerPedidoMesa(2)).toMatchObject({ ok: false, tipo: 'SIN_CONEXION' });
     await expect(api.obtenerMenu()).rejects.toThrow('Error de la nube: sin red');
+  });
+});
+
+describe('crearApiNube: última sincronización del local', () => {
+  test('devuelve la hora de la fila única de estado_sincronizacion', async () => {
+    const supabase = supabaseFalso({
+      estado_sincronizacion: [{ id: 1, ultima_sincronizacion: '2026-11-22T10:00:00Z' }]
+    });
+    expect(await crearApiNube(supabase, RAPIDO).obtenerUltimaSincronizacion()).toEqual({
+      ok: true,
+      ultima: '2026-11-22T10:00:00Z'
+    });
+  });
+
+  test('sin fila (el local nunca sincronizó) devuelve null', async () => {
+    const api = crearApiNube(supabaseFalso({}), RAPIDO);
+    expect(await api.obtenerUltimaSincronizacion()).toEqual({ ok: true, ultima: null });
+  });
+
+  test('si la nube falla, devuelve un error de conexión', async () => {
+    const supabase = supabaseFalso({});
+    supabase.errores.estado_sincronizacion = 'sin red';
+    expect(await crearApiNube(supabase, RAPIDO).obtenerUltimaSincronizacion()).toEqual({
+      ok: false,
+      tipo: 'SIN_CONEXION',
+      error: 'sin red'
+    });
   });
 });
 
@@ -509,5 +537,33 @@ describe('crearConexionNube: interfaz de socket sobre Supabase Realtime', () => 
 
     conexion.disconnect();
     expect(supabase.removeChannel).toHaveBeenCalledWith(supabase.canal);
+  });
+
+  test('se identifica como conexión del modo nube', () => {
+    expect(conexion.modo).toBe('nube');
+  });
+
+  test('estado_sincronizacion: se envía al conectar y cada vez que el local la actualiza', async () => {
+    const alAviso = vi.fn();
+    conexion.on('estado_sincronizacion', alAviso);
+    supabase.canal.alEstado('SUBSCRIBED');
+    await vi.runAllTimersAsync();
+    expect(alAviso).toHaveBeenLastCalledWith(null); // sin fila todavía
+
+    supabase.tablas.estado_sincronizacion = [
+      { id: 1, ultima_sincronizacion: '2026-11-22T10:00:30Z' }
+    ];
+    supabase.cambio('estado_sincronizacion');
+    await vi.runAllTimersAsync();
+    expect(alAviso).toHaveBeenLastCalledWith('2026-11-22T10:00:30Z');
+  });
+
+  test('si la lectura de la sincronización falla, no se envía nada', async () => {
+    const alAviso = vi.fn();
+    conexion.on('estado_sincronizacion', alAviso);
+    supabase.errores.estado_sincronizacion = 'sin red';
+    supabase.cambio('estado_sincronizacion');
+    await vi.runAllTimersAsync();
+    expect(alAviso).not.toHaveBeenCalled();
   });
 });
