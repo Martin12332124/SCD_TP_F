@@ -28,6 +28,7 @@ import {
 import AvancePedido from './AvancePedido';
 import Icono from './Icono';
 import TrasladoMesa from './TrasladoMesa';
+import { MENSAJE_ORDEN_PENDIENTE, esPendiente } from '../utils/ordenPendiente';
 
 function DetalleMesa({
   mesa,
@@ -39,7 +40,8 @@ function DetalleMesa({
   versionPedidos = 0,
   mesas = [],
   onTrasladar = () => {},
-  mensajeTraslado = ''
+  mensajeTraslado = '',
+  avisoOrden = ''
 }) {
   const estaOcupada = mesa?.estado === 'ocupada';
   const numeroMesa = mesa?.numero;
@@ -104,7 +106,9 @@ function DetalleMesa({
     setCargando(true);
     try {
       const data = await abrirMesaApi(mesa.numero);
-      if (data.ok) {
+      if (esPendiente(data)) {
+        setAccion({ mesaId, texto: MENSAJE_ORDEN_PENDIENTE });
+      } else if (data.ok) {
         // CA5: el cambio se refleja vía socket 'estado_mesas' desde el backend;
         // solo mostramos confirmación local
         setAccion({ mesaId, texto: '✅ Mesa marcada como Ocupada.' });
@@ -126,7 +130,9 @@ function DetalleMesa({
     setCargando(true);
     try {
       const data = await cerrarMesaApi(mesa.numero);
-      if (data.ok) {
+      if (esPendiente(data)) {
+        setAccion({ mesaId, texto: MENSAJE_ORDEN_PENDIENTE });
+      } else if (data.ok) {
         setAccion({ mesaId, texto: '✅ Mesa liberada correctamente.' });
       } else {
         // CA3: con un pedido en curso, el backend devuelve tipo PEDIDO_ACTIVO con el motivo
@@ -144,7 +150,12 @@ function DetalleMesa({
     onTomarPedido(mesa); // abre la vista de toma de pedido
   };
 
-  const exito = mensajeAccion.startsWith('✅');
+  const tonoDe = (texto) =>
+    texto === MENSAJE_ORDEN_PENDIENTE
+      ? estilos.tonoNeutro
+      : texto.startsWith('✅')
+        ? estilos.tonoExito
+        : estilos.tonoPeligro;
 
   return (
     <>
@@ -206,7 +217,7 @@ function DetalleMesa({
                 role="status"
                 style={{
                   ...estilos.aviso,
-                  ...(exito ? estilos.tonoExito : estilos.tonoPeligro)
+                  ...tonoDe(mensajeAccion)
                 }}
               >
                 {mensajeAccion}
@@ -224,6 +235,17 @@ function DetalleMesa({
               </div>
             )}
 
+            {/* Modo nube: orden de cambio de estado o de pedido que quedó en espera */}
+            {avisoOrden && (
+              <div
+                id="aviso-orden-pendiente"
+                role="status"
+                style={{ ...estilos.aviso, ...estilos.tonoNeutro }}
+              >
+                {avisoOrden}
+              </div>
+            )}
+
             {/* US-05: resultado del traslado. Se muestra aunque la mesa de origen ya quedó libre */}
             {mensajeTraslado && (
               <div
@@ -231,7 +253,7 @@ function DetalleMesa({
                 role="status"
                 style={{
                   ...estilos.aviso,
-                  ...(mensajeTraslado.startsWith('✅') ? estilos.tonoExito : estilos.tonoPeligro)
+                  ...tonoDe(mensajeTraslado)
                 }}
               >
                 {mensajeTraslado}
@@ -424,6 +446,11 @@ const estilos = {
     background: 'var(--color-exito-suave)',
     color: 'var(--color-exito-texto)',
     borderColor: 'var(--color-exito)'
+  },
+  tonoNeutro: {
+    background: 'var(--color-superficie-alt)',
+    color: 'var(--color-texto)',
+    borderColor: 'var(--color-neutro)'
   },
   tonoPeligro: {
     background: 'var(--color-peligro-suave)',

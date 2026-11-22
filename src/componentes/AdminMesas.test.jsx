@@ -131,6 +131,35 @@ describe('AdminMesas: quitar con confirmación', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('✅ Mesa 4 quitada.');
   });
 
+  test('orden pendiente (modo nube): mensaje neutral en vez de "quitada"', async () => {
+    simularBackend({ ok: true, pendiente: true, mesa: 'Mesa 4' });
+    renderizar();
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar la mesa 4' }));
+    await userEvent.click(
+      within(document.getElementById('fila-mesa-4')).getByRole('button', { name: 'Sí, quitar' })
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      /^Orden enviada. Se aplicará cuando el sistema del restaurante se conecte.$/
+    );
+    expect(document.getElementById('resultado-admin')).not.toHaveTextContent('quitada');
+  });
+
+  test('orden pendiente al agregar: mensaje neutral y se limpia el número escrito', async () => {
+    simularBackend({
+      ok: true,
+      pendiente: true,
+      mesa: { id: 'Mesa 7', numero: 7, estado: 'libre' }
+    });
+    renderizar();
+    const campo = screen.getByRole('spinbutton');
+    await userEvent.type(campo, '7');
+    await userEvent.click(screen.getByRole('button', { name: /^Agregar mesa 7$|Agregar$/ }));
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      /^Orden enviada. Se aplicará cuando el sistema del restaurante se conecte.$/
+    );
+    expect(document.getElementById('resultado-admin')).not.toHaveTextContent('agregada');
+  });
+
   test('"Cancelar" vuelve atrás sin llamar al backend', async () => {
     const fetchFalso = simularBackend();
     renderizar();

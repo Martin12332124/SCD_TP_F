@@ -49,6 +49,40 @@ async function renderizarConectado() {
   await screen.findByText('Mesa 1');
 }
 
+describe('App: aviso de conexión con el restaurante (solo modo nube)', () => {
+  afterEach(() => {
+    delete socket.modo;
+  });
+
+  test('en modo local no hay aviso, aunque llegue el evento', async () => {
+    await renderizarConectado();
+    await servidor('estado_sincronizacion', new Date().toISOString());
+    expect(document.getElementById('aviso-conexion-local')).toBeNull();
+  });
+
+  test('en modo nube se actualiza con cada estado_sincronizacion', async () => {
+    socket.modo = 'nube';
+    await renderizarConectado();
+    expect(document.getElementById('aviso-conexion-local')).toBeNull(); // aún no se sabe
+    await servidor('estado_sincronizacion', new Date().toISOString());
+    expect(document.getElementById('aviso-conexion-local')).toHaveTextContent(
+      'Conectado al sistema del restaurante'
+    );
+    await servidor('estado_sincronizacion', new Date(Date.now() - 10 * 60000).toISOString());
+    expect(document.getElementById('aviso-conexion-local')).toHaveTextContent(
+      /no está conectado desde las \d\d:\d\d/
+    );
+  });
+
+  test('orden pendiente sin panel abierto: aviso neutral en la pantalla principal', async () => {
+    await renderizarConectado();
+    await servidor('respuesta_pedido', { ok: true, pendiente: true, mesa: 'Mesa 1' });
+    expect(
+      screen.getByText('Orden enviada. Se aplicará cuando el sistema del restaurante se conecte.')
+    ).toHaveAttribute('role', 'status');
+  });
+});
+
 describe('App: conexión', () => {
   test('arranca desconectada y deshabilita las acciones de la mesa', async () => {
     render(<App socket={socket} />);
@@ -307,6 +341,31 @@ describe('App: trasladar desde el panel de la mesa (US-05)', () => {
     expect(document.getElementById('mensaje-traslado')).toHaveTextContent(
       '✅ Pedido trasladado: Mesa 2 → Mesa 3 (En Cocina 🍳)'
     );
+  });
+
+  test('traslado pendiente (modo nube): mensaje neutral, no "Pedido trasladado"', async () => {
+    await abrirPanelMesa2();
+    await servidor('respuesta_traslado', {
+      ok: true,
+      pendiente: true,
+      origen: 'Mesa 2',
+      destino: 'Mesa 3',
+      estado: 'orden en cola: el local no responde todavía'
+    });
+    const aviso = document.getElementById('mensaje-traslado');
+    expect(aviso).toHaveTextContent(
+      'Orden enviada. Se aplicará cuando el sistema del restaurante se conecte.'
+    );
+    expect(aviso).not.toHaveTextContent('trasladado');
+  });
+
+  test('cambio de estado pendiente: el panel muestra el aviso neutral, y un rechazo posterior lo reemplaza', async () => {
+    await abrirPanelMesa2();
+    await servidor('respuesta_pedido', { ok: true, pendiente: true, mesa: 'Mesa 2' });
+    expect(document.getElementById('aviso-orden-pendiente')).toHaveTextContent(
+      'Orden enviada. Se aplicará cuando el sistema del restaurante se conecte.'
+    );
+    expect(document.getElementById('error-pedido-mesa')).toBeNull();
   });
 
   test('un rechazo del backend se muestra en el panel con tipo, motivo y lo esperado', async () => {

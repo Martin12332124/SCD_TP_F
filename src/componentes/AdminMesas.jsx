@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { agregarMesa, quitarMesa } from '../servicios/api';
 import { validarNumeroMesaNueva, NUMERO_MESA_MAXIMO } from '../validaciones/validaciones';
 import { estadoVisualMesa } from '../utils/estadoMesa';
+import { MENSAJE_ORDEN_PENDIENTE, esPendiente } from '../utils/ordenPendiente';
 
 function AdminMesas({ mesas, conectado, onCerrar }) {
   const [numeroNuevo, setNumeroNuevo] = useState('');
@@ -33,6 +34,10 @@ function AdminMesas({ mesas, conectado, onCerrar }) {
     setEnviando(true);
     try {
       const data = await operacion();
+      if (esPendiente(data)) {
+        setResultado({ ok: true, pendiente: true, texto: MENSAJE_ORDEN_PENDIENTE });
+        return true;
+      }
       if (data.ok) {
         setResultado({ ok: true, texto: `✅ ${textoExito(data)}` });
         return true;
@@ -103,7 +108,11 @@ function AdminMesas({ mesas, conectado, onCerrar }) {
             role={resultado.ok ? 'status' : 'alert'}
             style={{
               ...estilos.aviso,
-              ...(resultado.ok ? estilos.tonoExito : estilos.tonoPeligro)
+              ...(resultado.pendiente
+                ? estilos.tonoNeutro
+                : resultado.ok
+                  ? estilos.tonoExito
+                  : estilos.tonoPeligro)
             }}
           >
             {resultado.texto}
@@ -293,6 +302,11 @@ const estilos = {
     background: 'var(--color-exito-suave)',
     color: 'var(--color-exito-texto)',
     borderColor: 'var(--color-exito)'
+  },
+  tonoNeutro: {
+    background: 'var(--color-superficie-alt)',
+    color: 'var(--color-texto)',
+    borderColor: 'var(--color-neutro)'
   },
   tonoPeligro: {
     background: 'var(--color-peligro-suave)',

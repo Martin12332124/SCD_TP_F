@@ -116,6 +116,39 @@ describe('DetalleMesa: abrir mesa (US-09 CA1)', () => {
     );
   });
 
+  test('orden pendiente (modo nube): mensaje neutral, no "Mesa marcada como Ocupada"', async () => {
+    simularBackend({ '/api/mesas/1/abrir': { ok: true, pendiente: true } });
+    renderizar(libre);
+    await userEvent.click(screen.getByText(/Abrir mesa/));
+    const aviso = await screen.findByText(
+      'Orden enviada. Se aplicará cuando el sistema del restaurante se conecte.'
+    );
+    expect(aviso).toHaveAttribute('id', 'mensaje-accion-mesa');
+    expect(screen.queryByText(/Mesa marcada como Ocupada/)).not.toBeInTheDocument();
+    expect(aviso.textContent).not.toMatch(/✅|⚠️/);
+  });
+
+  test('orden pendiente al liberar: mismo mensaje neutral', async () => {
+    simularBackend({ '/api/mesas/2/cerrar': { ok: true, pendiente: true } });
+    renderizar(ocupada);
+    await userEvent.click(screen.getByText(/Liberar mesa/));
+    expect(
+      await screen.findByText(
+        'Orden enviada. Se aplicará cuando el sistema del restaurante se conecte.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/liberada correctamente/)).not.toBeInTheDocument();
+  });
+
+  test('muestra el aviso de orden en espera que le pasa App (cambio de estado)', () => {
+    renderizar(ocupada, {
+      avisoOrden: 'Orden enviada. Se aplicará cuando el sistema del restaurante se conecte.'
+    });
+    expect(document.getElementById('aviso-orden-pendiente')).toHaveTextContent(
+      'Orden enviada. Se aplicará cuando el sistema del restaurante se conecte.'
+    );
+  });
+
   test('si el backend rechaza (ESTADO_NO_PERMITIDO) muestra tipo y motivo', async () => {
     simularBackend({
       '/api/mesas/1/abrir': {
@@ -242,7 +275,6 @@ describe('DetalleMesa: presentación y accesibilidad (#77)', () => {
     expect(total).toHaveTextContent(/12\.500/);
   });
 });
-
 
 describe('DetalleMesa: avanzar el pedido desde la mesa', () => {
   const conPedido = (estadoPedido) => ({ ...ocupada, estadoPedido });
