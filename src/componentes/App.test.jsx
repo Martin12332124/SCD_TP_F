@@ -44,14 +44,64 @@ beforeEach(() => {
 });
 
 async function renderizarConectado() {
-  render(<App />);
+  render(<App socket={socket} />);
   await servidor('connect');
   await screen.findByText('Mesa 1');
 }
 
+const MENSAJE_DESCONECTADO =
+  'No se pudo hacer el cambio: el sistema del restaurante no está conectado (desde las 14:30). Inténtalo cuando vuelva a estar conectado.';
+const MENSAJE_SIN_RESPUESTA =
+  'El sistema del restaurante no respondió a tiempo. El cambio no se aplicó.';
+
+describe('App: aviso de conexión con el restaurante (solo modo nube)', () => {
+  afterEach(() => {
+    delete socket.modo;
+  });
+
+  test('en modo local no hay aviso, aunque llegue el evento', async () => {
+    await renderizarConectado();
+    await servidor('estado_sincronizacion', new Date().toISOString());
+    expect(document.getElementById('aviso-conexion-local')).toBeNull();
+  });
+
+  test('en modo nube se actualiza con cada estado_sincronizacion', async () => {
+    socket.modo = 'nube';
+    await renderizarConectado();
+    expect(document.getElementById('aviso-conexion-local')).toBeNull(); // aún no se sabe
+    await servidor('estado_sincronizacion', new Date().toISOString());
+    expect(document.getElementById('aviso-conexion-local')).toHaveTextContent(
+      'Conectado al sistema del restaurante'
+    );
+    await servidor('estado_sincronizacion', new Date(Date.now() - 10 * 60000).toISOString());
+    expect(document.getElementById('aviso-conexion-local')).toHaveTextContent(
+      /no está conectado desde las \d\d:\d\d/
+    );
+  });
+
+  test('el aviso ya no promete "cambios en espera": dice que no se pueden hacer cambios', async () => {
+    socket.modo = 'nube';
+    await renderizarConectado();
+    await servidor('estado_sincronizacion', new Date(Date.now() - 10 * 60000).toISOString());
+    const aviso = document.getElementById('aviso-conexion-local');
+    expect(aviso).toHaveTextContent('no se pueden hacer cambios hasta que se conecte');
+    expect(aviso).not.toHaveTextContent('en espera');
+  });
+
+  test('rechazo por local desconectado sin panel abierto: se ve en la pantalla principal', async () => {
+    await renderizarConectado();
+    await servidor('respuesta_pedido', {
+      ok: false,
+      tipo: 'LOCAL_DESCONECTADO',
+      error: MENSAJE_DESCONECTADO
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent(`⚠️ ${MENSAJE_DESCONECTADO}`);
+  });
+});
+
 describe('App: conexión', () => {
   test('arranca desconectada y deshabilita las acciones de la mesa', async () => {
-    render(<App />);
+    render(<App socket={socket} />);
     expect(screen.getByText(/Servidor Desconectado/)).toBeInTheDocument();
     await userEvent.click(await screen.findByTitle(/Mesa 2 —/));
     expect(screen.getByRole('button', { name: 'Registrar pedido sin productos' })).toBeDisabled();
@@ -59,7 +109,7 @@ describe('App: conexión', () => {
   });
 
   test('connect/disconnect actualizan el indicador', async () => {
-    render(<App />);
+    render(<App socket={socket} />);
     await servidor('connect');
     expect(screen.getByText(/Sistema Conectado/)).toBeInTheDocument();
     await servidor('disconnect');
@@ -160,7 +210,7 @@ describe('App: mapa de mesas (US-08)', () => {
         throw new Error('sin red');
       })
     );
-    render(<App />);
+    render(<App socket={socket} />);
     await servidor('estado_mesas', mesasBase);
     expect(await screen.findByText('Mesa 1')).toBeInTheDocument();
   });
@@ -307,6 +357,43 @@ describe('App: trasladar desde el panel de la mesa (US-05)', () => {
     expect(document.getElementById('mensaje-traslado')).toHaveTextContent(
       '✅ Pedido trasladado: Mesa 2 → Mesa 3 (En Cocina 🍳)'
     );
+  });
+
+  test('traslado sin respuesta del local (modo nube): "el cambio no se aplicó", no "Pedido trasladado"', async () => {
+    await abrirPanelMesa2();
+    await servidor('respuesta_traslado', {
+      ok: false,
+      tipo: 'LOCAL_SIN_RESPUESTA',
+      error: MENSAJE_SIN_RESPUESTA
+    });
+    const aviso = document.getElementById('mensaje-traslado');
+    expect(aviso).toHaveTextContent(`⚠️ ${MENSAJE_SIN_RESPUESTA}`);
+    expect(aviso).not.toHaveTextContent('trasladado');
+    expect(aviso).not.toHaveTextContent('LOCAL_SIN_RESPUESTA');
+  });
+
+  test('cambio de estado con el local desconectado: el panel muestra el motivo', async () => {
+    await abrirPanelMesa2();
+    await servidor('respuesta_pedido', {
+      ok: false,
+      tipo: 'LOCAL_DESCONECTADO',
+      error: MENSAJE_DESCONECTADO
+    });
+    expect(document.getElementById('error-pedido-mesa')).toHaveTextContent(
+      `⚠️ ${MENSAJE_DESCONECTADO}`
+    );
+  });
+
+  test('una orden vencida que rechaza el local se muestra con su motivo, sin el código', async () => {
+    await abrirPanelMesa2();
+    await servidor('respuesta_pedido', {
+      ok: false,
+      tipo: 'ORDEN_VENCIDA',
+      error: 'La orden esperó más de 10 s al sistema del restaurante y se descartó sin aplicarse.'
+    });
+    const aviso = document.getElementById('error-pedido-mesa');
+    expect(aviso).toHaveTextContent('se descartó sin aplicarse');
+    expect(aviso).not.toHaveTextContent('ORDEN_VENCIDA');
   });
 
   test('un rechazo del backend se muestra en el panel con tipo, motivo y lo esperado', async () => {
@@ -490,7 +577,7 @@ describe('App: temporizador de cada comanda', () => {
 
   /** Conecta, recibe un pedido en cocina y deja correr el reloj `segundos` segundos. */
   async function pedidoEnCocinaDurante(segundos) {
-    render(<App />);
+    render(<App socket={socket} />);
     await servidor('connect');
     await servidor('estado_mesas', mesasBase);
     await servidor('cambio_estado_pedido', { mesa: 'Mesa 2', estado: 'En Cocina 🍳' });

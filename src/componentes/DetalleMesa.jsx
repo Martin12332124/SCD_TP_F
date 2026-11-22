@@ -28,6 +28,7 @@ import {
 import AvancePedido from './AvancePedido';
 import Icono from './Icono';
 import TrasladoMesa from './TrasladoMesa';
+import { textoRechazo } from '../utils/rechazo';
 
 function DetalleMesa({
   mesa,
@@ -110,7 +111,7 @@ function DetalleMesa({
         setAccion({ mesaId, texto: '✅ Mesa marcada como Ocupada.' });
       } else {
         // CA1 implica: si ya estaba ocupada el backend retorna ESTADO_NO_PERMITIDO
-        setAccion({ mesaId, texto: `⚠️ [${data.tipo}] ${data.error}` });
+        setAccion({ mesaId, texto: textoRechazo(data) });
       }
     } catch {
       setAccion({ mesaId, texto: '⚠️ Error de red al intentar abrir la mesa.' });
@@ -130,7 +131,7 @@ function DetalleMesa({
         setAccion({ mesaId, texto: '✅ Mesa liberada correctamente.' });
       } else {
         // CA3: con un pedido en curso, el backend devuelve tipo PEDIDO_ACTIVO con el motivo
-        setAccion({ mesaId, texto: `⚠️ [${data.tipo}] ${data.error}` });
+        setAccion({ mesaId, texto: textoRechazo(data) });
       }
     } catch {
       setAccion({ mesaId, texto: '⚠️ Error de red al intentar liberar la mesa.' });
@@ -144,7 +145,7 @@ function DetalleMesa({
     onTomarPedido(mesa); // abre la vista de toma de pedido
   };
 
-  const exito = mensajeAccion.startsWith('✅');
+  const tonoDe = (texto) => (texto.startsWith('✅') ? estilos.tonoExito : estilos.tonoPeligro);
 
   return (
     <>
@@ -206,7 +207,7 @@ function DetalleMesa({
                 role="status"
                 style={{
                   ...estilos.aviso,
-                  ...(exito ? estilos.tonoExito : estilos.tonoPeligro)
+                  ...tonoDe(mensajeAccion)
                 }}
               >
                 {mensajeAccion}
@@ -231,7 +232,7 @@ function DetalleMesa({
                 role="status"
                 style={{
                   ...estilos.aviso,
-                  ...(mensajeTraslado.startsWith('✅') ? estilos.tonoExito : estilos.tonoPeligro)
+                  ...tonoDe(mensajeTraslado)
                 }}
               >
                 {mensajeTraslado}

@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { agregarMesa, quitarMesa } from '../servicios/api';
 import { validarNumeroMesaNueva, NUMERO_MESA_MAXIMO } from '../validaciones/validaciones';
 import { estadoVisualMesa } from '../utils/estadoMesa';
+import { textoRechazo } from '../utils/rechazo';
 
 function AdminMesas({ mesas, conectado, onCerrar }) {
   const [numeroNuevo, setNumeroNuevo] = useState('');
@@ -37,7 +38,7 @@ function AdminMesas({ mesas, conectado, onCerrar }) {
         setResultado({ ok: true, texto: `✅ ${textoExito(data)}` });
         return true;
       }
-      setResultado({ ok: false, texto: `⚠️ [${data.tipo}] ${data.error}` });
+      setResultado({ ok: false, texto: textoRechazo(data) });
     } catch {
       setResultado({ ok: false, texto: '⚠️ Error de red: no se pudo contactar al servidor.' });
     } finally {

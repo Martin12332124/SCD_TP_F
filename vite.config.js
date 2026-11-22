@@ -7,6 +7,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    // Las pruebas no dependen del .env de quien las corre: sin esto, una VITE_API_KEY real en el
+    // .env se colaría en api.js y cambiaría las cabeceras que las pruebas esperan.
+    env: { VITE_API_KEY: '' },
     setupFiles: ['./src/test/setup.js'],
     include: ['src/**/*.test.{js,jsx}'],
     restoreMocks: true,

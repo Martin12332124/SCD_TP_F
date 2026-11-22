@@ -5,6 +5,11 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AdminMesas from './AdminMesas';
 
+const MENSAJE_DESCONECTADO =
+  'No se pudo hacer el cambio: el sistema del restaurante no está conectado (desde las 14:30). Inténtalo cuando vuelva a estar conectado.';
+const MENSAJE_SIN_RESPUESTA =
+  'El sistema del restaurante no respondió a tiempo. El cambio no se aplicó.';
+
 const mesas = [
   { id: 'Mesa 1', numero: 1, estado: 'libre', estadoPedido: null },
   { id: 'Mesa 2', numero: 2, estado: 'ocupada', estadoPedido: 'En Cocina 🍳' },
@@ -129,6 +134,30 @@ describe('AdminMesas: quitar con confirmación', () => {
       method: 'DELETE'
     });
     expect(await screen.findByRole('status')).toHaveTextContent('✅ Mesa 4 quitada.');
+  });
+
+  test('modo nube, local desconectado: quitar muestra el motivo y no dice "quitada"', async () => {
+    simularBackend({ ok: false, tipo: 'LOCAL_DESCONECTADO', error: MENSAJE_DESCONECTADO });
+    renderizar();
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar la mesa 4' }));
+    await userEvent.click(
+      within(document.getElementById('fila-mesa-4')).getByRole('button', { name: 'Sí, quitar' })
+    );
+    const aviso = await screen.findByRole('alert');
+    expect(aviso).toHaveTextContent(`⚠️ ${MENSAJE_DESCONECTADO}`);
+    expect(aviso).not.toHaveTextContent('[LOCAL_DESCONECTADO]'); // es una frase para el usuario
+    expect(aviso).not.toHaveTextContent('quitada');
+  });
+
+  test('modo nube, el local no respondió: agregar muestra "el cambio no se aplicó"', async () => {
+    simularBackend({ ok: false, tipo: 'LOCAL_SIN_RESPUESTA', error: MENSAJE_SIN_RESPUESTA });
+    renderizar();
+    const campo = screen.getByRole('spinbutton');
+    await userEvent.type(campo, '7');
+    await userEvent.click(screen.getByRole('button', { name: /^Agregar mesa 7$|Agregar$/ }));
+    const aviso = await screen.findByRole('alert');
+    expect(aviso).toHaveTextContent(`⚠️ ${MENSAJE_SIN_RESPUESTA}`);
+    expect(aviso).not.toHaveTextContent('agregada');
   });
 
   test('"Cancelar" vuelve atrás sin llamar al backend', async () => {
