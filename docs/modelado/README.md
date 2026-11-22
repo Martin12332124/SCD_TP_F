@@ -1,6 +1,6 @@
 # Modelado del sistema (Entrega 3)
 
-Cuatro diagramas UML del sistema POS + KDS tal como está construido en la rama final: servidor local (repo `SCD_TP_B`) y SPA (repo `SCD_TP_F`), con la réplica en Supabase, el inicio de sesión y el despliegue de la SPA en Netlify. Los diagramas son bloques Mermaid dentro de cada `.md`: GitHub los dibuja solo y el texto es la fuente editable.
+Cuatro diagramas UML del sistema POS + KDS tal como está construido en la rama final: servidor local (repo `SCD_TP_B`) y SPA (repo `SCD_TP_F`), con la réplica en Supabase, el inicio de sesión y el despliegue de la SPA en Netlify. Los diagramas son bloques Mermaid dentro de cada `diagrama`.
 
 | # | Diagrama | Qué responde | Archivo |
 | :--- | :--- | :--- | :--- |
