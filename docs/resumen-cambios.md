@@ -10,7 +10,7 @@ Una página para el equipo y la presentación. El detalle está en los documento
 | **Login** | Nada se lee ni se escribe sin sesión: JWT en local, Supabase Auth en la nube. Sin roles. | [inicio-de-sesion.md](https://github.com/Martin12332124/SCD_TP_B/blob/main/docs/inicio-de-sesion.md) |
 | **API gateway** | Puerta del servidor local: API key por aplicación (`x-api-key`), límite de peticiones y registro de accesos. | [api-gateway.md](https://github.com/Martin12332124/SCD_TP_B/blob/main/docs/api-gateway.md) |
 | **Despliegue** | SPA en Netlify (modo nube) + Supabase; el producto real sigue siendo local. | [despliegue.md](despliegue.md) |
-| **Modelado** | Los 4 diagramas UML actualizados al código final. | [modelado/](modelado/README.md) |
+| **Modelado** | Los 4 diagramas UML de la Entrega 3 (pendiente: los sube el equipo). | [modelado/](modelado/README.md) |
 
 ## Cómo se usa
 
@@ -34,7 +34,7 @@ Una página para el equipo y la presentación. El detalle está en los documento
 | --- | --- | --- |
 | `feat/sincronizacion-nube` | B y F | `sincronizacion/` (`Sincronizador`, `cliente-supabase`), `ordenes-nube.js`, `supabase/esquema.sql`; en F, `nube.js`, modo `VITE_MODO` en `api.js`, `netlify.toml`. |
 | `feat/login` | B y F | `usuario.service.js`, `usuarios-sqlite.js`, `seguridad/`, `auth.router.js`, `autenticacion.js`; en F, `Login.jsx`, `Sesion.jsx`, token en `api.js`. |
-| `docs/modelado` | F y B | F: `docs/modelado/` (4 diagramas + índice) y `docs/despliegue.md`. En ambos, el README enlaza a modelado y despliegue. |
+| `docs/modelado` | F y B | F: `docs/despliegue.md`. En ambos, el README enlaza a despliegue y a `docs/modelado/`, donde el equipo deja los 4 diagramas de la Entrega 3. |
 | `feat/api-gateway` | B y F | B: `presentacion/gateway.js`, `app.js`, `index.js`, `docs/api-gateway.md`, `test/gateway.test.js`; órdenes que vencen (`ORDEN_VENCIDA`, función `ordenes_pendientes_con_edad` en `esquema.sql`). F: `x-api-key` en `api.js` y en el socket, `scripts/ci-frontend.js`, este documento; en modo nube, rechazo de cambios con el local desconectado (`utils/conexionLocal.js`, `nube.js`; reemplaza al estado "pendiente"). |
 
 Variables nuevas del gateway: `API_KEYS` (backend, obligatoria) y `VITE_API_KEY` (frontend, solo modo local). Ninguna lleva valor en el repo: los `.env` están ignorados por git y los `.env.example` solo traen los nombres.
