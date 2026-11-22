@@ -2,11 +2,9 @@
 
 ## Descripción del sistema
 
-El Sistema de Pedidos para Restaurante (POS + KDS) resuelve el problema de coordinación entre la toma de pedidos en el salón y su preparación en cocina. En muchos restaurantes ese proceso depende de comandas en papel o de sistemas que no se actualizan en tiempo real, lo que provoca pedidos traspapelados, platos que se preparan mal o que llegan tarde a la mesa. El sistema conecta un Punto de Venta (POS), donde el mesero toma la comanda, con una Pantalla de Cocina (KDS), donde el personal de cocina la recibe y actualiza su estado a medida que avanza la preparación, todo sincronizado en tiempo real dentro de la red local del restaurante.
+El Sistema de Pedidos para Restaurante (POS + KDS) coordina la toma de pedidos en el salón con su preparación en cocina. El mesero gestiona las mesas y confirma pedidos desde el POS; cocina los recibe y actualiza su estado en el KDS. El sistema es híbrido: el servidor local con SQLite es la autoridad y sigue funcionando sin internet; cuando está conectado, sincroniza una réplica con Supabase para que la web pública pueda consultar el estado y enviar órdenes al servidor local.
 
-Un elemento central del diseño es el paso de validación obligatoria de la comanda con el cliente antes de enviarla a cocina: el mesero confirma cada ítem, cantidad y modificador con el comensal antes de que el pedido salga hacia la cocina, para eliminar el error humano en el origen del proceso en vez de corregirlo después, cuando ya es más costoso hacerlo.
-
-El sistema sirve a cuatro roles dentro del restaurante: el Mesero, que toma los pedidos, gestiona las mesas y cierra las cuentas; el Cocinero, que recibe y prepara las comandas desde el KDS; el JefeDeCocina, que supervisa la cocina y el inventario de ingredientes; y el Administrador, que gestiona el catálogo de menú, los usuarios del sistema y el registro de ventas del local.
+Los usuarios inician sesión para acceder al sistema. No hay permisos diferenciados por rol; las acciones disponibles corresponden a las funciones implementadas de mesas y pedidos.
 
 ## Historias de Usuario
 
@@ -57,7 +55,7 @@ Ver: [Arquitectura.md](./Arquitectura.md) — estilo, diagrama, descomposición 
 ## Modelado y despliegue
 
 - **Modelado (Entrega 3):** [docs/modelado/](docs/modelado/README.md) — diagramas de casos de uso, clases, secuencia y componentes del sistema final, con su nota de lectura.
-- **Despliegue:** [docs/despliegue.md](docs/despliegue.md) — modo local (offline) y modo nube (Netlify + Supabase), paso a paso, y plan de escalamiento a varias sucursales. Sitio en modo nube: https://scd-tp-pos-kds.netlify.app
+- **Despliegue:** [docs/despliegue.md](docs/despliegue.md) — arquitectura híbrida, operación local sin internet, modo nube (Netlify + Supabase) y plan de escalamiento. Sitio público: https://scd-tp-pos-kds.netlify.app
 
 ## Responsabilidades del Equipo
 
@@ -83,9 +81,9 @@ Ver: [Arquitectura.md](./Arquitectura.md) — estilo, diagrama, descomposición 
 
 ## Instalación y ejecución
 
-Este proyecto es la interfaz gráfica de usuario (Frontend) del Sistema de Pedidos para Restaurante (POS + KDS). Está construido con React, Vite y se conecta mediante Sockets al servidor backend.
+Este repositorio contiene la interfaz React + Vite. En modo local se conecta al backend por REST y Socket.IO; en la web pública usa Supabase para leer la réplica y enviar órdenes al servidor del restaurante.
 
-A continuación, tienes las instrucciones exactas y masticadas para descargar, instalar y ejecutar esta pantalla en cualquier computadora.
+Para el uso habitual en la nube, abre el [sitio público](https://scd-tp-pos-kds.netlify.app) e inicia sesión. El encargado debe mantener encendido y conectado a Supabase el servidor del restaurante. Si la franja amarilla indica que el sistema del restaurante no está conectado, avísale; desde la web no hay que instalar ni ejecutar `localhost`.
 
 ---
 
@@ -96,17 +94,6 @@ Se requiere al nuestro equipo la implementación de un formato el código despu�
 npm run format
 ```
 
----
-## Hito 2 — Funcionalidades evaluadas
-
-| # | Funcionalidad | Historia | Backend (SCD_TP_B) | Frontend (SCD_TP_F) | Pruebas |
-|---|---|---|---|---|---|
-| 1 | Abrir y liberar mesa | US-09 | `src/dominio/mesa-estado.service.js`, `src/presentacion/mesas.router.js` | `src/componentes/DetalleMesa.jsx` | `test/mesa-estado.service.test.js`, `test/api.test.js` |
-| 2 | Mapa de mesas en tiempo real | US-08 | `GET /api/mesas`, evento `estado_mesas` en `src/app.js` | `src/componentes/MapaMesas.jsx`, `src/componentes/App.jsx` | `test/api.test.js`, `test/socket.test.js` |
-| 3 | Traslado de pedido entre mesas | US-05 | `src/dominio/mesa.service.js`, evento `trasladar_pedido` | panel de la mesa: `src/componentes/TrasladoMesa.jsx` | `test/mesa.service.test.js`, `test/socket.test.js` |
-| 4 | Precio base de productos (crear/editar) | US-07 | `src/dominio/menu-item.service.js`, `src/presentacion/menu-items.router.js` | — | `test/menu-item.service.test.js`, `test/api.test.js` |
-| 5 | Toma de pedido, confirmación y disponibilidad | US-04 (parcial) | `src/dominio/pedido.service.js` (`confirmarPedido`), `PATCH /api/menu-items/:id` | `src/componentes/TomaPedido.jsx` | `test/pedido.service.test.js`, `test/socket.test.js` |
-
 ### Cómo ejecutar
 ``` bash 
 npm ci
@@ -116,17 +103,13 @@ npm run build
 npm run test:coverage
 ```
 
-
-
 ### REQUISITOS PREVIOS
 
-Para que esta pantalla funcione, la computadora externa necesita cumplir con dos condiciones:
-1. Tener **Node.js** instalado (versión LTS recomendada).
-2. Tener el servidor **Backend (`SCD_TP_B`) ya encendido y corriendo** en el puerto 3000 de la misma PC o en red.
+Los pasos siguientes son para ejecutar y desarrollar el frontend en modo local. Para el uso de la web pública no necesitas Node.js ni levantar el backend en tu computadora.
 
 ---
 
-### PASO A PASO PARA INSTALAR LA PANTALLA
+### PASO A PASO PARA EJECUTAR EN MODO LOCAL
 
 Sigue estos pasos en orden estricto sin saltarte ninguno:
 
@@ -159,6 +142,8 @@ npm install
 ```
 *Espera un momento a que se complete la barra de carga. Sabrás que terminó cuando la terminal te permita escribir comandos otra vez.*
 
+Configura `.env.local` con `VITE_MODO=local`, `VITE_API_URL` y `VITE_API_KEY`. La API key debe coincidir con una de las configuradas en `API_KEYS` en el backend. Consulta [docs/despliegue.md](docs/despliegue.md) para los valores y los pasos del servidor.
+
 ---
 
 ### CÓMO ENCENDER LA INTERFAZ VISUAL
@@ -177,9 +162,9 @@ Al ejecutar el comando, Vite te mostrará una dirección local en la terminal.
 
 ---
 
-### CÓMO USAR LA SIMULACIÓN
+### CÓMO USAR LA INTERFAZ
 Una vez que entres a la página web:
-* **Indicador de Servidor:** Si el Backend está encendido, verás un letrero verde que dice **"Conectado ✔"**. Si el Backend está apagado, dirá **"Desconectado ✖"** en rojo.
+* **Indicadores de conexión:** en modo local, el encabezado muestra si el backend está conectado. En modo nube, el encabezado indica la conexión con Supabase y la franja amarilla indica si el servidor del restaurante sincronizó recientemente. Si no está conectado, puedes consultar los últimos datos, pero no hacer cambios.
 
 * **Comandas:** bajo el encabezado cuelga un ticket por cada pedido en curso, con su tiempo. Pasados 15 minutos el ticket se pone ámbar y pasados 20, rojo ("Atrasado"). Tocar un ticket abre su mesa.
 
