@@ -1,28 +1,28 @@
 <mxfile host="app.diagrams.net">
   <diagram name="2 Clases" id="drlwvn4x7N6gMDs4wMwA">
-    <mxGraphModel dx="1584" dy="695" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1080" pageHeight="720" math="0" shadow="0">
+    <mxGraphModel dx="1877" dy="823" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1080" pageHeight="720" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="c3" parent="1" style="fontSize=13;fontColor=default;fontStyle=1;fillColor=light-dark(#1F2A44,#000033);strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="Mesa" vertex="1">
+        <mxCell id="c3" parent="1" style="fontSize=13;fontColor=#FFFFFF;fontStyle=1;fillColor=light-dark(#1F2A44,#000033);strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="Mesa" vertex="1">
           <mxGeometry height="30" width="260" x="40" y="60" as="geometry" />
         </mxCell>
         <mxCell id="c4" parent="1" style="fontSize=11;fontColor=default;fontStyle=0;fillColor=none;strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="+ id : string&lt;br&gt;+ numero : int&lt;br&gt;+ estado : string {libre | ocupada}&lt;br&gt;+ /estadoPedido : string&lt;br&gt;+ /pedidoDesde : string" vertex="1">
           <mxGeometry height="112" width="260" x="40" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="c5" parent="1" style="fontSize=13;fontColor=default;fontStyle=1;fillColor=light-dark(#1F2A44,#000066);strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="Pedido" vertex="1">
+        <mxCell id="c5" parent="1" style="fontSize=13;fontColor=#FFFFFF;fontStyle=1;fillColor=light-dark(#1F2A44,#000066);strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="Pedido" vertex="1">
           <mxGeometry height="30" width="260" x="400" y="60" as="geometry" />
         </mxCell>
         <mxCell id="c6" parent="1" style="fontSize=11;fontColor=default;fontStyle=0;fillColor=none;strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="+ mesa : string&lt;br&gt;+ estado : string {Recibido | En Cocina | Listo}&lt;br&gt;+ estadoDesde : string&lt;br&gt;+ items : LineaDePedido[]" vertex="1">
           <mxGeometry height="92" width="260" x="400" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="c7" parent="1" style="fontSize=13;fontColor=default;fontStyle=1;fillColor=light-dark(#1F2A44,#000066);strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="LineaDePedido" vertex="1">
+        <mxCell id="c7" parent="1" style="fontSize=13;fontColor=#FFFFFF;fontStyle=1;fillColor=light-dark(#1F2A44,#000066);strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="LineaDePedido" vertex="1">
           <mxGeometry height="30" width="290" x="760" y="60" as="geometry" />
         </mxCell>
         <mxCell id="c8" parent="1" style="fontSize=11;fontColor=default;fontStyle=0;fillColor=none;strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="+ id : int   (id del MenuItem copiado)&lt;br&gt;+ nombre : string&lt;br&gt;+ precioBase : int&lt;br&gt;+ cantidad : int" vertex="1">
           <mxGeometry height="92" width="290" x="760" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="c9" parent="1" style="fontSize=13;fontColor=default;fontStyle=1;fillColor=light-dark(#1F2A44,#000066);strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="MenuItem" vertex="1">
+        <mxCell id="c9" parent="1" style="fontSize=13;fontColor=#FFFFFF;fontStyle=1;fillColor=light-dark(#1F2A44,#000066);strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="MenuItem" vertex="1">
           <mxGeometry height="30" width="290" x="760" y="290" as="geometry" />
         </mxCell>
         <mxCell id="c10" parent="1" style="fontSize=11;fontColor=default;fontStyle=0;fillColor=none;strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="+ id : int&lt;br&gt;+ nombre : string&lt;br&gt;+ precioBase : int&lt;br&gt;+ disponible : boolean" vertex="1">
@@ -31,7 +31,7 @@
         <mxCell id="c11" parent="1" style="text;html=1;whiteSpace=wrap;fontSize=10;fontColor=default;align=left;verticalAlign=middle;fontStyle=2;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="tabla usuarios (SQLite)" vertex="1">
           <mxGeometry height="16" width="260" x="40" y="460" as="geometry" />
         </mxCell>
-        <mxCell id="c12" parent="1" style="fontSize=13;fontColor=default;fontStyle=1;fillColor=light-dark(#1F2A44,#000066);strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="Usuario" vertex="1">
+        <mxCell id="c12" parent="1" style="fontSize=13;fontColor=#FFFFFF;fontStyle=1;fillColor=light-dark(#1F2A44,#000066);strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="Usuario" vertex="1">
           <mxGeometry height="30" width="260" x="40" y="480" as="geometry" />
         </mxCell>
         <mxCell id="c13" parent="1" style="fontSize=11;fontColor=default;fontStyle=0;fillColor=none;strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="+ nombreUsuario : string&lt;br&gt;+ hashContrasena : string&lt;br&gt;+ creadoEn : string" vertex="1">
@@ -40,7 +40,7 @@
         <mxCell id="c14" parent="1" style="text;html=1;whiteSpace=wrap;fontSize=10;fontColor=default;align=left;verticalAlign=middle;fontStyle=2;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="tabla ordenes_pendientes (Supabase)" vertex="1">
           <mxGeometry height="16" width="260" x="355" y="410" as="geometry" />
         </mxCell>
-        <mxCell id="c15" parent="1" style="fontSize=13;fontColor=default;fontStyle=1;fillColor=light-dark(#1F2A44,#000066);strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="OrdenPendiente" vertex="1">
+        <mxCell id="c15" parent="1" style="fontSize=13;fontColor=#FFFFFF;fontStyle=1;fillColor=light-dark(#1F2A44,#000066);strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="OrdenPendiente" vertex="1">
           <mxGeometry height="30" width="260" x="400" y="430" as="geometry" />
         </mxCell>
         <mxCell id="c16" parent="1" style="fontSize=11;fontColor=default;fontStyle=0;fillColor=none;strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="+ id : int&lt;br&gt;+ tipo : string&lt;br&gt;+ payload : object&lt;br&gt;+ creadaEn : string&lt;br&gt;+ creadaPor : string&lt;br&gt;+ estado : string&lt;br&gt;+ resultado : object&lt;br&gt;+ procesadaEn : string" vertex="1">
@@ -49,7 +49,7 @@
         <mxCell id="c17" parent="1" style="text;html=1;whiteSpace=wrap;fontSize=10;fontColor=default;align=left;verticalAlign=middle;fontStyle=2;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="tabla ordenes_aplicadas (SQLite)" vertex="1">
           <mxGeometry height="16" width="290" x="760" y="460" as="geometry" />
         </mxCell>
-        <mxCell id="c18" parent="1" style="fontSize=13;fontColor=default;fontStyle=1;fillColor=light-dark(#1F2A44,#000066);strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="OrdenAplicada" vertex="1">
+        <mxCell id="c18" parent="1" style="fontSize=13;fontColor=#FFFFFF;fontStyle=1;fillColor=light-dark(#1F2A44,#000066);strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="OrdenAplicada" vertex="1">
           <mxGeometry height="30" width="290" x="760" y="480" as="geometry" />
         </mxCell>
         <mxCell id="c19" parent="1" style="fontSize=11;fontColor=default;fontStyle=0;fillColor=none;strokeColor=#1F2A44;strokeWidth=1.2;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;labelBackgroundColor=none;labelBorderColor=none;textShadow=0;" value="+ id : int&lt;br&gt;+ estado : string&lt;br&gt;&lt;div&gt;+ resultado : object&lt;/div&gt;&lt;div&gt;+ aplicadaEn : string&lt;/div&gt;" vertex="1">
