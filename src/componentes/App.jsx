@@ -10,7 +10,7 @@ import Encabezado from './Encabezado';
 import RielComandas from './RielComandas';
 import { comandasActivas } from '../utils/tiempoComanda';
 import AvisoConexionLocal from './AvisoConexionLocal';
-import { MENSAJE_ORDEN_PENDIENTE, esPendiente } from '../utils/ordenPendiente';
+import { textoRechazo } from '../utils/rechazo';
 
 // Props (las entrega Sesion, después del login):
 //   socket          {object}   - Conexión en tiempo real: Socket.IO en modo local o Supabase
@@ -34,8 +34,6 @@ function App({ socket, usuario, onCerrarSesion, onSesionVencida }) {
 
   // Modo nube: hora de la última sincronización del local (undefined = aún no se sabe)
   const [ultimaSincronizacion, setUltimaSincronizacion] = useState(undefined);
-  // Modo nube: aviso neutral de una orden que quedó en espera (confirmar pedido, cambiar estado)
-  const [avisoOrden, setAvisoOrden] = useState('');
 
   // US-08: mesa seleccionada para mostrar su panel lateral. Se guarda solo el id y la mesa
   // se toma de la lista: así el panel siempre muestra el estado más reciente (CA3).
@@ -96,29 +94,17 @@ function App({ socket, usuario, onCerrarSesion, onSesionVencida }) {
     socket.on('estado_sincronizacion', setUltimaSincronizacion);
 
     socket.on('respuesta_pedido', (resultado) => {
-      if (esPendiente(resultado)) {
-        setAvisoOrden(MENSAJE_ORDEN_PENDIENTE);
-      } else if (!resultado.ok) {
-        setErrorValidacion(
-          `⚠️ [${resultado.tipo}] ${resultado.error}` +
-            (resultado.esperado ? ` — Esperado: ${resultado.esperado}` : '')
-        );
-      }
+      if (!resultado.ok) setErrorValidacion(textoRechazo(resultado));
     });
 
     // Operación 3 (US-05): escuchar respuesta del traslado de mesa
     socket.on('respuesta_traslado', (resultado) => {
-      if (esPendiente(resultado)) {
-        setMensajeTraslado(MENSAJE_ORDEN_PENDIENTE);
-      } else if (resultado.ok) {
+      if (resultado.ok) {
         setMensajeTraslado(
           `✅ Pedido trasladado: ${resultado.origen} → ${resultado.destino} (${resultado.estado})`
         );
       } else {
-        setMensajeTraslado(
-          `⚠️ [${resultado.tipo}] ${resultado.error}` +
-            (resultado.esperado ? ` — Esperado: ${resultado.esperado}` : '')
-        );
+        setMensajeTraslado(textoRechazo(resultado));
       }
     });
 
@@ -156,7 +142,6 @@ function App({ socket, usuario, onCerrarSesion, onSesionVencida }) {
     // los avisos anteriores no pertenecen a esta mesa
     setErrorValidacion('');
     setMensajeTraslado('');
-    setAvisoOrden('');
   };
 
   // Temporizadores de las comandas: un solo reloj para todas, que avanza cada segundo
@@ -171,7 +156,6 @@ function App({ socket, usuario, onCerrarSesion, onSesionVencida }) {
   // Pide al backend pasar el pedido de una mesa a un estado, desde el panel de esa mesa.
   const actualizarPedido = (valorMesa, nuevoEstado) => {
     setErrorValidacion(''); // Limpiar errores previos
-    setAvisoOrden('');
 
     // 1. VALIDACIÓN DEFENSIVA: la mesa es un número válido y existe
     //    (la cantidad de mesas es configurable, ya no basta con "entero mayor a 0")
@@ -200,7 +184,6 @@ function App({ socket, usuario, onCerrarSesion, onSesionVencida }) {
   // ambas mesas existan; el resto (origen con pedido, destino libre) lo valida el backend.
   const enviarTraslado = (origen, destino) => {
     setMensajeTraslado(''); // Limpiar mensajes previos
-    setAvisoOrden('');
     const resultado = validarTraslado(origen, destino, mesas);
     if (!resultado.esValido) {
       setMensajeTraslado(resultado.mensajeError);
@@ -237,12 +220,6 @@ function App({ socket, usuario, onCerrarSesion, onSesionVencida }) {
           </div>
         )}
 
-        {avisoOrden && !mesaSeleccionada && (
-          <div role="status" style={{ ...estilos.aviso, ...estilos.avisoNeutro }}>
-            {avisoOrden}
-          </div>
-        )}
-
         {/* US-08: plano de sala; al tocar una mesa se abre su panel con todas sus acciones */}
         <section style={estilos.tarjeta}>
           <MapaMesas
@@ -264,7 +241,6 @@ function App({ socket, usuario, onCerrarSesion, onSesionVencida }) {
           mesas={mesas}
           onTrasladar={enviarTraslado}
           mensajeTraslado={mensajeTraslado}
-          avisoOrden={avisoOrden}
         />
 
         {/* Vista "Tomar pedido" — se muestra encima de todo cuando hay una mesa activa */}
@@ -318,11 +294,6 @@ const estilos = {
     background: 'var(--color-peligro-suave)',
     color: 'var(--color-peligro-texto)',
     borderColor: 'var(--color-peligro)'
-  },
-  avisoNeutro: {
-    background: 'var(--color-superficie-alt)',
-    color: 'var(--color-texto)',
-    borderColor: 'var(--color-neutro)'
   },
   tarjeta: {
     background: 'var(--color-superficie)',

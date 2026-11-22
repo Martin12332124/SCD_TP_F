@@ -6,14 +6,26 @@
 //   - Leer: de las tablas espejo que el local mantiene en Supabase.
 //   - Escribir: nunca directo. Cada acción se deja como una orden en `ordenes_pendientes`;
 //     el local la aplica con sus reglas y el cambio vuelve por Realtime a las tablas espejo.
-//   Después de enviar una orden se espera unos segundos su resultado: si el local la aplica
-//   o la rechaza, se devuelve SU respuesta (la misma forma que en modo local). Si el local
-//   no responde a tiempo (por ejemplo, está sin internet), se responde ok con
-//   `pendiente: true`: la orden quedó en cola y se aplicará cuando el local vuelva.
-//   No se responde error en ese caso, para que nadie la reenvíe y quede duplicada.
+//   Nada queda en cola: una orden aplicada horas después genera conflictos. Por eso:
+//     1. Antes de insertar, se mira si el local está conectado (misma regla del aviso: última
+//        sincronización de hace menos de 75 s). Si no, no se inserta nada y se responde
+//        { ok: false, tipo: 'LOCAL_DESCONECTADO' } con el motivo para el usuario.
+//     2. Si se insertó, se espera hasta ESPERA_RESULTADO_MS el resultado del local (aplicada o
+//        rechazada) y se devuelve SU respuesta, igual que en modo local. Si no llega, se
+//        responde { ok: false, tipo: 'LOCAL_SIN_RESPUESTA' }: "no se aplicó".
+//   Esa frase es verdad porque el servidor local rechaza (ORDEN_VENCIDA) toda orden que lleve
+//   más de VENCIMIENTO_ORDEN_MS en el buzón (SCD_TP_B/src/presentacion/ordenes-nube.js), y
+//   ese plazo es menor que la espera de aquí.
 //
 // Sesión: Supabase Auth. El formulario pide "usuario"; aquí se convierte en el correo
 // "usuario@sistema.local", que es como se crean los usuarios en el panel de Supabase.
+
+import {
+  localConectado,
+  mensajeLocalDesconectado,
+  MENSAJE_LOCAL_SIN_RESPUESTA
+} from '../utils/conexionLocal';
+import { TIPO_LOCAL_DESCONECTADO, TIPO_LOCAL_SIN_RESPUESTA } from '../utils/rechazo';
 
 /** Agrupa avisos seguidos: una subida del local cambia varias tablas a la vez. */
 const ESPERA_RECARGA_MS = 150;
@@ -23,8 +35,14 @@ const SIN_CONEXION = 'SIN_CONEXION';
 /** Dominio ficticio de los correos de Supabase Auth: "ana" → "ana@sistema.local". */
 export const DOMINIO_USUARIOS = 'sistema.local';
 
-/** Cuánto se espera la respuesta del local a una orden, y cada cuánto se pregunta. */
-const ESPERA_RESULTADO_MS = 8000;
+/**
+ * Cuánto se espera la respuesta del local a una orden, y cada cuánto se pregunta.
+ * INVARIANTE con el backend: VENCIMIENTO_ORDEN_MS (10 s, SCD_TP_B/src/presentacion/
+ * ordenes-nube.js) debe ser MENOR que ESPERA_RESULTADO_MS, con margen. Si el local solo aplica
+ * órdenes de menos de 10 s y la web espera 15 s, cuando la web dice "no se aplicó" el local ya
+ * no puede aplicarla. Si cambias uno de los dos, cambia el otro.
+ */
+export const ESPERA_RESULTADO_MS = 15000;
 const INTERVALO_RESULTADO_MS = 1000;
 
 /** "  Ana " → "ana@sistema.local". Misma normalización que el backend (usuario.service.js). */
@@ -76,10 +94,29 @@ export function crearApiNube(
   { esperaMaximaMs = ESPERA_RESULTADO_MS, intervaloMs = INTERVALO_RESULTADO_MS } = {}
 ) {
   /**
+   * Hora de la última subida exitosa del local (fila única de estado_sincronizacion).
+   * `ultima` es un texto ISO, o null si el local nunca ha sincronizado.
+   */
+  async function leerUltimaSincronizacion() {
+    const { data, error } = await supabase
+      .from('estado_sincronizacion')
+      .select('ultima_sincronizacion')
+      .maybeSingle();
+    if (error) return { ok: false, tipo: SIN_CONEXION, error: error.message };
+    return { ok: true, ultima: data?.ultima_sincronizacion ?? null };
+  }
+
+  /**
    * Espera a que el local procese la orden. Devuelve el resultado del servicio de dominio
-   * (aplicada o rechazada) o null si no llegó a tiempo.
+   * (aplicada o rechazada), o null si no llegó dentro de la espera máxima.
+   *
+   * Un fallo al consultar NO termina la espera: puede ser un tropiezo de red de un segundo y
+   * el local quizá aplique la orden un instante después. Declarar "no se aplicó" antes del
+   * plazo sería falso. Si hasta la última consulta falla, no se puede saber qué pasó: se
+   * devuelve `sinVerificar` y el que llama no afirma que "no se aplicó".
    */
   async function esperarResultado(id) {
+    let ultimaFallo = false;
     for (let esperado = 0; esperado < esperaMaximaMs; esperado += intervaloMs) {
       await esperar(intervaloMs);
       const { data, error } = await supabase
@@ -87,19 +124,42 @@ export function crearApiNube(
         .select('estado, resultado')
         .eq('id', id)
         .maybeSingle();
-      if (error || !data) return null;
+      ultimaFallo = Boolean(error) || !data;
+      if (ultimaFallo) continue;
       if (data.estado !== 'pendiente') {
-        return data.resultado ?? { ok: data.estado === 'aplicada' };
+        return { resultado: data.resultado ?? { ok: data.estado === 'aplicada' } };
       }
     }
-    return null;
+    return { resultado: null, sinVerificar: ultimaFallo };
   }
 
   /**
-   * Deja una orden en el buzón (solo tipo y payload: el resto lo pone la base) y espera
-   * la respuesta del local. Ver el comentario del inicio del archivo.
+   * Envía una orden al local y espera su respuesta. Nunca deja una orden "en cola":
+   *   - local desconectado → no inserta nada (LOCAL_DESCONECTADO);
+   *   - sin respuesta a tiempo → LOCAL_SIN_RESPUESTA ("el cambio no se aplicó");
+   *   - respuesta del local → esa misma respuesta (aplicada o rechazada con su motivo).
+   * Es el único punto por el que pasan todas las acciones que escriben (ver el inicio del
+   * archivo).
    */
   async function enviarOrden(tipo, payload) {
+    // Lectura fresca en cada acción (no el estado de la pantalla, que puede estar viejo).
+    const conexion = await leerUltimaSincronizacion();
+    if (!conexion.ok) {
+      return {
+        ok: false,
+        tipo: SIN_CONEXION,
+        error: `No se pudo comprobar la conexión con el sistema del restaurante: ${conexion.error}`
+      };
+    }
+    if (!localConectado(conexion.ultima)) {
+      return {
+        ok: false,
+        tipo: TIPO_LOCAL_DESCONECTADO,
+        error: mensajeLocalDesconectado(conexion.ultima)
+      };
+    }
+
+    // Solo tipo y payload: el resto lo pone la base (permiso por columna en esquema.sql).
     const { data, error } = await supabase
       .from('ordenes_pendientes')
       .insert({ tipo, payload })
@@ -112,8 +172,18 @@ export function crearApiNube(
         error: `No se pudo enviar la orden a la nube: ${error.message}`
       };
     }
-    const resultado = await esperarResultado(data.id);
-    return resultado ?? { ok: true, pendiente: true };
+    const { resultado, sinVerificar } = await esperarResultado(data.id);
+    if (resultado) return resultado;
+    if (sinVerificar) {
+      return {
+        ok: false,
+        tipo: SIN_CONEXION,
+        error:
+          'No se pudo confirmar si el cambio se aplicó porque se perdió la conexión con la nube. ' +
+          'Revisa el estado de la mesa antes de repetirlo.'
+      };
+    }
+    return { ok: false, tipo: TIPO_LOCAL_SIN_RESPUESTA, error: MENSAJE_LOCAL_SIN_RESPUESTA };
   }
 
   const api = {
@@ -166,29 +236,15 @@ export function crearApiNube(
       };
     },
 
-    /**
-     * Hora de la última subida exitosa del local (fila única de estado_sincronizacion).
-     * `ultima` es un texto ISO, o null si el local nunca ha sincronizado.
-     */
-    async obtenerUltimaSincronizacion() {
-      const { data, error } = await supabase
-        .from('estado_sincronizacion')
-        .select('ultima_sincronizacion')
-        .maybeSingle();
-      if (error) return { ok: false, tipo: SIN_CONEXION, error: error.message };
-      return { ok: true, ultima: data?.ultima_sincronizacion ?? null };
-    },
+    obtenerUltimaSincronizacion: leerUltimaSincronizacion,
 
     abrirMesa: (numero) => enviarOrden('abrir_mesa', { numero }),
     cerrarMesa: (numero) => enviarOrden('cerrar_mesa', { numero }),
-    async quitarMesa(numero) {
-      const r = await enviarOrden('quitar_mesa', { numero });
-      return r.pendiente ? { ...r, mesa: `Mesa ${numero}` } : r;
-    },
+    quitarMesa: (numero) => enviarOrden('quitar_mesa', { numero }),
 
     /**
      * Sin número, el local elegiría "la siguiente a la más alta". Aquí se calcula con el
-     * espejo y se envía explícito, para poder responder qué mesa se pidió agregar.
+     * espejo y se envía explícito (el local responde con la mesa creada).
      */
     async agregarMesa(numero) {
       let elegido = numero;
@@ -197,9 +253,7 @@ export function crearApiNube(
         if (!actuales.ok) return actuales;
         elegido = Math.max(0, ...actuales.mesas.map((m) => m.numero)) + 1;
       }
-      const resultado = await enviarOrden('agregar_mesa', { numero: elegido });
-      if (!resultado.pendiente) return resultado;
-      return { ...resultado, mesa: { id: `Mesa ${elegido}`, numero: elegido, estado: 'libre' } };
+      return enviarOrden('agregar_mesa', { numero: elegido });
     },
 
     enviarOrden,
@@ -321,22 +375,15 @@ export function crearConexionNube(supabase, api) {
   const ACCIONES = {
     confirmar_pedido: {
       respuesta: 'respuesta_pedido',
-      enviar: (d) => api.enviarOrden('confirmar_pedido', d),
-      exito: (d) => ({ mesa: d.mesa })
+      enviar: (d) => api.enviarOrden('confirmar_pedido', d)
     },
     actualizar_pedido: {
       respuesta: 'respuesta_pedido',
-      enviar: (d) => api.enviarOrden('actualizar_estado', d),
-      exito: (d) => ({ mesa: d.mesa, estado: d.estado })
+      enviar: (d) => api.enviarOrden('actualizar_estado', d)
     },
     trasladar_pedido: {
       respuesta: 'respuesta_traslado',
-      enviar: (d) => api.enviarOrden('trasladar_pedido', d),
-      exito: (d) => ({
-        origen: `Mesa ${d.origen}`,
-        destino: `Mesa ${d.destino}`,
-        estado: 'orden en cola: el local no responde todavía'
-      })
+      enviar: (d) => api.enviarOrden('trasladar_pedido', d)
     }
   };
 
@@ -353,10 +400,9 @@ export function crearConexionNube(supabase, api) {
     async emit(evento, datos) {
       const accion = ACCIONES[evento];
       if (!accion) return;
-      const r = await accion.enviar(datos);
-      // Si el local respondió, se reenvía su respuesta tal cual (igual que en modo local).
-      // Si quedó pendiente, se completan los datos que la vista muestra.
-      avisar(accion.respuesta, r.pendiente ? { ...r, ...accion.exito(datos) } : r);
+      // La respuesta (del local, o el rechazo por desconexión o falta de respuesta) se
+      // reenvía tal cual, con la misma forma que en modo local.
+      avisar(accion.respuesta, await accion.enviar(datos));
     },
     /** Deja de escuchar. Mismo nombre que en socket.io, para cerrar ambas igual al salir. */
     disconnect() {

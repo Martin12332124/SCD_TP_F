@@ -1,8 +1,9 @@
 // src/componentes/AvisoConexionLocal.jsx
 // Solo modo nube. Franja fija arriba de la app que dice si el servidor del restaurante
-// está conectado. El local sube su estado a Supabase al menos cada 30 s, así que si la última
-// sincronización tiene menos de 75 s (dos periodos y medio) se considera conectado.
+// está conectado (criterio compartido con nube.js: ../utils/conexionLocal.js).
 // Se reevalúa cada 15 s aunque no llegue ningún aviso (un local caído no avisa nada).
+// Los botones siguen habilitados con el local desconectado: cada cambio se rechaza al
+// intentarlo, con un mensaje claro (nada queda en cola).
 //
 // Props:
 //   ultima {string|null|undefined} - Hora ISO de la última sincronización; null = nunca;
@@ -10,13 +11,9 @@
 
 import { useState, useEffect } from 'react';
 import Icono from './Icono';
+import { localConectado, horaDeUltima } from '../utils/conexionLocal';
 
-export const UMBRAL_CONEXION_MS = 75000;
 export const REEVALUAR_MS = 15000;
-
-/** "HH:MM" en la hora local del navegador. */
-const horaCorta = (iso) =>
-  new Date(iso).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false });
 
 function AvisoConexionLocal({ ultima }) {
   const [ahora, setAhora] = useState(() => Date.now());
@@ -27,8 +24,7 @@ function AvisoConexionLocal({ ultima }) {
 
   if (ultima === undefined) return null;
 
-  const hora = ultima ? new Date(ultima).getTime() : NaN;
-  const conectado = Number.isFinite(hora) && ahora - hora < UMBRAL_CONEXION_MS;
+  const conectado = localConectado(ultima, ahora);
 
   return (
     <div
@@ -42,8 +38,8 @@ function AvisoConexionLocal({ ultima }) {
         {conectado
           ? 'Conectado al sistema del restaurante'
           : `El sistema del restaurante no está conectado${
-              Number.isFinite(hora) ? ` desde las ${horaCorta(ultima)}` : ''
-            }. Puedes ver los últimos datos, pero los cambios quedarán en espera hasta que se conecte.`}
+              horaDeUltima(ultima) ? ` desde las ${horaDeUltima(ultima)}` : ''
+            }. Puedes ver los últimos datos, pero no se pueden hacer cambios hasta que se conecte.`}
       </span>
     </div>
   );

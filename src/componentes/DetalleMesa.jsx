@@ -28,7 +28,7 @@ import {
 import AvancePedido from './AvancePedido';
 import Icono from './Icono';
 import TrasladoMesa from './TrasladoMesa';
-import { MENSAJE_ORDEN_PENDIENTE, esPendiente } from '../utils/ordenPendiente';
+import { textoRechazo } from '../utils/rechazo';
 
 function DetalleMesa({
   mesa,
@@ -40,8 +40,7 @@ function DetalleMesa({
   versionPedidos = 0,
   mesas = [],
   onTrasladar = () => {},
-  mensajeTraslado = '',
-  avisoOrden = ''
+  mensajeTraslado = ''
 }) {
   const estaOcupada = mesa?.estado === 'ocupada';
   const numeroMesa = mesa?.numero;
@@ -106,15 +105,13 @@ function DetalleMesa({
     setCargando(true);
     try {
       const data = await abrirMesaApi(mesa.numero);
-      if (esPendiente(data)) {
-        setAccion({ mesaId, texto: MENSAJE_ORDEN_PENDIENTE });
-      } else if (data.ok) {
+      if (data.ok) {
         // CA5: el cambio se refleja vía socket 'estado_mesas' desde el backend;
         // solo mostramos confirmación local
         setAccion({ mesaId, texto: '✅ Mesa marcada como Ocupada.' });
       } else {
         // CA1 implica: si ya estaba ocupada el backend retorna ESTADO_NO_PERMITIDO
-        setAccion({ mesaId, texto: `⚠️ [${data.tipo}] ${data.error}` });
+        setAccion({ mesaId, texto: textoRechazo(data) });
       }
     } catch {
       setAccion({ mesaId, texto: '⚠️ Error de red al intentar abrir la mesa.' });
@@ -130,13 +127,11 @@ function DetalleMesa({
     setCargando(true);
     try {
       const data = await cerrarMesaApi(mesa.numero);
-      if (esPendiente(data)) {
-        setAccion({ mesaId, texto: MENSAJE_ORDEN_PENDIENTE });
-      } else if (data.ok) {
+      if (data.ok) {
         setAccion({ mesaId, texto: '✅ Mesa liberada correctamente.' });
       } else {
         // CA3: con un pedido en curso, el backend devuelve tipo PEDIDO_ACTIVO con el motivo
-        setAccion({ mesaId, texto: `⚠️ [${data.tipo}] ${data.error}` });
+        setAccion({ mesaId, texto: textoRechazo(data) });
       }
     } catch {
       setAccion({ mesaId, texto: '⚠️ Error de red al intentar liberar la mesa.' });
@@ -150,12 +145,7 @@ function DetalleMesa({
     onTomarPedido(mesa); // abre la vista de toma de pedido
   };
 
-  const tonoDe = (texto) =>
-    texto === MENSAJE_ORDEN_PENDIENTE
-      ? estilos.tonoNeutro
-      : texto.startsWith('✅')
-        ? estilos.tonoExito
-        : estilos.tonoPeligro;
+  const tonoDe = (texto) => (texto.startsWith('✅') ? estilos.tonoExito : estilos.tonoPeligro);
 
   return (
     <>
@@ -232,17 +222,6 @@ function DetalleMesa({
                 style={{ ...estilos.aviso, ...estilos.tonoPeligro }}
               >
                 {errorPedido}
-              </div>
-            )}
-
-            {/* Modo nube: orden de cambio de estado o de pedido que quedó en espera */}
-            {avisoOrden && (
-              <div
-                id="aviso-orden-pendiente"
-                role="status"
-                style={{ ...estilos.aviso, ...estilos.tonoNeutro }}
-              >
-                {avisoOrden}
               </div>
             )}
 
@@ -446,11 +425,6 @@ const estilos = {
     background: 'var(--color-exito-suave)',
     color: 'var(--color-exito-texto)',
     borderColor: 'var(--color-exito)'
-  },
-  tonoNeutro: {
-    background: 'var(--color-superficie-alt)',
-    color: 'var(--color-texto)',
-    borderColor: 'var(--color-neutro)'
   },
   tonoPeligro: {
     background: 'var(--color-peligro-suave)',
