@@ -28,7 +28,8 @@ Los actores de casos de uso aparecen como líneas de vida (Mesero, Cocina, Supab
 ### 2. Clases
  
 ![Diagrama de clases](./2-clases.png)
- 
+
+El diagrama muestra solo lo que el sistema guarda hoy, para poder compararlo con el código. Por eso no aparecen Venta, Categoria ni Receta, que estaban en el diseño original. Un Pedido está compuesto por sus LineaDePedido: una línea no tiene sentido sin su pedido, no se comparte con otros y se borra junto con él. Una Mesa tiene como máximo un Pedido en curso, porque el sistema no guarda historial. Cada LineaDePedido guarda una copia del nombre y del precio del producto, no un enlace al menú, así los pedidos ya tomados no cambian si después se sube un precio. Por eso la relación con MenuItem es una dependencia. estadoPedido y pedidoDesde no se guardan en la mesa: se calculan al leerla a partir de su pedido (por eso llevan /), así hay un solo lugar donde cambian y no pueden quedar desfasados. OrdenPendiente vive en Supabase y OrdenAplicada en SQLite, y comparten id para no aplicar dos veces una orden si se corta internet a mitad del proceso. OrdenPendiente depende de Mesa porque cada orden trae una mesa en su contenido; la multiplicidad es 0..1 porque agregar una mesa puede pedirse sin número. Usuario no se relaciona con Pedido porque el pedido no guarda quién lo tomó.
  
 ### 3. Secuencia
 [INSERTAR NOTA DE LECTURA]
