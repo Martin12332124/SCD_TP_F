@@ -54,6 +54,11 @@ Ver: [DominioEntidades.md](./DominioEntidades.md) — 10 entidades, diagrama ER 
 
 Ver: [Arquitectura.md](./Arquitectura.md) — estilo, diagrama, descomposición modular y decisiones de diseño (ADR).
 
+## Modelado y despliegue
+
+- **Modelado (Entrega 3):** [docs/modelado/](docs/modelado/README.md) — diagramas de casos de uso, clases, secuencia y componentes del sistema final, con su nota de lectura.
+- **Despliegue:** [docs/despliegue.md](docs/despliegue.md) — modo local (offline) y modo nube (Netlify + Supabase), paso a paso, y plan de escalamiento a varias sucursales. Sitio en modo nube: https://scd-tp-pos-kds.netlify.app
+
 ## Responsabilidades del Equipo
 
 ### Entregable 1
