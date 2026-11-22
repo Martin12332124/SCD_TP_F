@@ -10,7 +10,10 @@ const dobles = vi.hoisted(() => ({
 vi.mock('@supabase/supabase-js', () => ({ createClient: dobles.createClient }));
 vi.mock('socket.io-client', () => ({ io: dobles.io }));
 
-/** Supabase mínimo: tablas vacías; cada orden queda aplicada por el local al instante. */
+/**
+ * Supabase mínimo: tablas vacías; el local figura conectado (sincronizó hace un instante) y
+ * cada orden queda aplicada por él al instante.
+ */
 function supabaseVacio() {
   const q = {
     unica: false,
@@ -19,7 +22,14 @@ function supabaseVacio() {
     order: () => q,
     maybeSingle: () => ({
       then: (resolver) =>
-        resolver({ data: { estado: 'aplicada', resultado: { ok: true } }, error: null })
+        resolver({
+          data: {
+            estado: 'aplicada',
+            resultado: { ok: true },
+            ultima_sincronizacion: new Date().toISOString()
+          },
+          error: null
+        })
     }),
     insert: () => ({ select: () => ({ single: async () => ({ data: { id: 1 }, error: null }) }) }),
     then: (resolver) => resolver({ data: [], error: null })

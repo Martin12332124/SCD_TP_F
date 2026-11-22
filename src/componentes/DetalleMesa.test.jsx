@@ -49,6 +49,11 @@ beforeEach(() => {
   simularBackend({});
 });
 
+const MENSAJE_DESCONECTADO =
+  'No se pudo hacer el cambio: el sistema del restaurante no está conectado (desde las 14:30). Inténtalo cuando vuelva a estar conectado.';
+const MENSAJE_SIN_RESPUESTA =
+  'El sistema del restaurante no respondió a tiempo. El cambio no se aplicó.';
+
 describe('DetalleMesa: visualización (US-08 CA5)', () => {
   test('sin mesa seleccionada no renderiza contenido del panel', () => {
     renderizar(null);
@@ -116,37 +121,30 @@ describe('DetalleMesa: abrir mesa (US-09 CA1)', () => {
     );
   });
 
-  test('orden pendiente (modo nube): mensaje neutral, no "Mesa marcada como Ocupada"', async () => {
-    simularBackend({ '/api/mesas/1/abrir': { ok: true, pendiente: true } });
+  test('modo nube, local desconectado: abrir muestra el motivo, no "Mesa marcada como Ocupada"', async () => {
+    simularBackend({
+      '/api/mesas/1/abrir': { ok: false, tipo: 'LOCAL_DESCONECTADO', error: MENSAJE_DESCONECTADO }
+    });
     renderizar(libre);
     await userEvent.click(screen.getByText(/Abrir mesa/));
-    const aviso = await screen.findByText(
-      'Orden enviada. Se aplicará cuando el sistema del restaurante se conecte.'
-    );
+    const aviso = await screen.findByText(`⚠️ ${MENSAJE_DESCONECTADO}`);
     expect(aviso).toHaveAttribute('id', 'mensaje-accion-mesa');
     expect(screen.queryByText(/Mesa marcada como Ocupada/)).not.toBeInTheDocument();
-    expect(aviso.textContent).not.toMatch(/✅|⚠️/);
+    expect(aviso.textContent).not.toContain('LOCAL_DESCONECTADO');
   });
 
-  test('orden pendiente al liberar: mismo mensaje neutral', async () => {
-    simularBackend({ '/api/mesas/2/cerrar': { ok: true, pendiente: true } });
+  test('modo nube, el local no respondió: liberar dice que el cambio no se aplicó', async () => {
+    simularBackend({
+      '/api/mesas/2/cerrar': {
+        ok: false,
+        tipo: 'LOCAL_SIN_RESPUESTA',
+        error: MENSAJE_SIN_RESPUESTA
+      }
+    });
     renderizar(ocupada);
     await userEvent.click(screen.getByText(/Liberar mesa/));
-    expect(
-      await screen.findByText(
-        'Orden enviada. Se aplicará cuando el sistema del restaurante se conecte.'
-      )
-    ).toBeInTheDocument();
+    expect(await screen.findByText(`⚠️ ${MENSAJE_SIN_RESPUESTA}`)).toBeInTheDocument();
     expect(screen.queryByText(/liberada correctamente/)).not.toBeInTheDocument();
-  });
-
-  test('muestra el aviso de orden en espera que le pasa App (cambio de estado)', () => {
-    renderizar(ocupada, {
-      avisoOrden: 'Orden enviada. Se aplicará cuando el sistema del restaurante se conecte.'
-    });
-    expect(document.getElementById('aviso-orden-pendiente')).toHaveTextContent(
-      'Orden enviada. Se aplicará cuando el sistema del restaurante se conecte.'
-    );
   });
 
   test('si el backend rechaza (ESTADO_NO_PERMITIDO) muestra tipo y motivo', async () => {

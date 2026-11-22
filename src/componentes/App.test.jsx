@@ -49,6 +49,11 @@ async function renderizarConectado() {
   await screen.findByText('Mesa 1');
 }
 
+const MENSAJE_DESCONECTADO =
+  'No se pudo hacer el cambio: el sistema del restaurante no está conectado (desde las 14:30). Inténtalo cuando vuelva a estar conectado.';
+const MENSAJE_SIN_RESPUESTA =
+  'El sistema del restaurante no respondió a tiempo. El cambio no se aplicó.';
+
 describe('App: aviso de conexión con el restaurante (solo modo nube)', () => {
   afterEach(() => {
     delete socket.modo;
@@ -74,12 +79,23 @@ describe('App: aviso de conexión con el restaurante (solo modo nube)', () => {
     );
   });
 
-  test('orden pendiente sin panel abierto: aviso neutral en la pantalla principal', async () => {
+  test('el aviso ya no promete "cambios en espera": dice que no se pueden hacer cambios', async () => {
+    socket.modo = 'nube';
     await renderizarConectado();
-    await servidor('respuesta_pedido', { ok: true, pendiente: true, mesa: 'Mesa 1' });
-    expect(
-      screen.getByText('Orden enviada. Se aplicará cuando el sistema del restaurante se conecte.')
-    ).toHaveAttribute('role', 'status');
+    await servidor('estado_sincronizacion', new Date(Date.now() - 10 * 60000).toISOString());
+    const aviso = document.getElementById('aviso-conexion-local');
+    expect(aviso).toHaveTextContent('no se pueden hacer cambios hasta que se conecte');
+    expect(aviso).not.toHaveTextContent('en espera');
+  });
+
+  test('rechazo por local desconectado sin panel abierto: se ve en la pantalla principal', async () => {
+    await renderizarConectado();
+    await servidor('respuesta_pedido', {
+      ok: false,
+      tipo: 'LOCAL_DESCONECTADO',
+      error: MENSAJE_DESCONECTADO
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent(`⚠️ ${MENSAJE_DESCONECTADO}`);
   });
 });
 
@@ -343,29 +359,41 @@ describe('App: trasladar desde el panel de la mesa (US-05)', () => {
     );
   });
 
-  test('traslado pendiente (modo nube): mensaje neutral, no "Pedido trasladado"', async () => {
+  test('traslado sin respuesta del local (modo nube): "el cambio no se aplicó", no "Pedido trasladado"', async () => {
     await abrirPanelMesa2();
     await servidor('respuesta_traslado', {
-      ok: true,
-      pendiente: true,
-      origen: 'Mesa 2',
-      destino: 'Mesa 3',
-      estado: 'orden en cola: el local no responde todavía'
+      ok: false,
+      tipo: 'LOCAL_SIN_RESPUESTA',
+      error: MENSAJE_SIN_RESPUESTA
     });
     const aviso = document.getElementById('mensaje-traslado');
-    expect(aviso).toHaveTextContent(
-      'Orden enviada. Se aplicará cuando el sistema del restaurante se conecte.'
-    );
+    expect(aviso).toHaveTextContent(`⚠️ ${MENSAJE_SIN_RESPUESTA}`);
     expect(aviso).not.toHaveTextContent('trasladado');
+    expect(aviso).not.toHaveTextContent('LOCAL_SIN_RESPUESTA');
   });
 
-  test('cambio de estado pendiente: el panel muestra el aviso neutral, y un rechazo posterior lo reemplaza', async () => {
+  test('cambio de estado con el local desconectado: el panel muestra el motivo', async () => {
     await abrirPanelMesa2();
-    await servidor('respuesta_pedido', { ok: true, pendiente: true, mesa: 'Mesa 2' });
-    expect(document.getElementById('aviso-orden-pendiente')).toHaveTextContent(
-      'Orden enviada. Se aplicará cuando el sistema del restaurante se conecte.'
+    await servidor('respuesta_pedido', {
+      ok: false,
+      tipo: 'LOCAL_DESCONECTADO',
+      error: MENSAJE_DESCONECTADO
+    });
+    expect(document.getElementById('error-pedido-mesa')).toHaveTextContent(
+      `⚠️ ${MENSAJE_DESCONECTADO}`
     );
-    expect(document.getElementById('error-pedido-mesa')).toBeNull();
+  });
+
+  test('una orden vencida que rechaza el local se muestra con su motivo, sin el código', async () => {
+    await abrirPanelMesa2();
+    await servidor('respuesta_pedido', {
+      ok: false,
+      tipo: 'ORDEN_VENCIDA',
+      error: 'La orden esperó más de 10 s al sistema del restaurante y se descartó sin aplicarse.'
+    });
+    const aviso = document.getElementById('error-pedido-mesa');
+    expect(aviso).toHaveTextContent('se descartó sin aplicarse');
+    expect(aviso).not.toHaveTextContent('ORDEN_VENCIDA');
   });
 
   test('un rechazo del backend se muestra en el panel con tipo, motivo y lo esperado', async () => {

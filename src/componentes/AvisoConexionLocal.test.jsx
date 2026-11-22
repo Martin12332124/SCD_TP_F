@@ -24,7 +24,7 @@ describe('AvisoConexionLocal', () => {
     const aviso = screen.getByRole('status');
     expect(aviso).toHaveAttribute('data-conectado', 'false');
     expect(aviso).toHaveTextContent(
-      /^El sistema del restaurante no está conectado desde las \d\d:\d\d\. Puedes ver los últimos datos, pero los cambios quedarán en espera hasta que se conecte\.$/
+      /^El sistema del restaurante no está conectado desde las \d\d:\d\d\. Puedes ver los últimos datos, pero no se pueden hacer cambios hasta que se conecte\.$/
     );
   });
 

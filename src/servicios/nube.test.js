@@ -2,7 +2,8 @@
 // Supabase se reemplaza por un doble en memoria: sin red. Se verifica que las respuestas
 // tengan la misma forma que las del backend local y que las acciones se conviertan en órdenes.
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { crearApiNube, crearConexionNube, correoDeUsuario } from './nube.js';
+import { crearApiNube, crearConexionNube, correoDeUsuario, ESPERA_RESULTADO_MS } from './nube.js';
+import { MENSAJE_LOCAL_SIN_RESPUESTA } from '../utils/conexionLocal';
 
 /**
  * Doble de Supabase: tablas en memoria, buzón de órdenes, Auth y un canal Realtime controlable.
@@ -113,6 +114,18 @@ const TABLAS = {
   ]
 };
 
+/**
+ * Las tablas de TABLAS más la hora de la última sincronización del local. Sin ella (o con una
+ * de hace 75 s o más) el local cuenta como desconectado y nube.js no envía ninguna orden.
+ * Por defecto: recién sincronizado.
+ */
+const conLocal = (haceSegundos = 5) => ({
+  ...TABLAS,
+  estado_sincronizacion: [
+    { id: 1, ultima_sincronizacion: new Date(Date.now() - haceSegundos * 1000).toISOString() }
+  ]
+});
+
 describe('crearApiNube: lecturas con la misma forma que la API REST', () => {
   test('obtenerMesas une mesas y pedidos, ordenadas por número', async () => {
     const api = crearApiNube(supabaseFalso(TABLAS));
@@ -207,7 +220,7 @@ describe('crearApiNube: última sincronización del local', () => {
 
 describe('crearApiNube: las acciones se envían como órdenes y esperan al local', () => {
   test('si el local aplica la orden, se devuelve su respuesta tal cual', async () => {
-    const supabase = supabaseFalso(TABLAS);
+    const supabase = supabaseFalso(conLocal());
     supabase.local = localQueAplica({ ok: true, mesa: 'Mesa 1', estado: 'ocupada' });
     const api = crearApiNube(supabase, RAPIDO);
 
@@ -217,7 +230,7 @@ describe('crearApiNube: las acciones se envían como órdenes y esperan al local
   });
 
   test('si el local la rechaza, se devuelve el motivo del dominio', async () => {
-    const supabase = supabaseFalso(TABLAS);
+    const supabase = supabaseFalso(conLocal());
     const rechazo = {
       ok: false,
       tipo: 'ESTADO_NO_PERMITIDO',
@@ -228,18 +241,26 @@ describe('crearApiNube: las acciones se envían como órdenes y esperan al local
   });
 
   test('una orden procesada sin resultado guardado responde según su estado', async () => {
-    const supabase = supabaseFalso(TABLAS);
+    const supabase = supabaseFalso(conLocal());
     supabase.local = () => ({ estado: 'rechazada', resultado: null });
     expect(await crearApiNube(supabase, RAPIDO).cerrarMesa(2)).toEqual({ ok: false });
   });
 
-  test('si el local no responde a tiempo, queda pendiente (ok, para no reenviarla)', async () => {
-    const supabase = supabaseFalso(TABLAS);
+  test('si el local no responde a tiempo: error claro, el cambio no se aplicó (no queda "pendiente")', async () => {
+    const supabase = supabaseFalso(conLocal());
     const api = crearApiNube(supabase, RAPIDO);
+    const esperado = {
+      ok: false,
+      tipo: 'LOCAL_SIN_RESPUESTA',
+      error: 'El sistema del restaurante no respondió a tiempo. El cambio no se aplicó.'
+    };
 
-    expect(await api.abrirMesa(1)).toEqual({ ok: true, pendiente: true });
-    expect(await api.cerrarMesa(2)).toEqual({ ok: true, pendiente: true });
-    expect(await api.quitarMesa(1)).toEqual({ ok: true, pendiente: true, mesa: 'Mesa 1' });
+    expect(await api.abrirMesa(1)).toEqual(esperado);
+    expect(await api.cerrarMesa(2)).toEqual(esperado);
+    expect(await api.quitarMesa(1)).toEqual(esperado);
+    expect(MENSAJE_LOCAL_SIN_RESPUESTA).toBe(esperado.error);
+    // Las órdenes sí se insertaron (el local conectado puede haberlas visto): por eso el
+    // backend las rechaza si se vencen, en vez de aplicarlas tarde.
     expect(enviadas(supabase)).toEqual([
       { tipo: 'abrir_mesa', payload: { numero: 1 } },
       { tipo: 'cerrar_mesa', payload: { numero: 2 } },
@@ -247,16 +268,48 @@ describe('crearApiNube: las acciones se envían como órdenes y esperan al local
     ]);
   });
 
-  test('si no se puede consultar el resultado, también queda pendiente', async () => {
-    const supabase = supabaseFalso(TABLAS);
+  test('la espera por defecto (15 s) supera el vencimiento de 10 s que aplica el local', () => {
+    // Invariante con SCD_TP_B (VENCIMIENTO_ORDEN_MS = 10000): web espera más que lo que dura
+    // una orden viva, así "no se aplicó" nunca se contradice con una aplicación tardía.
+    expect(ESPERA_RESULTADO_MS).toBe(15000);
+    expect(ESPERA_RESULTADO_MS).toBeGreaterThanOrEqual(10000 + 3000);
+  });
+
+  test('un fallo pasajero al consultar NO termina la espera: si el local responde después, se devuelve su respuesta', async () => {
+    vi.useFakeTimers();
+    try {
+      const supabase = supabaseFalso(conLocal());
+      const api = crearApiNube(supabase, { esperaMaximaMs: 5000, intervaloMs: 1000 });
+      const espera = api.abrirMesa(1);
+      await vi.advanceTimersByTimeAsync(0); // se inserta la orden
+      supabase.errores.ordenes_pendientes = 'sin red';
+      await vi.advanceTimersByTimeAsync(1000); // la primera consulta falla...
+      delete supabase.errores.ordenes_pendientes;
+      Object.assign(supabase.ordenes[0], {
+        estado: 'aplicada',
+        resultado: { ok: true, mesa: 'Mesa 1', estado: 'ocupada' }
+      }); // ...y el local aplica la orden justo después
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(await espera).toEqual({ ok: true, mesa: 'Mesa 1', estado: 'ocupada' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test('si no se puede consultar el resultado hasta el final, no afirma que "no se aplicó"', async () => {
+    const supabase = supabaseFalso(conLocal());
     const api = crearApiNube(supabase, RAPIDO);
     const espera = api.abrirMesa(1);
-    supabase.errores.ordenes_pendientes = 'sin red'; // la inserción ya pasó; la consulta falla
-    expect(await espera).toEqual({ ok: true, pendiente: true });
+    await new Promise((r) => setTimeout(r, 0));
+    supabase.errores.ordenes_pendientes = 'sin red'; // la inserción ya pasó; las consultas fallan
+    const r = await espera;
+    expect(r).toMatchObject({ ok: false, tipo: 'SIN_CONEXION' });
+    expect(r.error).toContain('No se pudo confirmar si el cambio se aplicó');
+    expect(r.error).not.toContain('no se aplicó');
   });
 
   test('quitarMesa respondida por el local no se modifica', async () => {
-    const supabase = supabaseFalso(TABLAS);
+    const supabase = supabaseFalso(conLocal());
     supabase.local = localQueAplica({ ok: true, mesa: 'Mesa 1' });
     expect(await crearApiNube(supabase, RAPIDO).quitarMesa(1)).toEqual({
       ok: true,
@@ -265,13 +318,13 @@ describe('crearApiNube: las acciones se envían como órdenes y esperan al local
   });
 
   test('agregarMesa sin número pide la siguiente a la más alta del espejo', async () => {
-    const supabase = supabaseFalso(TABLAS);
+    const supabase = supabaseFalso(conLocal());
     const api = crearApiNube(supabase, RAPIDO);
-    expect(await api.agregarMesa()).toEqual({
+    supabase.local = localQueAplica({
       ok: true,
-      pendiente: true,
       mesa: { id: 'Mesa 3', numero: 3, estado: 'libre' }
     });
+    expect((await api.agregarMesa()).mesa.numero).toBe(3);
     supabase.local = localQueAplica({
       ok: true,
       mesa: { id: 'Mesa 12', numero: 12, estado: 'libre' }
@@ -287,12 +340,14 @@ describe('crearApiNube: las acciones se envían como órdenes y esperan al local
   });
 
   test('agregarMesa sin mesas en el espejo pide la mesa 1', async () => {
-    const supabase = supabaseFalso({ mesas: [], pedidos: [] });
-    expect((await crearApiNube(supabase, RAPIDO).agregarMesa()).mesa.numero).toBe(1);
+    const supabase = supabaseFalso({ ...conLocal(), mesas: [], pedidos: [] });
+    supabase.local = localQueAplica({ ok: true });
+    await crearApiNube(supabase, RAPIDO).agregarMesa();
+    expect(enviadas(supabase)).toEqual([{ tipo: 'agregar_mesa', payload: { numero: 1 } }]);
   });
 
   test('si la orden no llega a la nube, responde SIN_CONEXION', async () => {
-    const supabase = supabaseFalso(TABLAS);
+    const supabase = supabaseFalso(conLocal());
     supabase.errores.ordenes_pendientes = 'Failed to fetch';
     const api = crearApiNube(supabase, RAPIDO);
     expect(await api.abrirMesa(1)).toEqual({
@@ -304,9 +359,76 @@ describe('crearApiNube: las acciones se envían como órdenes y esperan al local
   });
 
   test('agregarMesa sin número y sin poder leer el espejo no envía nada', async () => {
-    const supabase = supabaseFalso(TABLAS);
+    const supabase = supabaseFalso(conLocal());
     supabase.errores.mesas = 'sin red';
     expect(await crearApiNube(supabase, RAPIDO).agregarMesa()).toMatchObject({ ok: false });
+    expect(supabase.ordenes).toEqual([]);
+  });
+});
+
+describe('crearApiNube: con el local desconectado no se envía nada', () => {
+  const MENSAJE = (desde) =>
+    `No se pudo hacer el cambio: el sistema del restaurante no está conectado${desde}. ` +
+    'Inténtalo cuando vuelva a estar conectado.';
+
+  /** Todas las acciones que pasan por el buzón. */
+  const ACCIONES = {
+    abrirMesa: (api) => api.abrirMesa(1),
+    cerrarMesa: (api) => api.cerrarMesa(2),
+    quitarMesa: (api) => api.quitarMesa(1),
+    agregarMesa: (api) => api.agregarMesa(),
+    agregarMesaNumero: (api) => api.agregarMesa(7),
+    enviarOrden: (api) => api.enviarOrden('confirmar_pedido', { mesa: 'Mesa 1', items: [] })
+  };
+
+  test.each(Object.keys(ACCIONES))(
+    '%s: última sincronización de hace 75 s → no inserta nada y explica el motivo',
+    async (nombre) => {
+      const supabase = supabaseFalso(conLocal(75));
+      const hora = new Date(supabase.tablas.estado_sincronizacion[0].ultima_sincronizacion);
+      supabase.local = localQueAplica({ ok: true });
+      const r = await ACCIONES[nombre](crearApiNube(supabase, RAPIDO));
+
+      expect(r).toEqual({
+        ok: false,
+        tipo: 'LOCAL_DESCONECTADO',
+        error: MENSAJE(
+          ` (desde las ${hora.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false })})`
+        )
+      });
+      expect(supabase.ordenes).toEqual([]); // nada en cola
+    }
+  );
+
+  test('de hace 74 s todavía cuenta como conectado: la orden se envía', async () => {
+    const supabase = supabaseFalso(conLocal(74));
+    supabase.local = localQueAplica({ ok: true });
+    expect(await crearApiNube(supabase, RAPIDO).abrirMesa(1)).toEqual({ ok: true });
+    expect(supabase.ordenes).toHaveLength(1);
+  });
+
+  test('el local nunca sincronizó: se rechaza sin inventar una hora', async () => {
+    const supabase = supabaseFalso(TABLAS); // sin fila en estado_sincronizacion
+    const r = await crearApiNube(supabase, RAPIDO).abrirMesa(1);
+    expect(r).toEqual({ ok: false, tipo: 'LOCAL_DESCONECTADO', error: MENSAJE('') });
+    expect(supabase.ordenes).toEqual([]);
+  });
+
+  test('se mira el estado en cada acción (lectura fresca): al reconectar, la siguiente pasa', async () => {
+    const supabase = supabaseFalso(conLocal(300));
+    supabase.local = localQueAplica({ ok: true });
+    const api = crearApiNube(supabase, RAPIDO);
+    expect((await api.abrirMesa(1)).tipo).toBe('LOCAL_DESCONECTADO');
+    supabase.tablas.estado_sincronizacion = conLocal(1).estado_sincronizacion;
+    expect(await api.abrirMesa(1)).toEqual({ ok: true });
+  });
+
+  test('si no se puede leer el estado de la conexión, no se inserta nada (SIN_CONEXION)', async () => {
+    const supabase = supabaseFalso(conLocal());
+    supabase.errores.estado_sincronizacion = 'sin red';
+    const r = await crearApiNube(supabase, RAPIDO).abrirMesa(1);
+    expect(r).toMatchObject({ ok: false, tipo: 'SIN_CONEXION' });
+    expect(r.error).toContain('sin red');
     expect(supabase.ordenes).toEqual([]);
   });
 });
@@ -393,7 +515,7 @@ describe('crearConexionNube: interfaz de socket sobre Supabase Realtime', () => 
   let conexion;
   beforeEach(() => {
     vi.useFakeTimers();
-    supabase = supabaseFalso(TABLAS);
+    supabase = supabaseFalso(conLocal());
     conexion = crearConexionNube(supabase, crearApiNube(supabase, RAPIDO));
   });
   afterEach(() => {
@@ -466,7 +588,7 @@ describe('crearConexionNube: interfaz de socket sobre Supabase Realtime', () => 
     expect(respuesta).toHaveBeenCalledWith(rechazo);
   });
 
-  test('sin respuesta del local, confirmar y actualizar responden pendiente con la mesa', async () => {
+  test('sin respuesta del local, confirmar y actualizar responden con el error "no se aplicó"', async () => {
     const respuesta = vi.fn();
     conexion.on('respuesta_pedido', respuesta);
 
@@ -477,26 +599,48 @@ describe('crearConexionNube: interfaz de socket sobre Supabase Realtime', () => 
       { tipo: 'confirmar_pedido', payload: { mesa: 'Mesa 1', items: [{ id: 1, cantidad: 2 }] } },
       { tipo: 'actualizar_estado', payload: { mesa: 'Mesa 2', estado: 'Listo 🍽️' } }
     ]);
-    expect(respuesta).toHaveBeenNthCalledWith(1, { ok: true, pendiente: true, mesa: 'Mesa 1' });
-    expect(respuesta).toHaveBeenNthCalledWith(2, {
-      ok: true,
-      pendiente: true,
-      mesa: 'Mesa 2',
-      estado: 'Listo 🍽️'
-    });
+    const sinRespuesta = {
+      ok: false,
+      tipo: 'LOCAL_SIN_RESPUESTA',
+      error: 'El sistema del restaurante no respondió a tiempo. El cambio no se aplicó.'
+    };
+    expect(respuesta).toHaveBeenNthCalledWith(1, sinRespuesta);
+    expect(respuesta).toHaveBeenNthCalledWith(2, sinRespuesta);
   });
 
-  test('trasladar_pedido responde por respuesta_traslado (real o pendiente)', async () => {
+  test('con el local desconectado, confirmar, actualizar y trasladar se rechazan sin enviar nada', async () => {
+    supabase.tablas.estado_sincronizacion = conLocal(600).estado_sincronizacion;
+    const pedido = vi.fn();
+    const traslado = vi.fn();
+    conexion.on('respuesta_pedido', pedido);
+    conexion.on('respuesta_traslado', traslado);
+
+    await emitir('confirmar_pedido', { mesa: 'Mesa 1', items: [{ id: 1, cantidad: 2 }] });
+    await emitir('actualizar_pedido', { mesa: 'Mesa 2', estado: 'Listo 🍽️' });
+    await emitir('trasladar_pedido', { origen: 2, destino: 1 });
+
+    expect(supabase.ordenes).toEqual([]);
+    const rechazo = expect.objectContaining({
+      ok: false,
+      tipo: 'LOCAL_DESCONECTADO',
+      error: expect.stringMatching(
+        /^No se pudo hacer el cambio: el sistema del restaurante no está conectado \(desde las \d\d:\d\d\)\. Inténtalo cuando vuelva a estar conectado\.$/
+      )
+    });
+    expect(pedido).toHaveBeenNthCalledWith(1, rechazo);
+    expect(pedido).toHaveBeenNthCalledWith(2, rechazo);
+    expect(traslado).toHaveBeenCalledWith(rechazo);
+  });
+
+  test('trasladar_pedido responde por respuesta_traslado (real o sin respuesta)', async () => {
     const respuesta = vi.fn();
     conexion.on('respuesta_traslado', respuesta);
 
     await emitir('trasladar_pedido', { origen: 2, destino: 1 });
     expect(respuesta).toHaveBeenLastCalledWith({
-      ok: true,
-      pendiente: true,
-      origen: 'Mesa 2',
-      destino: 'Mesa 1',
-      estado: 'orden en cola: el local no responde todavía'
+      ok: false,
+      tipo: 'LOCAL_SIN_RESPUESTA',
+      error: 'El sistema del restaurante no respondió a tiempo. El cambio no se aplicó.'
     });
 
     const real = { ok: true, origen: 'Mesa 2', destino: 'Mesa 1', estado: 'En Cocina 🍳' };
@@ -546,6 +690,7 @@ describe('crearConexionNube: interfaz de socket sobre Supabase Realtime', () => 
   test('estado_sincronizacion: se envía al conectar y cada vez que el local la actualiza', async () => {
     const alAviso = vi.fn();
     conexion.on('estado_sincronizacion', alAviso);
+    supabase.tablas.estado_sincronizacion = []; // el local todavía no ha sincronizado nunca
     supabase.canal.alEstado('SUBSCRIBED');
     await vi.runAllTimersAsync();
     expect(alAviso).toHaveBeenLastCalledWith(null); // sin fila todavía
