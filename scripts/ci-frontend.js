@@ -34,10 +34,12 @@ async function waitForServer(url, timeoutMs = 30000) {
  * devuelve null y la verificación sigue sin token: así el script sirve antes y después de
  * integrar el login en la rama dev del backend.
  */
-async function obtenerToken(usuario, contrasena) {
+async function obtenerToken(usuario, contrasena, llaveApi) {
   const res = await fetch('http://localhost:3000/api/auth/login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    // x-api-key: el API gateway del backend la exige en todo /api, también en el login.
+    // Un backend anterior al gateway simplemente la ignora.
+    headers: { 'Content-Type': 'application/json', 'x-api-key': llaveApi },
     body: JSON.stringify({ usuario, contrasena })
   });
   if (res.status === 404) return null;
@@ -51,6 +53,8 @@ async function main() {
   // Credenciales desechables, generadas en cada corrida: no hay secretos en el repo.
   const usuarioCi = 'integracion';
   const contrasenaCi = randomBytes(18).toString('base64url');
+  // Llave de aplicación desechable para el API gateway (API_KEYS del backend), también por corrida.
+  const llaveApiCi = randomBytes(24).toString('base64url');
   const backend = spawn(process.execPath, [backendPath], {
     cwd: repoRoot,
     stdio: ['ignore', 'inherit', 'inherit'],
@@ -61,7 +65,8 @@ async function main() {
       NODE_ENV: 'test',
       DB_PATH: ':memory:',
       JWT_SECRET: randomBytes(32).toString('base64'),
-      USUARIOS_INICIALES: `${usuarioCi}:${contrasenaCi}`
+      USUARIOS_INICIALES: `${usuarioCi}:${contrasenaCi}`,
+      API_KEYS: `integracion:${llaveApiCi}`
     }
   });
 
@@ -71,12 +76,12 @@ async function main() {
       throw new Error('El backend no respondió en http://localhost:3000 dentro del tiempo esperado.');
     }
 
-    const token = await obtenerToken(usuarioCi, contrasenaCi);
+    const token = await obtenerToken(usuarioCi, contrasenaCi, llaveApiCi);
     console.log(`==> Backend disponible (${token ? 'con' : 'sin'} login), verificando el frontend`);
     const verifier = spawn(process.execPath, ['test-verificacion.js'], {
       cwd: repoRoot,
       stdio: 'inherit',
-      env: { ...process.env, BACKEND_TOKEN: token ?? '' }
+      env: { ...process.env, BACKEND_TOKEN: token ?? '', BACKEND_API_KEY: llaveApiCi }
     });
 
     const code = await new Promise((resolve) => {

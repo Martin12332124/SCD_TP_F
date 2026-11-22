@@ -1,8 +1,10 @@
 // scripts/probar-api.mjs
 // Uso del componente reutilizable src/servicios/api.js desde otro archivo del proyecto.
 // Requiere el backend encendido (en SCD_TP_B: npm start) y un usuario del backend.
+// Variables de entorno: VITE_API_KEY (una de las API_KEYS del .env del backend), PROBAR_USUARIO y
+// PROBAR_CONTRASENA. Con Node a secas la URL del backend es siempre http://localhost:3000.
 // Ejecutar desde la carpeta SCD_TP_F con:
-//   PROBAR_USUARIO=<usuario> PROBAR_CONTRASENA=<contraseña> node scripts/probar-api.mjs
+//   VITE_API_KEY=<llave> PROBAR_USUARIO=<usuario> PROBAR_CONTRASENA=<contraseña> node scripts/probar-api.mjs
 import { iniciarSesion, obtenerMesas, obtenerMenu, cerrarMesa } from '../src/servicios/api.js';
 
 const sesion = await iniciarSesion(process.env.PROBAR_USUARIO, process.env.PROBAR_CONTRASENA);
