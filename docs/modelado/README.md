@@ -7,7 +7,7 @@ Cuatro diagramas UML del sistema POS + KDS tal como está construido en la rama 
 | 1 | **Casos de uso** | Quién usa el sistema (incluido Supabase) y qué puede hacer | `1-casos-de-uso` |
 | 2 | **Clases** | Qué conceptos del dominio existen y cómo se relacionan | `2-clases` |
 | 3 | **Secuencia** | Cómo se resuelve Confirmar pedido, mensaje por mensaje | `3-secuencia` |
-| 4 | **Componentes** | En qué piezas se divide el sistema y qué interfaces las conectan | `4-componentes` |
+| 4 | **Componentes** | En qué piezas se divide el sistema y qué interfaces las conectan | [4_componentes.svg](4_componentes.svg) · [4_componentes.drawio](4_componentes.drawio) |
 
 
 ## Nota de lectura general
@@ -26,6 +26,7 @@ Los actores de casos de uso aparecen como líneas de vida (Mesero, Cocina, Supab
 * **El sistema funciona sin internet:** Supabase y Netlify son externos y opcionales; sin ellos el sistema es el mismo.
 * **Sin roles:** Mesero, Cocina y Administrador son uso previsto. Lo único que se exige es sesión iniciada.
 * **Dos capas de acceso:** el API gateway del servidor local identifica a la aplicación con una API key (`x-api-key`) y el inicio de sesión identifica al usuario con un JWT. Aparece como componente *Gateway* con la interfaz *API pública* (diagrama 4); no es un caso de uso porque ninguna persona lo busca como objetivo (ver nota del diagrama 1).
+* ![Diagrama de componentes](4_componentes.svg)
 * **Solo lo que existe en el código:** no se modelan pagos, ventas ni inventario, porque no están implementados.
 
 ---
