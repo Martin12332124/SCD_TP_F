@@ -23,12 +23,13 @@ Un solo PC hace de servidor; el resto de los dispositivos se conectan a él por 
 3. Copiar `.env.example` como `.env` y completar:
    - `JWT_SECRET`: mínimo 32 caracteres (`node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`). Sin él el servidor no arranca.
    - `USUARIOS_INICIALES`: `usuario:contraseña,usuario2:contraseña2` (contraseña de 8 o más caracteres). Solo se usa en el primer arranque, con la tabla `usuarios` vacía.
+   - `API_KEYS`: `nombre:llave,nombre2:llave2` (llave de 16 o más caracteres; `node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"`). Una por aplicación cliente; sin ella el servidor no arranca. Cómo rotarlas: [API gateway](https://github.com/Martin12332124/SCD_TP_B/blob/main/docs/api-gateway.md).
    - `SUPABASE_URL` y `SUPABASE_SECRET_KEY`: opcionales. Si faltan, el sistema es 100 % local.
 4. Ejecutar `npm start` (no `node index.js`: solo `npm start` lee el `.env`). Debe mostrar `Servidor Restaurante corriendo en el puerto 3000`. La base se crea sola en `data/restaurante.db` (o en `DB_PATH`).
 
 **Frontend (`SCD_TP_F`)**
 1. `npm ci`.
-2. Copiar `.env.example` como `.env` con `VITE_MODO=local` y `VITE_API_URL=http://<IP del PC servidor>:3000` (para el mismo PC, `http://localhost:3000`).
+2. Copiar `.env.example` como `.env` con `VITE_MODO=local`, `VITE_API_URL=http://<IP del PC servidor>:3000` (para el mismo PC, `http://localhost:3000`) y `VITE_API_KEY=<una de las llaves de API_KEYS del servidor>`.
 3. `npm run dev` y abrir `http://localhost:5173`. Para abrirlo desde otro dispositivo de la red, `npm run dev -- --host` y usar la IP del PC.
 4. Iniciar sesión con alguno de los usuarios de `USUARIOS_INICIALES`.
 
