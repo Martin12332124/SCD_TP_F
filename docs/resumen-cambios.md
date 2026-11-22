@@ -21,8 +21,8 @@ Una página para el equipo y la presentación. El detalle está en los documento
 
 **Demo del corte de internet** (paso a paso con detalle en [sincronizacion-nube.md §5.4](https://github.com/Martin12332124/SCD_TP_B/blob/main/docs/sincronizacion-nube.md))
 1. Con el POS abierto en el PC servidor, apagar el Wi-Fi. Seguir tomando pedidos: todo funciona.
-2. Desde un celular con datos, insertar una orden en `ordenes_pendientes` (SQL Editor de Supabase): queda `pendiente`.
-3. Volver a encender el Wi-Fi: en 30 s como máximo Supabase se pone al día y la orden pasa a `aplicada` (consola: `[SYNC] Conexión con Supabase restablecida.`).
+2. Pasados 75 s, abrir la web pública (modo nube): la franja dice que el sistema del restaurante no está conectado. Los botones siguen activos, pero al usarlos el cambio se rechaza ("No se pudo hacer el cambio: ... Inténtalo cuando vuelva a estar conectado") y no se inserta ninguna orden: nada queda en cola.
+3. Volver a encender el Wi-Fi: en 30 s como máximo Supabase se pone al día (consola: `[SYNC] Conexión con Supabase restablecida.`) y la web vuelve a aceptar cambios. Si una orden llegara al buzón y esperara 10 s o más, el local la rechaza (`ORDEN_VENCIDA`) en vez de aplicarla.
 
 **Demo del gateway:** `curl` sin `x-api-key` → `401 API_KEY_INVALIDA`; con llave y token → `200`; seis logins con contraseña mala seguidos → `429`. Cada petición aparece en la consola del servidor con el nombre de la llave ([comandos](https://github.com/Martin12332124/SCD_TP_B/blob/main/docs/api-gateway.md#4-cómo-probarlo-con-curl)).
 
@@ -35,7 +35,7 @@ Una página para el equipo y la presentación. El detalle está en los documento
 | `feat/sincronizacion-nube` | B y F | `sincronizacion/` (`Sincronizador`, `cliente-supabase`), `ordenes-nube.js`, `supabase/esquema.sql`; en F, `nube.js`, modo `VITE_MODO` en `api.js`, `netlify.toml`. |
 | `feat/login` | B y F | `usuario.service.js`, `usuarios-sqlite.js`, `seguridad/`, `auth.router.js`, `autenticacion.js`; en F, `Login.jsx`, `Sesion.jsx`, token en `api.js`. |
 | `docs/modelado` | F y B | F: `docs/modelado/` (4 diagramas + índice) y `docs/despliegue.md`. En ambos, el README enlaza a modelado y despliegue. |
-| `feat/api-gateway` | B y F | B: `presentacion/gateway.js`, `app.js`, `index.js`, `docs/api-gateway.md`, `test/gateway.test.js`. F: `x-api-key` en `api.js` y en el socket, `scripts/ci-frontend.js`, este documento. |
+| `feat/api-gateway` | B y F | B: `presentacion/gateway.js`, `app.js`, `index.js`, `docs/api-gateway.md`, `test/gateway.test.js`; órdenes que vencen (`ORDEN_VENCIDA`, función `ordenes_pendientes_con_edad` en `esquema.sql`). F: `x-api-key` en `api.js` y en el socket, `scripts/ci-frontend.js`, este documento; en modo nube, rechazo de cambios con el local desconectado (`utils/conexionLocal.js`, `nube.js`; reemplaza al estado "pendiente"). |
 
 Variables nuevas del gateway: `API_KEYS` (backend, obligatoria) y `VITE_API_KEY` (frontend, solo modo local). Ninguna lleva valor en el repo: los `.env` están ignorados por git y los `.env.example` solo traen los nombres.
 
