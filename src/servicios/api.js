@@ -15,6 +15,11 @@
 //   Un `ok: false` NO lanza error: cada vista decide qué mensaje mostrar.
 // - Errores: la promesa se rechaza si falla la red (backend apagado, sin conexión).
 //   obtenerMenu() además se rechaza si el servidor responde con un código HTTP de error.
+// - API key (solo modo local): VITE_API_KEY viaja como cabecera x-api-key en TODA petición al
+//   servidor, también el login, y en el handshake de Socket.IO. Identifica a la aplicación
+//   ante el API gateway del servidor local (ver docs/api-gateway.md en el repo backend). En
+//   el navegador es visible para cualquiera: la seguridad del usuario la da el JWT. En modo
+//   nube no se usa: el gateway es el de Supabase (cabecera apikey, que ya pone supabase-js).
 // - Sesión: todo, salvo iniciarSesion, exige sesión. En modo local el token (JWT) se guarda
 //   en localStorage y viaja en la cabecera Authorization y en el handshake de Socket.IO;
 //   en modo nube la sesión la guarda y renueva supabase-js. Un 401 (o la sesión perdida
@@ -43,6 +48,17 @@ function crearClienteNube() {
   }
   return createClient(url, llave);
 }
+
+/** Llave de esta aplicación ante el gateway del servidor local ('' = no se envía cabecera). */
+// Bajo Vite viene de import.meta.env; ejecutado con Node a secas (scripts/probar-api.mjs) no
+// existe import.meta.env y se lee de process.env. En el navegador esa segunda rama no existe.
+const API_KEY =
+  MODO === 'local'
+    ? import.meta.env?.VITE_API_KEY || globalThis.process?.env?.VITE_API_KEY || ''
+    : '';
+
+/** Valor de `tipo` con que el gateway rechaza una llave ausente o inválida (HTTP 401). */
+export const API_KEY_INVALIDA = 'API_KEY_INVALIDA';
 
 const supabase = MODO === 'nube' ? crearClienteNube() : null;
 const nube = supabase ? crearApiNube(supabase) : null;
@@ -108,7 +124,7 @@ export async function iniciarSesion(usuario, contrasena) {
   try {
     res = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: conLlave({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ usuario, contrasena })
     });
   } catch {
@@ -144,25 +160,45 @@ export async function cerrarSesion() {
 export const conectarTiempoReal = () =>
   nube
     ? crearConexionNube(supabase, nube)
-    : io(API_URL, { auth: { token: leerSesionLocal()?.token } });
+    : io(API_URL, { auth: { token: leerSesionLocal()?.token, apiKey: API_KEY || undefined } });
 
-/** Agrega Authorization solo si hay token (sin sesión la petición sale igual que antes). */
-function conToken(opciones) {
+/** Agrega x-api-key a unas cabeceras, si hay llave configurada. */
+function conLlave(headers = {}) {
+  return API_KEY ? { ...headers, 'x-api-key': API_KEY } : headers;
+}
+
+/**
+ * Agrega x-api-key (si hay llave) y Authorization (si hay token) a las opciones de fetch.
+ * Sin ninguna de las dos la petición sale igual que antes.
+ */
+function conCredenciales(opciones) {
   const token = leerSesionLocal()?.token;
-  if (!token) return opciones;
+  if (!token && !API_KEY) return opciones;
   return {
     ...opciones,
-    headers: { ...(opciones?.headers ?? {}), Authorization: `Bearer ${token}` }
+    headers: conLlave({
+      ...(opciones?.headers ?? {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    })
   };
 }
 
+/**
+ * Un 401 con tipo API_KEY_INVALIDA es un problema de configuración de la aplicación
+ * (VITE_API_KEY mal puesta o rotada), no de la sesión: cerrar la sesión no lo arregla.
+ */
+function esSesionPerdida(status, cuerpo) {
+  return status === 401 && cuerpo?.tipo !== API_KEY_INVALIDA;
+}
+
 async function pedirJson(ruta, opcionesBase) {
-  const opciones = conToken(opcionesBase);
+  const opciones = conCredenciales(opcionesBase);
   const res = opciones
     ? await fetch(`${API_URL}${ruta}`, opciones)
     : await fetch(`${API_URL}${ruta}`);
-  if (res.status === 401) sesionPerdida();
-  return res.json();
+  const cuerpo = await res.json();
+  if (esSesionPerdida(res.status, cuerpo)) sesionPerdida();
+  return cuerpo;
 }
 
 /**
@@ -228,11 +264,14 @@ export const quitarMesa = (numero) =>
  */
 export const obtenerMenu = async () => {
   if (nube) return nube.obtenerMenu();
-  const opciones = conToken();
+  const opciones = conCredenciales();
   const res = opciones
     ? await fetch(`${API_URL}/api/menu-items`, opciones)
     : await fetch(`${API_URL}/api/menu-items`);
-  if (res.status === 401) sesionPerdida();
+  if (res.status === 401) {
+    const cuerpo = await res.json().catch(() => null);
+    if (esSesionPerdida(res.status, cuerpo)) sesionPerdida();
+  }
   if (!res.ok) throw new Error(`Error del servidor: ${res.status}`);
   return res.json();
 };
