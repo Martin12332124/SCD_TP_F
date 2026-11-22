@@ -4,12 +4,11 @@ Cuatro diagramas UML del sistema POS + KDS tal como está construido en la rama 
 
 | # | Diagrama | Qué responde | Archivo |
 | :--- | :--- | :--- | :--- |
-| 1 | **Casos de uso** | Quién usa el sistema (incluido Supabase) y qué puede hacer | `1-casos-de-uso.md` |
-| 2 | **Clases** | Qué conceptos del dominio existen y cómo se relacionan | `2-clases.md` |
-| 3 | **Secuencia** | Cómo se resuelve Confirmar pedido, mensaje por mensaje | `3-secuencia.md` |
-| 4 | **Componentes** | En qué piezas se divide el sistema y qué interfaces las conectan | `4-componentes.md` |
+| 1 | **Casos de uso** | Quién usa el sistema (incluido Supabase) y qué puede hacer | `1-casos-de-uso` |
+| 2 | **Clases** | Qué conceptos del dominio existen y cómo se relacionan | `2-clases` |
+| 3 | **Secuencia** | Cómo se resuelve Confirmar pedido, mensaje por mensaje | `3-secuencia` |
+| 4 | **Componentes** | En qué piezas se divide el sistema y qué interfaces las conectan | `4-componentes` |
 
-> **Nota:** Despliegue de los dos modos y plan de escalamiento en [`../despliegue.md`](../despliegue.md).
 
 ## Nota de lectura general
 
