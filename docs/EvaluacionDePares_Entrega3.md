@@ -37,10 +37,10 @@ Escala de notas: 1,0 a 7,0. Cada integrante evalúa a los otros cuatro (no se ev
 
 | Integrante | Nota (1-7) | Comentario |
 |---|---|---|
-| 1. Martín Saldívar | [ ] | |
-| 2. Martín Carvallo | [ ] | |
-| 3. Claudia Medina | [ ] | |
-| 4. Diego Urbano | [ ] | |
+| 1. Martín Saldívar | [6.8] | |
+| 2. Martín Carvallo | [7.0] | |
+| 3. Claudia Medina | [6.6] | |
+| 4. Diego Urbano | [7.0] | |
 
 ## Evaluador/a: Diego Urbano
 
