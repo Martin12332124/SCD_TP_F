@@ -46,21 +46,9 @@ Escala de notas: 1,0 a 7,0. Cada integrante evalúa a los otros cuatro (no se ev
 
 | Integrante | Nota (1-7) | Comentario |
 |---|---|---|
-| 1. Martín Saldívar | [ ] | |
-| 2. Martín Carvallo | [ ] | |
-| 3. Claudia Medina | [ ] | |
-| 4. Francisca Hernández | [ ] | |
+| 1. Martín Saldívar | [6.6] | |
+| 2. Martín Carvallo | [7.0] | |
+| 3. Claudia Medina | [6.6] | |
+| 4. Francisca Hernández | [7.0] | |
 
----
 
-## Resumen (notas recibidas)
-
-| Evaluado/a ↓ · Evaluador/a → | Martín Saldívar | Martín Carvallo | Claudia Medina | Francisca Hernández | Diego Urbano | Promedio |
-|---|---|---|---|---|---|---|
-| **Martín Saldívar** | — | [ ] | [ ] | [ ] | [ ] | [ ] |
-| **Martín Carvallo** | [ ] | — | [ ] | [ ] | [ ] | [ ] |
-| **Claudia Medina** | [ ] | [ ] | — | [ ] | [ ] | [ ] |
-| **Francisca Hernández** | [ ] | [ ] | [ ] | — | [ ] | [ ] |
-| **Diego Urbano** | [ ] | [ ] | [ ] | [ ] | — | [ ] |
-
-*El promedio de cada fila se calcula a mano con las cuatro notas recibidas (la diagonal «—» no cuenta).*
