@@ -1,0 +1,299 @@
+{
+    "clientName": "Thunder Client",
+    "collectionName": "Pruebas-US-07",
+    "collectionId": "9164399d-0466-49e1-a7f6-a4732db4073f",
+    "dateExported": "2026-10-18T23:16:44.793Z",
+    "version": "1.4",
+    "folders": [],
+    "requests": [
+        {
+            "_id": "5f59168d-b271-497e-b68c-c6cb7f24a87c",
+            "colId": "9164399d-0466-49e1-a7f6-a4732db4073f",
+            "containerId": "",
+            "name": "TC-01 — Crear un ítem con precio y nombre válidos",
+            "url": "http://localhost:3000/api/menu-items",
+            "method": "POST",
+            "sortNum": 20000,
+            "created": "2026-10-18T23:01:18.834Z",
+            "modified": "2026-10-18T23:01:18.835Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{ \"nombre\": \"Hamburguesa Clásica\", \"precioBase\": 5900 }"
+                ],
+                "form": []
+            }
+        },
+        {
+            "_id": "a2487666-2464-4210-9866-1e7a369d267f",
+            "colId": "9164399d-0466-49e1-a7f6-a4732db4073f",
+            "containerId": "",
+            "name": "TC-02 — Crear un ítem con precio en el límite inferior exacto",
+            "url": "http://localhost:3000/api/menu-items",
+            "method": "POST",
+            "sortNum": 30000,
+            "created": "2026-10-18T23:08:32.902Z",
+            "modified": "2026-10-18T23:08:32.902Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{ \"nombre\": \"Agua Mineral\", \"precioBase\": 1 }"
+                ],
+                "form": []
+            }
+        },
+        {
+            "_id": "a5a437d7-9083-4f65-aeda-a63b2026523a",
+            "colId": "9164399d-0466-49e1-a7f6-a4732db4073f",
+            "containerId": "",
+            "name": "TC-03 — Crear un ítem con precio en el límite superior exacto",
+            "url": "http://localhost:3000/api/menu-items",
+            "method": "POST",
+            "sortNum": 40000,
+            "created": "2026-10-18T23:09:08.711Z",
+            "modified": "2026-10-18T23:09:08.711Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{ \"nombre\": \"Caja Degustación Premium\", \"precioBase\": 1000000 }"
+                ],
+                "form": []
+            }
+        },
+        {
+            "_id": "b3d41b6c-6c90-4841-9956-aaa4f72a9c67",
+            "colId": "9164399d-0466-49e1-a7f6-a4732db4073f",
+            "containerId": "",
+            "name": "TC-04 — Rechazar precio igual a 0",
+            "url": "http://localhost:3000/api/menu-items",
+            "method": "POST",
+            "sortNum": 50000,
+            "created": "2026-10-18T23:09:42.026Z",
+            "modified": "2026-10-18T23:09:42.026Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{ \"nombre\": \"Ítem Gratis\", \"precioBase\": 0 }"
+                ],
+                "form": []
+            }
+        },
+        {
+            "_id": "ee113e74-3284-44fb-b19b-63a25e1a7525",
+            "colId": "9164399d-0466-49e1-a7f6-a4732db4073f",
+            "containerId": "",
+            "name": "TC-05 — Rechazar precio superior al máximo en un paso",
+            "url": "http://localhost:3000/api/menu-items",
+            "method": "POST",
+            "sortNum": 70000,
+            "created": "2026-10-18T23:10:49.235Z",
+            "modified": "2026-10-18T23:10:49.235Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{ \"nombre\": \"Banquete Exclusivo\", \"precioBase\": 1000001 }"
+                ],
+                "form": []
+            }
+        },
+        {
+            "_id": "82c0867a-5de2-4cb0-8956-7bfbf3c0f2cd",
+            "colId": "9164399d-0466-49e1-a7f6-a4732db4073f",
+            "containerId": "",
+            "name": "TC-06 — Rechazar precio con decimales",
+            "url": "http://localhost:3000/api/menu-items",
+            "method": "POST",
+            "sortNum": 80000,
+            "created": "2026-10-18T23:11:16.990Z",
+            "modified": "2026-10-18T23:11:16.990Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{ \"nombre\": \"Sopa del día\", \"precioBase\": 1500.5 }"
+                ],
+                "form": []
+            }
+        },
+        {
+            "_id": "262e9d0b-d820-4d33-8e1d-03c11bef392e",
+            "colId": "9164399d-0466-49e1-a7f6-a4732db4073f",
+            "containerId": "",
+            "name": "TC-07 — Rechazar precio enviado como string numérico",
+            "url": "http://localhost:3000/api/menu-items",
+            "method": "POST",
+            "sortNum": 90000,
+            "created": "2026-10-18T23:11:48.869Z",
+            "modified": "2026-10-18T23:11:48.869Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{ \"nombre\": \"Tiramisú\", \"precioBase\": \"3500\" }"
+                ],
+                "form": []
+            }
+        },
+        {
+            "_id": "0a97548a-842a-4711-8a6c-b8e386c326e3",
+            "colId": "9164399d-0466-49e1-a7f6-a4732db4073f",
+            "containerId": "",
+            "name": "TC-08 — Rechazar nombre duplicado al crear",
+            "url": "http://localhost:3000/api/menu-items",
+            "method": "POST",
+            "sortNum": 100000,
+            "created": "2026-10-18T23:12:16.252Z",
+            "modified": "2026-10-18T23:12:16.252Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{ \"nombre\": \"pizza margarita\", \"precioBase\": 7000 }"
+                ],
+                "form": []
+            }
+        },
+        {
+            "_id": "b6342706-8be1-4c1f-9777-f47339722ab8",
+            "colId": "9164399d-0466-49e1-a7f6-a4732db4073f",
+            "containerId": "",
+            "name": "TC-09 — Editar el precio de un producto existente",
+            "url": "http://localhost:3000/api/menu-items/1",
+            "method": "PUT",
+            "sortNum": 110000,
+            "created": "2026-10-18T23:12:46.207Z",
+            "modified": "2026-10-18T23:12:46.207Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{ \"precioBase\": 9500 }"
+                ],
+                "form": []
+            }
+        },
+        {
+            "_id": "22628a50-4716-4e04-add4-3736b42dd220",
+            "colId": "9164399d-0466-49e1-a7f6-a4732db4073f",
+            "containerId": "",
+            "name": "TC-10 — Editar el precio de un producto inexistente",
+            "url": "http://localhost:3000/api/menu-items/999",
+            "method": "PUT",
+            "sortNum": 120000,
+            "created": "2026-10-18T23:13:20.886Z",
+            "modified": "2026-10-18T23:13:20.886Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{ \"precioBase\": 5000 }"
+                ],
+                "form": []
+            }
+        },
+        {
+            "_id": "24a8e8f9-969f-4d21-976d-f220051c6f6e",
+            "colId": "9164399d-0466-49e1-a7f6-a4732db4073f",
+            "containerId": "",
+            "name": "TC-11 — Editar con id inválido en la URL",
+            "url": "http://localhost:3000/api/menu-items/0",
+            "method": "PUT",
+            "sortNum": 130000,
+            "created": "2026-10-18T23:14:01.633Z",
+            "modified": "2026-10-18T23:14:01.633Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{ \"precioBase\": 5000 }"
+                ],
+                "form": []
+            }
+        },
+        {
+            "_id": "4a0e191e-cec7-4f1a-9e42-14bc7af14c57",
+            "colId": "9164399d-0466-49e1-a7f6-a4732db4073f",
+            "containerId": "",
+            "name": "TC-12 — Rechazar nombre con más de 60 caracteres",
+            "url": "http://localhost:3000/api/menu-items",
+            "method": "POST",
+            "sortNum": 140000,
+            "created": "2026-10-18T23:14:30.820Z",
+            "modified": "2026-10-18T23:14:30.820Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{ \"nombre\": \"Ensalada de pollo grillado con aderezo de mostaza y miel con croutons integrales extra\", \"precioBase\": 4500 }"
+                ],
+                "form": []
+            }
+        }
+    ],
+    "ref": "LcLTrbbjckjQbgga7n75J6Nl3KG-chgXUNMkVdtfb0eQ5AXIQvnRU5pU-uf7oZ0Yohqc9ySBt3rwiMq2HneshQ"
+}
