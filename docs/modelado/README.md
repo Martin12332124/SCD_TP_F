@@ -7,7 +7,7 @@ Cuatro diagramas UML del sistema POS + KDS tal como está construido en la rama 
 | 1 | **Casos de uso** | Quién usa el sistema (incluido Supabase) y qué puede hacer | [`1-casos-de-uso.jpeg`](./1-casos-de-uso.jpeg) | [`1-casos-de-uso.drawio`](./1-casos-de-uso.drawio) |
 | 2 | **Clases** | Qué conceptos del dominio existen y cómo se relacionan | [`2-clases.png`](./2-clases.png) | [`2-clases.drawio`](./2-clases.drawio) |
 | 3 | **Secuencia** | Cómo se resuelve *Confirmar pedido*, mensaje por mensaje | [`3-secuencia.svg`](./3-secuencia.svg) | [`3-secuencia.drawio`](./3-secuencia.drawio) |
-| 4 | **Componentes** | En qué piezas se divide el sistema y qué interfaces las conectan | [`4-componentes.jpeg`](./4-componentes.jpeg) | [`4-componentes.drawio`](./4-componentes.drawio) |
+| 4 | **Componentes** | En qué piezas se divide el sistema y qué interfaces las conectan | [`4_componente.svg`](./4_componente.svg) | [`4_componentes.drawio`](./4_componentes.drawio) |
 
 
 ## Nota de lectura general
@@ -35,7 +35,10 @@ El diagrama muestra solo lo que el sistema guarda hoy, para poder compararlo con
 [INSERTAR NOTA DE LECTURA]
  
 ### 4. Componentes
-[INSERTAR NOTA DE LECTURA]
+
+![Diagrama de componentes](./4_componente.svg)
+
+El diagrama muestra en qué piezas se divide el sistema y por qué interfaces se comunican. Cada caja «component» es un módulo del código y las de borde discontinuo (Netlify y Supabase) son servicios externos; una bola es una interfaz que el componente provee y un anillo una que requiere. El recorrido principal va de izquierda a derecha: la SPA (pantallas POS y KDS) llama a la API pública del Gateway con x-api-key, y el Gateway valida la llave, aplica el límite y registra el acceso antes de pasar a Presentación, que expone la API REST y los eventos Socket.IO y delega en los servicios de Dominio. Dominio no usa SQLite directamente: requiere las interfaces Repositorio, Seguridad y Notificador, y los módulos de infraestructura/ las proveen, así las reglas no dependen de la base de datos ni del canal de avisos. La sincronización también entra por Presentación: el Sincronizador recibe las órdenes de Supabase mediante el cliente de nube y las pasa a aplicarOrden, por eso una orden remota sigue las mismas reglas que una local. Supabase y Netlify quedan fuera del servidor porque son opcionales: en modo local la SPA usa VITE_API_KEY + JWT contra el Gateway, y en modo nube usa la llave publishable con la sesión de Supabase Auth.
 
 ## Decisiones que atraviesan los cuatro diagramas
 
