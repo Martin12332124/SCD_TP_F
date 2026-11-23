@@ -2,9 +2,7 @@
 
 **Proyecto:** Sistema POS + KDS · ISF 225
 
-Escala de notas: 1,0 a 7,0. Cada integrante evalúa a los otros cuatro (no se evalúa a sí mismo). Completar las celdas vacías `[ ]`.
 
----
 
 ## Evaluador/a: Martín Saldívar
 
@@ -19,10 +17,10 @@ Escala de notas: 1,0 a 7,0. Cada integrante evalúa a los otros cuatro (no se ev
 
 | Integrante | Nota (1-7) | Comentario |
 |---|---|---|
-| 1. Martín Saldívar | [ ] | |
-| 2. Claudia Medina | [ ] | |
-| 3. Francisca Hernández | [ ] | |
-| 4. Diego Urbano | [ ] | |
+| 1. Martín Saldívar | [7.0] | |
+| 2. Claudia Medina | [7.0] | |
+| 3. Francisca Hernández | [7.0] | |
+| 4. Diego Urbano | [7.0] | |
 
 ## Evaluador/a: Claudia Medina
 
