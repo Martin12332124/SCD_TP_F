@@ -37,7 +37,7 @@ El diagrama muestra solo lo que el sistema guarda hoy, para poder compararlo con
  
 ### 3. Secuencia
 
-![Secuencia: Confirmar pedido](diagramas/3_secuencia_numerado.svg)
+![Secuencia: Confirmar pedido](./3-secuencia.svg)
 
 **Qué se modeló y por qué.** Elegimos el caso de uso *Confirmar pedido* en modo nube
 porque es el recorrido más largo del sistema: cruza la SPA, Supabase y el servidor
