@@ -10,10 +10,10 @@ Escala de notas: 1,0 a 7,0. Cada integrante evalúa a los otros cuatro (no se ev
 
 | Integrante | Nota (1-7) | Comentario |
 |---|---|---|
-| 1. Martín Carvallo | [ ] | |
-| 2. Claudia Medina | [ ] | |
-| 3. Francisca Hernández | [ ] | |
-| 4. Diego Urbano | [ ] | |
+| 1. Martín Carvallo | [7.0] | |
+| 2. Claudia Medina | [6.5] | |
+| 3. Francisca Hernández | [6.5] | |
+| 4. Diego Urbano | [6.5] | |
 
 ## Evaluador/a: Martín Carvallo
 
@@ -28,10 +28,10 @@ Escala de notas: 1,0 a 7,0. Cada integrante evalúa a los otros cuatro (no se ev
 
 | Integrante | Nota (1-7) | Comentario |
 |---|---|---|
-| 1. Martín Saldívar | [ ] | |
-| 2. Martín Carvallo | [ ] | |
-| 3. Francisca Hernández | [ ] | |
-| 4. Diego Urbano | [ ] | |
+| 1. Martín Saldívar | [7.0] | |
+| 2. Martín Carvallo | [7.0] | |
+| 3. Francisca Hernández | [7.0] | |
+| 4. Diego Urbano | [7.0] | |
 
 ## Evaluador/a: Francisca Hernández
 
