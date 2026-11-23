@@ -1,12 +1,24 @@
 # Sistema de Pedidos para Restaurante (POS + KDS)
 
+> **Repositorio frontend (`SCD_TP_F`).** El servidor está en el repositorio backend: [SCD_TP_B](https://github.com/Martin12332124/SCD_TP_B).
+ 
+## Enlaces
+ 
+- **Sitio desplegado (modo nube):** https://scd-tp-pos-kds.netlify.app
+- **Modelado (Entrega 3):** [docs/modelado/](docs/modelado/README.md): casos de uso, clases, secuencia y componentes, con su nota de lectura.
+- **Despliegue:** [docs/despliegue.md](docs/despliegue.md): modo local (offline) y modo nube (Netlify + Supabase), paso a paso, y plan de escalamiento a varias sucursales.
+
 ## Descripción del sistema
 
 El Sistema de Pedidos para Restaurante (POS + KDS) resuelve el problema de coordinación entre la toma de pedidos en el salón y su preparación en cocina. En muchos restaurantes ese proceso depende de comandas en papel o de sistemas que no se actualizan en tiempo real, lo que provoca pedidos traspapelados, platos que se preparan mal o que llegan tarde a la mesa. El sistema conecta un Punto de Venta (POS), donde el mesero toma la comanda, con una Pantalla de Cocina (KDS), donde el personal de cocina la recibe y actualiza su estado a medida que avanza la preparación, todo sincronizado en tiempo real dentro de la red local del restaurante.
+ 
+Un elemento central del diseño es el paso de validación obligatoria de la comanda con el cliente antes de enviarla a cocina: el mesero confirma cada ítem y cantidad con el comensal antes de que el pedido salga hacia la cocina, para eliminar el error humano en el origen del proceso en vez de corregirlo después, cuando ya es más costoso hacerlo.
 
-Un elemento central del diseño es el paso de validación obligatoria de la comanda con el cliente antes de enviarla a cocina: el mesero confirma cada ítem, cantidad y modificador con el comensal antes de que el pedido salga hacia la cocina, para eliminar el error humano en el origen del proceso en vez de corregirlo después, cuando ya es más costoso hacerlo.
-
-El sistema sirve a cuatro roles dentro del restaurante: el Mesero, que toma los pedidos, gestiona las mesas y cierra las cuentas; el Cocinero, que recibe y prepara las comandas desde el KDS; el JefeDeCocina, que supervisa la cocina y el inventario de ingredientes; y el Administrador, que gestiona el catálogo de menú, los usuarios del sistema y el registro de ventas del local.
+### Alcance actual
+ 
+El sistema está pensado para tres usos: Mesero, Cocinero y Administrador. Hoy solo exige iniciar sesión: **no distingue permisos por rol**. Incluye mapa de mesas en tiempo real, apertura, liberación y traslado de mesas, toma de pedidos (con nuevas rondas), seguimiento de comandas en cocina, administración de mesas, inicio de sesión, API gateway y sincronización opcional con la nube (Supabase).
+ 
+**No incluye:** pagos, cuentas, inventario, ventas, variantes ni notas por producto, ni anulación de pedidos. La gestión de la carta (crear, editar y marcar productos como agotados) solo está disponible por API, sin pantalla.
 
 ## Historias de Usuario
 
@@ -35,29 +47,23 @@ Ver: [DominioEntidades.md](./DominioEntidades.md) — 10 entidades, diagrama ER 
 
 ## Mockups
 
-<!-- TODO: reemplazar por las rutas reales una vez subidas las imágenes -->
-
 | Mockup | Historia de usuario relacionada |
 |--------|----------------------------------|
-| `docs/mockups/us-01.png` | US-01 |
-| `docs/mockups/us-02.png` | US-02 |
-| `docs/mockups/us-03.png` | US-03 |
-| `docs/mockups/us-04.png` | US-04 |
-| `docs/mockups/us-05.png` | US-05 |
-| `docs/mockups/us-06.png` | US-06 |
-| `docs/mockups/us-07.png` | US-07 |
-| `docs/mockups/us-08.png` | US-08 |
-| `docs/mockups/us-09.png` | US-09 |
-| `docs/mockups/us-10.png` | US-10 |
+| [docs/mockups/us-01.png](docs/mockups/us-01.png) | US-01 |
+| [docs/mockups/us-02.png](docs/mockups/us-02.png) | US-02 |
+| [docs/mockups/us-03.png](docs/mockups/us-03.png) | US-03 |
+| [docs/mockups/us-04.png](docs/mockups/us-04.png) | US-04 |
+| [docs/mockups/us-05.png](docs/mockups/us-05.png) | US-05 |
+| [docs/mockups/us-06.png](docs/mockups/us-06.png) | US-06 |
+| [docs/mockups/us-07.png](docs/mockups/us-07.png) | US-07 |
+| [docs/mockups/us-08.png](docs/mockups/us-08.png) | US-08 |
+| [docs/mockups/us-09.png](docs/mockups/us-09.png) | US-09 |
+| [docs/mockups/us-10.png](docs/mockups/us-10.png) | US-10 |
+
 
 ## Diseño Arquitectónico
 
 Ver: [Arquitectura.md](./Arquitectura.md) — estilo, diagrama, descomposición modular y decisiones de diseño (ADR).
-
-## Modelado y despliegue
-
-- **Modelado (Entrega 3):** [docs/modelado/](docs/modelado/README.md) — diagramas de casos de uso, clases, secuencia y componentes del sistema final, con su nota de lectura.
-- **Despliegue:** [docs/despliegue.md](docs/despliegue.md) — modo local (offline) y modo nube (Netlify + Supabase), paso a paso, y plan de escalamiento a varias sucursales. Sitio en modo nube: https://scd-tp-pos-kds.netlify.app
 
 ## Responsabilidades del Equipo
 
@@ -83,18 +89,10 @@ Ver: [Arquitectura.md](./Arquitectura.md) — estilo, diagrama, descomposición 
 
 ## Instalación y ejecución
 
-Este proyecto es la interfaz gráfica de usuario (Frontend) del Sistema de Pedidos para Restaurante (POS + KDS). Está construido con React, Vite y se conecta mediante Sockets al servidor backend.
+Este proyecto es la interfaz gráfica de usuario (Frontend) del Sistema de Pedidos para Restaurante (POS + KDS). Está construido con React y Vite, y se conecta al servidor backend mediante REST y Socket.io (modo local) o a Supabase (modo nube).
+ 
+A continuación están las instrucciones para descargar, instalar y ejecutar esta pantalla en cualquier computadora. Para probar el sistema sin instalar nada, usa el [sitio desplegado](https://scd-tp-pos-kds.netlify.app).
 
-A continuación, tienes las instrucciones exactas y masticadas para descargar, instalar y ejecutar esta pantalla en cualquier computadora.
-
----
-
-### PARA EL EQUIPO
-
-Se requiere al nuestro equipo la implementación de un formato el código después de terminar de modificarlo
-```bash
-npm run format
-```
 
 ---
 ## Hito 2 — Funcionalidades evaluadas
@@ -116,13 +114,13 @@ npm run build
 npm run test:coverage
 ```
 
-
-
 ### REQUISITOS PREVIOS
 
 Para que esta pantalla funcione, la computadora externa necesita cumplir con dos condiciones:
 1. Tener **Node.js** instalado (versión LTS recomendada).
-2. Tener el servidor **Backend (`SCD_TP_B`) ya encendido y corriendo** en el puerto 3000 de la misma PC o en red.
+2. Tener el servidor **Backend (`SCD_TP_B`) ya encendido y corriendo** en el puerto 3000, de la misma PC o en red.
+3. Un **usuario y una API key** del backend: el usuario sale de `USUARIOS_INICIALES` y la llave de `API_KEYS`, ambos en el `.env` del backend.
+El modo nube (sin backend local) se explica en [docs/despliegue.md](docs/despliegue.md).
 
 ---
 
@@ -130,34 +128,64 @@ Para que esta pantalla funcione, la computadora externa necesita cumplir con dos
 
 Sigue estos pasos en orden estricto sin saltarte ninguno:
 
-#### Paso 1: Abrir la Terminal
-* En **Windows**: Presiona la tecla `Windows`, escribe **PowerShell** y ábrelo.
-* En **Mac**: Presiona `Cmd + Espacio`, escribe **Terminal** y ábrela.
-
+#### Paso 1: Abrir la terminal
+ 
+- En **Windows**: presiona la tecla `Windows`, escribe **PowerShell** y ábrelo.
+- En **Mac**: presiona `Cmd + Espacio`, escribe **Terminal** y ábrela.
 #### Paso 2: Ir a la carpeta de descargas
-Múevete a la carpeta donde quieras clonar el proyecto (por ejemplo, Descargas):
+ 
+Muévete a la carpeta donde quieras clonar el proyecto (por ejemplo, Descargas):
+ 
 ```bash
 cd Downloads
 ```
-
-#### Paso 3: Descargar el código del Frontend
-Copia, pega este comando en tu terminal y presiona `Enter`:
+ 
+#### Paso 3: Descargar el código del frontend
+ 
+Copia y pega este comando en tu terminal y presiona `Enter`:
+ 
 ```bash
 git clone https://github.com/Martin12332124/SCD_TP_F.git
 ```
-*(Esto creará la carpeta llamada `SCD_TP_F` en tus descargas).*
-
+ 
+_(Esto creará la carpeta `SCD_TP_F` en tus descargas.)_
+ 
 #### Paso 4: Entrar a la carpeta descargada
+ 
 ```bash
 cd SCD_TP_F
 ```
-
-#### Paso 5: Instalar los paquetes del diseño
-Ejecuta el siguiente comando para descargar de internet todas las herramientas visuales y de conexión necesarias:
+ 
+#### Paso 5: Instalar los paquetes
+ 
+Ejecuta el siguiente comando para descargar las herramientas visuales y de conexión necesarias:
+ 
 ```bash
 npm install
 ```
-*Espera un momento a que se complete la barra de carga. Sabrás que terminó cuando la terminal te permita escribir comandos otra vez.*
+ 
+_Espera a que termine: sabrás que acabó cuando la terminal te permita escribir comandos otra vez._
+ 
+#### Paso 6: Configurar el archivo `.env`
+ 
+Copia `.env.example` como `.env` y completa, para el modo local:
+ 
+```text
+VITE_MODO=local
+VITE_API_URL=http://localhost:3000
+VITE_API_KEY=<una de las llaves de API_KEYS del backend>
+```
+ 
+Si el backend está en otro computador de la red, usa su dirección en `VITE_API_URL` (por ejemplo `http://192.168.1.20:3000`). Detalles en [docs/despliegue.md](docs/despliegue.md).
+ 
+---
+
+### PARA EL EQUIPO
+
+Se requiere al nuestro equipo la implementación de un formato el código después de terminar de modificarlo
+```bash
+npm run format
+```
 
 ---
 
@@ -174,23 +202,20 @@ Al ejecutar el comando, Vite te mostrará una dirección local en la terminal.
 2. En la barra de direcciones de arriba, escribe exactamente:
    `http://localhost:5173`
 3. Presiona `Enter`.
+4. Inicia sesión con un usuario del backend.
 
 ---
 
 ### CÓMO USAR LA SIMULACIÓN
 Una vez que entres a la página web:
-* **Indicador de Servidor:** Si el Backend está encendido, verás un letrero verde que dice **"Conectado ✔"**. Si el Backend está apagado, dirá **"Desconectado ✖"** en rojo.
-
-* **Comandas:** bajo el encabezado cuelga un ticket por cada pedido en curso, con su tiempo. Pasados 15 minutos el ticket se pone ámbar y pasados 20, rojo ("Atrasado"). Tocar un ticket abre su mesa.
-
-* **Sala:** cada mesa del plano muestra su estado con color, ícono y texto: libre, ocupada, pedido tomado, en cocina o pedido listo.
-
-* **Todo dentro de la mesa:** toca una mesa para abrir su panel. Ahí puedes abrirla o liberarla, tomar el pedido (carta), avanzarlo con un solo botón (**Enviar a cocina** → **Marcar pedido listo**), ver la cuenta y trasladar el pedido tocando la mesa de destino.
-
-* **Configurar mesas:** el botón del encabezado abre una pantalla aparte para agregar mesas (la siguiente o con un número elegido) y quitar mesas libres, con confirmación.
+- **Inicio de sesión:** al abrir la aplicación se pide usuario y contraseña. Sin sesión iniciada no se muestra el sistema.
+- **Indicador de servidor:** si el backend está encendido, verás un letrero verde que dice **"Conectado ✔"**. Si está apagado, dirá **"Desconectado ✖"** en rojo.
+- **Comandas:** bajo el encabezado cuelga un ticket por cada pedido en curso, con su tiempo. Pasados 15 minutos el ticket se pone ámbar y pasados 20, rojo ("Atrasado"). Tocar un ticket abre su mesa.
+- **Sala:** cada mesa del plano muestra su estado con color, ícono y texto: libre, ocupada, pedido tomado, en cocina o pedido listo.
+- **Todo dentro de la mesa:** toca una mesa para abrir su panel. Ahí puedes abrirla o liberarla, tomar el pedido (carta), avanzarlo con un solo botón (**Enviar a cocina** → **Marcar pedido listo**), ver la cuenta y trasladar el pedido tocando la mesa de destino.
+- **Configurar mesas:** el botón del encabezado abre una pantalla aparte para agregar mesas (la siguiente o con un número elegido) y quitar mesas libres, con confirmación.
 
 Detalles del rediseño: [docs/rediseno-mesas.md](docs/rediseno-mesas.md).
-
 
 ---
 
