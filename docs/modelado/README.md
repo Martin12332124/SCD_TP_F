@@ -23,7 +23,11 @@ Los actores de casos de uso aparecen como líneas de vida (Mesero, Cocina, Supab
 ## Notas de lectura por diagrama
  
 ### 1. Casos de uso
-[INSERTAR NOTA DE LECTURA]
+
+![Diagrama de casos de uso](./1-casos-de-uso.jpeg)
+
+El diagrama muestra tres actores humanos y un sistema externo. Mesero y Cocina comparten cuatro casos de uso (ver mapa de mesas, consultar pedido de mesa, iniciar sesión y, con distinto alcance, los relacionados con el pedido) porque ambos necesitan ver el estado del salón en tiempo real; los casos privativos del Mesero son los que inician cambios (abrir, cerrar, trasladar, confirmar), mientras que el único privativo de Cocina es actualizar el estado del pedido. Administrador no opera en el servicio: solo configura el sistema, de ahí que sus dos casos de uso (agregar/quitar mesas y gestionar ítems del menú) no se superpongan con los operativos. Supabase aparece como actor con el estereotipo «sistema externo» porque interactúa con el sistema desde afuera igual que un actor humano, pero no inicia sesión: se autentica con sus propias credenciales de servicio, por eso queda fuera de la precondición de sesión. La autenticación con API key del gateway no aparece como caso de uso porque ninguna persona la busca como objetivo: es un control técnico transparente al usuario. *Confirmar pedido* incluye siempre *Validar ítems* porque la validación no tiene sentido fuera de ese contexto: el sistema no permite enviar a cocina un pedido vacío, con cantidades fuera de rango o con ítems agotados. *Agregar nueva ronda* extiende *Confirmar pedido* y no es un caso de uso separado porque el flujo de entrada es idéntico (el mesero selecciona ítems y confirma); lo que cambia es que el sistema detecta que la mesa ya tiene un pedido en cocina y acumula los ítems en lugar de iniciar uno nuevo. *Sincronizar con la nube* incluye siempre los dos sub-casos porque ambas direcciones ocurren en cada ciclo: primero se aplican las órdenes pendientes del buzón y luego se sube el estado completo; nunca se hace solo una de las dos.
+
 
 ### 2. Clases
  
