@@ -36,7 +36,21 @@ El diagrama muestra tres actores humanos y un sistema externo. Mesero y Cocina c
 El diagrama muestra solo lo que el sistema guarda hoy, para poder compararlo con el código. Por eso no aparecen Venta, Categoria ni Receta, que estaban en el diseño original. Un Pedido está compuesto por sus LineaDePedido: una línea no tiene sentido sin su pedido, no se comparte con otros y se borra junto con él. Una Mesa tiene como máximo un Pedido en curso, porque el sistema no guarda historial. Cada LineaDePedido guarda una copia del nombre y del precio del producto, no un enlace al menú, así los pedidos ya tomados no cambian si después se sube un precio. Por eso la relación con MenuItem es una dependencia. estadoPedido y pedidoDesde no se guardan en la mesa: se calculan al leerla a partir de su pedido (por eso llevan /), así hay un solo lugar donde cambian y no pueden quedar desfasados. OrdenPendiente vive en Supabase y OrdenAplicada en SQLite, y comparten id para no aplicar dos veces una orden si se corta internet a mitad del proceso. OrdenPendiente depende de Mesa porque cada orden trae una mesa en su contenido; la multiplicidad es 0..1 porque agregar una mesa puede pedirse sin número. Usuario no se relaciona con Pedido porque el pedido no guarda quién lo tomó.
  
 ### 3. Secuencia
-[INSERTAR NOTA DE LECTURA]
+
+![Secuencia: Confirmar pedido](diagramas/3_secuencia_numerado.svg)
+
+**Qué se modeló y por qué.** Elegimos el caso de uso *Confirmar pedido* en modo nube
+porque es el recorrido más largo del sistema: cruza la SPA, Supabase y el servidor
+local, y es donde se ve la decisión de arquitectura más importante: la web no
+escribe el pedido, solo deja una orden, y el servidor local sigue siendo la única
+autoridad sobre las reglas. Por eso `PedidoService` valida los ítems una sola vez
+y la orden rechazada queda registrada con su motivo en vez de perderse.
+Si el local lleva 75 s o más sin sincronizar, la SPA rechaza el cambio y no inserta
+nada: así no queda una cola de órdenes antiguas que se apliquen horas después. Como
+el local rechaza las órdenes con 10 s o más de espera y la SPA espera 15 s,
+"el cambio no se aplicó" es siempre verdad. Los eventos de Socket.IO se retienen
+hasta el COMMIT para que la cocina nunca reciba el aviso de un pedido que no
+existe, y la subida a Supabase es asíncrona para que el POS local no espere a la nube.
  
 ### 4. Componentes
 [INSERTAR NOTA DE LECTURA]
