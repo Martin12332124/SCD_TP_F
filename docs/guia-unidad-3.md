@@ -75,7 +75,31 @@ Revisó: Claudia Medina, 14-11-2026, en macOS, ramas `dev` de ambos repos (front
 
 ### Frontend (SCD_TP_F)
 
-Antes, todos los archivos estaban sueltos en `src/`. Ahora:
+**Antes** (commit `5dbfac8`, línea base): todos los archivos vivían sueltos en `src/`:
+
+```
+src/
+├── App.jsx               ← componente raíz + toda la lógica de socket
+├── App.test.jsx
+├── DetalleMesa.jsx       ← llamaba a fetch con URL escrita a mano
+├── DetalleMesa.test.jsx
+├── MapaMesas.jsx
+├── MapaMesas.test.jsx
+├── TomaPedido.jsx        ← llamaba a fetch con URL escrita a mano
+├── TomaPedido.test.jsx
+├── SelectorTema.jsx
+├── SelectorTema.test.jsx
+├── Sesion.jsx
+├── Sesion.test.jsx
+├── Login.jsx
+├── Login.test.jsx
+├── index.css
+└── main.jsx
+```
+
+Problemas identificados: la URL `http://localhost:3000` aparecía 4 veces en 3 archivos, `formatearPrecio` estaba definida en dos componentes, y no había separación entre lógica de red, presentación y utilidades.
+
+**Después** (PR #81, #80, #82): ahora:
 
 ```
 src/
@@ -113,6 +137,45 @@ Regla de dependencias: `componentes/` usa `servicios/`, `utils/` y `validaciones
 | B | `app.js` | `crearApp()`: crea los repositorios y servicios, monta las rutas y registra el socket | `index.js` y las pruebas |
 
 Las reglas compartidas viven en un solo lugar: el formato de moneda en `utils/formato.js`, los rangos de entrada en `validaciones/validaciones.js` y la URL del servidor en `servicios/api.js`.
+
+---
+
+## 2b. Diagrama de secuencia del flujo revisado
+
+Flujo revisado por Claudia Medina: **confirmar pedido** (abrir mesa → tomar pedido → confirmar → ver cuenta → intentar liberar).
+
+```mermaid
+sequenceDiagram
+    actor Mesero
+    participant FE as Frontend (React)
+    participant SK as Socket.IO
+    participant PS as PedidoService
+    participant DB as SQLite
+
+    Mesero->>FE: Abre mesa (botón "Abrir")
+    FE->>FE: POST /api/mesas/3/abrir
+    FE-->>Mesero: Mesa 3 ocupada ✔
+
+    Mesero->>FE: Abre carta (botón "Tomar pedido")
+    FE->>FE: GET /api/menu-items
+    FE-->>Mesero: Lista de productos con precios
+
+    Mesero->>FE: Agrega ítems al carrito y confirma
+    FE->>SK: emit('confirmar_pedido', {mesa:'Mesa 3', items:[…]})
+    SK->>PS: pedidoService.confirmarPedido(datos)
+    PS->>DB: guardar pedido (estado:'En Cocina 🍳')
+    DB-->>PS: ok
+    PS-->>SK: {ok:true, mesa:'Mesa 3', estado:'En Cocina 🍳', total:19000}
+    SK-->>FE: emit('respuesta_pedido', resultado)
+    SK-->>FE: emit('pedido_items_actualizado', {mesa:'Mesa 3'})
+    FE-->>Mesero: Vista se cierra, mesa muestra "En Cocina 🍳" / total $19.000
+
+    Mesero->>FE: Intenta liberar mesa con pedido activo
+    FE->>FE: POST /api/mesas/3/cerrar
+    FE-->>Mesero: Error PEDIDO_ACTIVO — "Debe servirse antes de cerrar"
+```
+
+> El diagrama corresponde exactamente a los 3 pasos registrados en §0, con los valores observados ($19.000, estado "En Cocina 🍳", error PEDIDO_ACTIVO).
 
 ---
 
@@ -160,8 +223,8 @@ Coincide con lo que dice el contrato: `obtenerMesas` y `obtenerMenu` devuelven e
 | **Mantenimiento** | La versión 4.8.3 se publicó en diciembre de 2025 ([notas de versión](https://github.com/socketio/socket.io/releases), [docs de instalación](https://socket.io/docs/v4/client-installation/)). |
 | **Licencia y condiciones** | MIT (campo `license` del `package.json` instalado). Obligación: conservar el aviso de copyright y la licencia al redistribuir el código de la librería. |
 | **Riesgo** | **Vulnerabilidad conocida.** `npm audit` (14-11-2026) reporta en el backend una vulnerabilidad **alta** en `engine.io@6.6.9`, dependencia interna de `socket.io`: denegación de servicio por diferencia de revisión del protocolo ([GHSA-2gc4-cqfq-p2gv](https://github.com/advisories/GHSA-2gc4-cqfq-p2gv), afecta `>=6.6.0 <6.6.10`). Probabilidad: baja en un entorno de clase, media si se expone a internet. Impacto: alto (si el servidor de socket cae, los pedidos no llegan a cocina). Riesgo secundario: un cambio incompatible en una versión mayor (5.x), mitigado porque el rango `^4.8.3` no la instala. |
-| **Medida de mitigación** | Ejecutar `npm audit fix` en SCD_TP_B, que actualiza `engine.io` a 6.6.10 sin salir del rango `^4` de `socket.io` (no requiere `--force`). Mantener el rango `^4` en ambos repos y actualizar cliente y servidor juntos. |
-| **Cómo se comprueba** | Después de la actualización: `npm ls engine.io` debe mostrar 6.6.10 o superior, `npm audit` ya no debe listar `engine.io`, y `test/socket.test.js` (que corre en el CI en cada PR) debe seguir pasando. Estado actual: **pendiente de aplicar** (ver sección 7). |
+| **Medida de mitigación** | Ejecutar `npm audit fix` en SCD_TP_B, que actualiza `engine.io` a 6.6.10 o superior sin salir del rango `^4` de `socket.io` (no requiere `--force`). Mantener el rango `^4` en ambos repos y actualizar cliente y servidor juntos. |
+| **Cómo se comprueba** | Aplicado en SCD_TP_B (`npm audit fix`): `npm ls engine.io` muestra `engine.io@6.6.13`, `npm audit --omit=dev` reporta `0 vulnerabilities` (eliminando GHSA-2gc4-cqfq-p2gv en producción), y la suite completa de SCD_TP_B (incluido `test/socket.test.js`) sigue pasando. |
 
 ---
 
@@ -202,7 +265,9 @@ Cada PR corre el CI de GitHub Actions (lint, pruebas y cobertura) y requiere una
 | SCD_TP_B | #47 handlers de socket | [checks](https://github.com/Martin12332124/SCD_TP_B/pull/47/checks) |
 | Ambos | Historial completo | [Actions F](https://github.com/Martin12332124/SCD_TP_F/actions) · [Actions B](https://github.com/Martin12332124/SCD_TP_B/actions) |
 
-Resultado local sobre `dev` final: frontend 163/163 pruebas, cobertura 97,55 % · backend 145/145 pruebas, cobertura 93,45 %.
+Resultado local sobre `dev` final: frontend **611/611 pruebas** (26 archivos), cobertura **98,28 % sentencias / 95,73 % ramas** · backend **435/435 pruebas** (17 archivos), cobertura **97,71 % sentencias / 90,75 % ramas** · integración extremo a extremo (`npm run test:integracion` contra `SCD_TP_B`) aprobada.
+
+Paquete entregable etiquetado como **`v3.0.0`** en ambos repositorios, con notas de versión en `CHANGELOG.md` e instrucciones de extensión en cada `README.md`.
 
 ---
 
@@ -212,5 +277,5 @@ Resultado local sobre `dev` final: frontend 163/163 pruebas, cobertura 97,55 % �
 |---|---|---|---|
 | `mesas.router.js` llama a `mesaEstadoService._validarNumero`, un método privado, desde fuera del servicio | Cambiarlo toca el contrato del servicio y sus pruebas; queda fuera del alcance de esta guía | Francisca Hernández | Al agregar otra ruta que valide número de mesa |
 | La tabla `HTTP_STATUS` está repetida en `mesas.router.js` y `menu-items.router.js` | Son tablas distintas (cada una mapea sus propios tipos de error) | Francisca Hernández | Si aparece un tercer router |
-| `App.jsx` (≈745 líneas) y `TomaPedido.jsx` (≈725 líneas) siguen siendo extensos, sobre todo por los estilos en línea | Separar estilos y subcomponentes es un cambio grande que no aporta a las intervenciones elegidas | Martín Saldívar | Antes de agregar una vista nueva |
-| `engine.io@6.6.9` con vulnerabilidad alta (GHSA-2gc4-cqfq-p2gv), y otras 24 alertas de `npm audit` en el backend y 10 en el frontend, todas en dependencias indirectas | Actualizar dependencias es un cambio aparte de la refactorización y debe ir en su propio PR con las pruebas de socket | Francisca Hernández | Antes de la entrega final o de exponer el backend fuera de la red local |
+| `App.jsx` y `TomaPedido.jsx` siguen siendo extensos, sobre todo por los estilos en línea | Separar estilos y subcomponentes es un cambio grande que no aporta a las intervenciones elegidas | Martín Saldívar | Antes de agregar una vista nueva |
+| 18 vulnerabilidades moderadas en dependencias de desarrollo (`jest` → `glob`/`minimatch`) que requieren `--force` (degradaría `jest` a 29.x) | Son solo de herramientas de desarrollo (no se empaquetan en producción; `npm audit --omit=dev` da 0 vulnerabilidades). La vulnerabilidad alta de `engine.io@6.6.9` ya fue corregida a `6.6.13` con `npm audit fix` | Francisca Hernández | Cuando `jest` publique actualización sin breaking changes |

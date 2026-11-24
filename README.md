@@ -226,3 +226,48 @@ Cuando quieras cerrar el entorno de desarrollo:
 3. Si te pregunta *"¿Desea terminar el trabajo por lotes (S/N)?"*, escribe **`S`** y presiona `Enter`.
 
 Actividades de clase previas: ver [docs/actividades-clase.md](./docs/actividades-clase.md).
+
+---
+
+## Cómo extender el sistema
+
+Esta sección explica dónde tocar el código para las extensiones más comunes.
+
+### Agregar un componente nuevo
+
+1. Crear `src/componentes/MiComponente.jsx` con `export default MiComponente`.
+2. Escribir `src/componentes/MiComponente.test.jsx` usando `@testing-library/react`.
+   - Mockear `socket.io-client` y `fetch` con `vi.mock` si el componente los necesita (ver `App.test.jsx` como ejemplo).
+3. Importar el componente desde donde corresponda (normalmente `App.jsx` o `DetalleMesa.jsx`).
+
+### Agregar una función de utilidad
+
+1. Crear `src/utils/mi-utilidad.js` (módulo ES: `export function …`).
+2. Escribir `src/utils/mi-utilidad.test.js` con casos válidos, límites y errores.
+3. Importar desde los componentes que la necesiten.
+
+**Regla de dependencias:** `componentes/` puede importar de `servicios/`, `utils/` y `validaciones/`, pero no al revés. `utils/`, `servicios/` y `validaciones/` no importan entre sí ni desde `componentes/`.
+
+### Agregar una operación al cliente REST
+
+En `src/servicios/api.js`, al final del archivo, exportar la nueva función siguiendo el patrón existente:
+
+```js
+/**
+ * Descripción de la operación.
+ * @param {number} id
+ * @returns {Promise<{ ok: boolean, … }>}
+ */
+export const miOperacion = (id) =>
+  nube ? nube.miOperacion(id) : pedirJson(`/api/mi-ruta/${id}`, { method: 'POST' });
+```
+
+Luego agregar el test correspondiente en `src/servicios/api.test.js`.
+
+### Cambiar el modo local ↔ nube
+
+Solo se necesita el archivo `.env`:
+- **Modo local:** `VITE_MODO=local`, `VITE_API_URL=http://…`, `VITE_API_KEY=…`
+- **Modo nube:** `VITE_MODO=nube`, `VITE_SUPABASE_URL=…`, `VITE_SUPABASE_PUBLISHABLE_KEY=…`
+
+Ver [docs/despliegue.md](docs/despliegue.md) para los pasos completos.
