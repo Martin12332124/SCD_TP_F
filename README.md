@@ -5,6 +5,7 @@
 ## Enlaces
  
 - **Sitio desplegado (modo nube):** https://scd-tp-pos-kds.netlify.app
+- **Hito 3 — Refactorización, modularización, pruebas y cierre (`v3.0.0`):** [docs/guia-unidad-3.md](docs/guia-unidad-3.md) · [CHANGELOG.md](CHANGELOG.md)
 - **Modelado (Entrega 3):** [docs/modelado/](docs/modelado/README.md): casos de uso, clases, secuencia y componentes, con su nota de lectura.
 - **Despliegue:** [docs/despliegue.md](docs/despliegue.md): modo local (offline) y modo nube (Netlify + Supabase), paso a paso, y plan de escalamiento a varias sucursales.
 
@@ -116,11 +117,19 @@ npm run test:coverage
 
 ### REQUISITOS PREVIOS
 
-Para que esta pantalla funcione, la computadora externa necesita cumplir con dos condiciones:
-1. Tener **Node.js** instalado (versión LTS recomendada).
+Para que esta pantalla funcione, la computadora externa necesita cumplir con estas condiciones:
+1. Tener **Node.js 22 LTS** (o superior compatible) y **npm** instalados.
 2. Tener el servidor **Backend (`SCD_TP_B`) ya encendido y corriendo** en el puerto 3000, de la misma PC o en red.
 3. Un **usuario y una API key** del backend: el usuario sale de `USUARIOS_INICIALES` y la llave de `API_KEYS`, ambos en el `.env` del backend.
 El modo nube (sin backend local) se explica en [docs/despliegue.md](docs/despliegue.md).
+
+> **Versión empaquetada (`v3.0.0`):** para probar la entrega exacta del Hito 3 tras clonar, ejecuta `git checkout v3.0.0`.
+
+### Problemas frecuentes
+
+- **"Desconectado ✖" o error de red en el login:** verifica que el backend esté encendido en `VITE_API_URL` (por defecto `http://localhost:3000`).
+- **Error `API_KEY_INVALIDA`:** la variable `VITE_API_KEY` del `.env` del frontend no coincide con ninguna llave configurada en `API_KEYS` del backend.
+- **Falla `npm run build` o `npm run dev` por dependencias:** ejecuta `npm ci` para reinstalar exactamente las versiones de `package-lock.json`.
 
 ---
 

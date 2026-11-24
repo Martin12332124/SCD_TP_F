@@ -177,6 +177,16 @@ sequenceDiagram
 
 > El diagrama corresponde exactamente a los 3 pasos registrados en §0, con los valores observados ($19.000, estado "En Cocina 🍳", error PEDIDO_ACTIVO).
 
+### Casos de integración ejecutados
+
+Entorno de ejecución: Windows 11, Node.js 22, backend local (`SCD_TP_B` en `http://localhost:3000` con SQLite en memoria) + cliente Socket.IO / `fetch` (`npm run test:integracion` y suite `api.test.js` / `App.test.jsx`).
+
+| Caso | Escenario | Pasos | Resultado esperado | Resultado obtenido |
+|---|---|---|---|---|
+| **1. Datos válidos** | Confirmar pedido válido (`Mesa 1` / `Mesa 3`) | 1. Login `POST /api/auth/login` con `x-api-key`.<br>2. Emitir `actualizar_pedido` / `confirmar_pedido` para `Mesa 1` con `'Recibido 📝'`. | Respuesta `{ ok: true }`, mesa pasa a `'ocupada'` y se emite `cambio_estado_pedido`. | `✅ VALIDADO: Mesa 1 → Recibido 📝` (`npm run test:integracion` OK). |
+| **2. Datos inválidos** | Número de mesa inválido (`Mesa 0`, `Mesa -1`) | Emitir `actualizar_pedido` con `{ mesa: 'Mesa 0', estado: 'Recibido 📝' }` y `{ mesa: 'Mesa -1', ... }`. | Rechazo con `tipo: 'ENTRADA_INVALIDA'` en `respuesta_pedido`; el estado de las mesas no cambia. | `❌ RECHAZADO [ENTRADA_INVALIDA]: mesa no tiene un formato válido` (frontend y backend consistentes). |
+| **3. Recurso ausente** | Mesa inexistente o backend apagado | 1. `POST /api/mesas/11/abrir` (solo existen 10 mesas).<br>2. `iniciarSesion` con servidor apagado. | 1. HTTP `404` con `tipo: 'NO_ENCONTRADO'`.<br>2. `{ ok: false, tipo: 'SIN_CONEXION' }` sin caída de la UI. | 1. HTTP `404` verificado en `test/api.test.js`.<br>2. `{ ok: false, tipo: 'SIN_CONEXION' }` verificado en `api.sesion.test.js`. |
+
 ---
 
 ## 3. Interfaz del componente reutilizable — `src/servicios/api.js`
@@ -279,3 +289,14 @@ Paquete entregable etiquetado como **`v3.0.0`** en ambos repositorios, con notas
 | La tabla `HTTP_STATUS` está repetida en `mesas.router.js` y `menu-items.router.js` | Son tablas distintas (cada una mapea sus propios tipos de error) | Francisca Hernández | Si aparece un tercer router |
 | `App.jsx` y `TomaPedido.jsx` siguen siendo extensos, sobre todo por los estilos en línea | Separar estilos y subcomponentes es un cambio grande que no aporta a las intervenciones elegidas | Martín Saldívar | Antes de agregar una vista nueva |
 | 18 vulnerabilidades moderadas en dependencias de desarrollo (`jest` → `glob`/`minimatch`) que requieren `--force` (degradaría `jest` a 29.x) | Son solo de herramientas de desarrollo (no se empaquetan en producción; `npm audit --omit=dev` da 0 vulnerabilidades). La vulnerabilidad alta de `engine.io@6.6.9` ya fue corregida a `6.6.13` con `npm audit fix` | Francisca Hernández | Cuando `jest` publique actualización sin breaking changes |
+
+---
+
+## 8. Informe breve de cierre y empaquetado (`v3.0.0`)
+
+- **Versión y etiqueta Git:** `v3.0.0` en ambos repositorios (`SCD_TP_F` y `SCD_TP_B`), con notas de versión en `CHANGELOG.md`. Se asigna `v3.0.0` (salto desde `v0.1.0-alpha` del Hito 2) por el cierre de la Unidad 3 (refactorizaciones, modularización completa de `src/`, documentación de contratos y mitigación de seguridad), manteniendo compatibilidad en los endpoints REST y eventos Socket.IO.
+- **Alcance entregado:** Tres intervenciones verificadas (`api.js`, `formato.js`, `socket.handlers.js`), estructura modular por responsabilidades en frontend y por capas en backend, contrato reutilizable de `api.js`, revisión y mitigación de `socket.io` / `engine.io@6.6.13`, diagramas y casos de integración.
+- **Decisiones y efectos:** Se priorizó extraer la capa de comunicación (`api.js`) y los handlers de socket (`socket.handlers.js`) con commits pequeños protegidos por pruebas previas, elevando la cobertura global a **98,28 %** en frontend y **97,71 %** en backend sin alterar el comportamiento visible.
+- **Pendientes priorizados:**
+  1. **Revisión por otro equipo en entorno limpio (Alta):** Pendiente que un integrante de otro equipo clone la etiqueta `v3.0.0` siguiendo ambos `README.md` y registre el resultado.
+  2. **Deuda técnica documentada en §7 (Media/Baja):** Refactorización de estilos en `App.jsx`/`TomaPedido.jsx`, uso de `_validarNumero` en `mesas.router.js` y actualización de `jest` cuando no requiera `--force`.
