@@ -12,18 +12,17 @@ ADR.
 
 ## 1. Estilo Arquitectónico
 
-**Estilo adoptado:** monolito en capas (Presentación / Aplicación / Dominio / Infraestructura) con
-comunicación orientada a eventos (publish/subscribe vía WebSocket) entre el servidor y los
-clientes POS y KDS.
+**Estilo adoptado:** monolito modular con organización combinada: capas para responsabilidades
+transversales y módulos por funcionalidad para agrupar código que cambia junto. El módulo de
+pedidos reúne sus reglas, adaptador Socket.IO y repositorio SQLite en el backend, y sus vistas,
+reglas de flujo y API específica en el frontend. La comunicación POS/KDS sigue orientada a eventos
+(publish/subscribe vía WebSocket).
 
-El monolito en capas organiza el código del servidor en las cuatro capas estándar: Presentación
-expone la API REST y el Gateway de Tiempo Real; Aplicación orquesta los casos de uso de cada
-módulo de negocio; Dominio contiene las entidades y reglas descritas en `DominioEntidades.md`
-(incluida la máquina de estados del Pedido); Infraestructura resuelve el acceso a datos. Sobre esa
-base, el estilo se complementa con un canal de eventos: cuando la capa de Aplicación confirma un
-cambio de estado del Pedido, el Gateway de Tiempo Real publica un evento que todos los clientes
-suscritos (POS y KDS) reciben de inmediato, sin que ninguno tenga que refrescar o consultar por su
-cuenta.
+`src/app.js` compone los módulos del backend y les inyecta dependencias. En el frontend,
+`src/modules/pedidos/` agrupa los componentes, reglas y API de pedidos; `src/shared/` mantiene
+componentes y estados visuales usados por más de una funcionalidad. El transporte común conserva
+la selección entre backend local y nube. Cuando el servicio confirma un cambio, el Gateway de
+Tiempo Real publica un evento que POS y KDS reciben sin refrescar la pantalla.
 
 ### Justificación basada en los REF de prioridad Alta
 
@@ -166,6 +165,11 @@ de infraestructura y no como dueños de lógica de negocio de otro módulo.
   cuenta en Ventas.
 - **Depende de:** Catálogo de Menú y Modificadores, Gestión de Mesas, Autenticación y Roles,
   Gateway de Tiempo Real, Persistencia.
+
+En el código actual, este módulo corresponde a `SCD_TP_B/src/modules/pedidos/` y
+`SCD_TP_F/src/modules/pedidos/`. Sus interfaces públicas se exportan desde `index.js`; consume
+adaptadores compartidos mediante inyección y el frontend utiliza `shared/` para íconos y estados
+visuales comunes.
 
 ### Módulo: Inventario y Recetas
 

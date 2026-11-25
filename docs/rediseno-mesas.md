@@ -45,11 +45,11 @@ Rama `feat/rediseno-mesas`, creada desde `dev` en `313b8ee`. Necesita la rama
 | --- | --- |
 | `src/componentes/Encabezado.jsx` | Sale de `App.jsx`: título, conexión, tema y "Configurar mesas". |
 | `src/componentes/UltimaActualizacion.jsx` | Sale de `App.jsx`: la franja del último cambio con su cronómetro. |
-| `src/componentes/AvancePedido.jsx` | Barra de progreso del pedido y botón con el siguiente paso válido. |
+| `src/modules/pedidos/components/AvancePedido.jsx` | Barra de progreso del pedido y botón con el siguiente paso válido. |
 | `src/componentes/TrasladoMesa.jsx` | Elegir el destino tocando una mesa y trasladar. |
 | `src/componentes/AdminMesas.jsx` | Pantalla "Configurar mesas". |
-| `src/utils/flujoPedido.js` | Estados del pedido en orden y `siguienteEstado`. |
-| `src/utils/estadoMesa.js` | Estado visual de una mesa (texto, ícono y color) según su pedido. |
+| `src/modules/pedidos/flujoPedido.js` | Estados del pedido en orden y `siguienteEstado`. |
+| `src/shared/utils/estadoMesa.js` | Estado visual de una mesa (texto, ícono y color) según su pedido. |
 | `src/test/colores-estado.test.js` | Calcula el contraste de cada color de estado en ambos temas. |
 | `src/test/patrones-visuales.test.js` | Vigila que no vuelvan los patrones visuales prohibidos. |
 | Tests de cada componente nuevo y de las utilidades | Ver sección 6. |
@@ -62,7 +62,7 @@ Rama `feat/rediseno-mesas`, creada desde `dev` en `313b8ee`. Necesita la rama
 | `src/componentes/App.jsx` | Sin las dos tarjetas ni sus campos; queda como contenedor (socket, estado, validaciones antes de emitir). Pasa de 746 a ~300 líneas. Actualiza `estadoPedido` de cada mesa con `cambio_estado_pedido`. |
 | `src/componentes/MapaMesas.jsx` | Plano de sala con 5 estados. |
 | `src/componentes/DetalleMesa.jsx` | Panel con todas las acciones de la mesa; franja de estado; sin "Información". |
-| `src/componentes/TomaPedido.jsx`, `SelectorTema.jsx` | Solo lo visual. |
+| `src/modules/pedidos/components/TomaPedido.jsx`, `src/componentes/SelectorTema.jsx` | Solo lo visual. |
 | `src/validaciones/validaciones.js` | Nuevos `validarMesaExistente`, `validarTraslado` y `validarNumeroMesaNueva`. **`validarNumeroMesa` no cambió** (el script de integración del CI, `test-verificacion.js`, comprueba sus mensajes exactos). |
 | `src/servicios/api.js` | `agregarMesa` y `quitarMesa`. |
 | `src/index.css` | Colores por estado (`--mesa-*`), piso del plano, tamaño táctil (`--toque`), verde más vivo; se quita la animación del puntito de conexión. |

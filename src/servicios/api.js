@@ -28,6 +28,7 @@
 import { io } from 'socket.io-client';
 import { createClient } from '@supabase/supabase-js';
 import { crearApiNube, crearConexionNube } from './nube.js';
+import { crearApiPedidos } from '../modules/pedidos/pedidos.api.js';
 
 /** URL del backend. Se configura con VITE_API_URL (archivo .env); por defecto, el backend local. */
 export const API_URL = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000';
@@ -201,6 +202,8 @@ async function pedirJson(ruta, opcionesBase) {
   return cuerpo;
 }
 
+const apiPedidos = crearApiPedidos({ pedirJson, nube });
+
 /**
  * Lista todas las mesas con su estado. `estadoPedido` es el estado del pedido vigente de la mesa
  * ("Recibido 📝", "En Cocina 🍳", "Listo 🍽️") o null; puede faltar si el backend es anterior.
@@ -214,7 +217,7 @@ export const obtenerMesas = () => (nube ? nube.obtenerMesas() : pedirJson('/api/
  * @returns {Promise<{ ok: boolean, items?: Array, total?: number, estado?: string, tipo?: string, error?: string }>}
  */
 export const obtenerPedidoMesa = (numero) =>
-  nube ? nube.obtenerPedidoMesa(numero) : pedirJson(`/api/mesas/${numero}/pedido`);
+  apiPedidos.obtenerResumen(numero);
 
 /**
  * Marca una mesa libre como ocupada.

@@ -1,4 +1,4 @@
-// src/componentes/RielComandas.jsx
+// src/modules/pedidos/components/RielComandas.jsx
 // Riel de comandas: como el riel metálico del pase de una cocina, muestra un ticket de
 // papel por cada pedido en curso, del más antiguo al más nuevo. Cada ticket lleva la mesa,
 // el estado del pedido y su propio temporizador.
@@ -15,10 +15,10 @@
 //   ahora         {number}   - Hora actual en ms (la actualiza App cada segundo)
 //   onSeleccionar {Function} - (mesa) => void. Abre el panel de la mesa del ticket
 
-import Icono from './Icono';
-import { estadoVisualPedido } from '../utils/estadoMesa';
-import { formatearTiempo } from '../utils/formato';
-import { comandasActivas, segundosDesde, urgencia } from '../utils/tiempoComanda';
+import Icono from '../../../shared/components/Icono.jsx';
+import { estadoVisualPedido } from '../../../shared/utils/estadoMesa.js';
+import { formatearTiempo } from '../../../utils/formato';
+import { comandasActivas, segundosDesde, urgencia } from '../tiempoComanda.js';
 
 const TEXTO_URGENCIA = {
   atencion: 'Más de 15 min',

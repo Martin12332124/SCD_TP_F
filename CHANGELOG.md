@@ -15,3 +15,4 @@
 
 ## [v0.1.0-alpha] — 2026-11-01 (Hito 2)
 - Interfaz POS + KDS en React 19 + Vite, mapa de mesas, riel de comandas, toma de pedido, traslado entre mesas, administración de mesas, autenticación y modo nube con Supabase.
+

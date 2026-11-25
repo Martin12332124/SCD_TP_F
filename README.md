@@ -104,7 +104,7 @@ A continuación están las instrucciones para descargar, instalar y ejecutar est
 | 2 | Mapa de mesas en tiempo real | US-08 | `GET /api/mesas`, evento `estado_mesas` en `src/app.js` | `src/componentes/MapaMesas.jsx`, `src/componentes/App.jsx` | `test/api.test.js`, `test/socket.test.js` |
 | 3 | Traslado de pedido entre mesas | US-05 | `src/dominio/mesa.service.js`, evento `trasladar_pedido` | panel de la mesa: `src/componentes/TrasladoMesa.jsx` | `test/mesa.service.test.js`, `test/socket.test.js` |
 | 4 | Precio base de productos (crear/editar) | US-07 | `src/dominio/menu-item.service.js`, `src/presentacion/menu-items.router.js` | — | `test/menu-item.service.test.js`, `test/api.test.js` |
-| 5 | Toma de pedido, confirmación y disponibilidad | US-04 (parcial) | `src/dominio/pedido.service.js` (`confirmarPedido`), `PATCH /api/menu-items/:id` | `src/componentes/TomaPedido.jsx` | `test/pedido.service.test.js`, `test/socket.test.js` |
+| 5 | Toma de pedido, confirmación y disponibilidad | US-04 (parcial) | `src/modules/pedidos/pedido.service.js` (`confirmarPedido`), `PATCH /api/menu-items/:id` | `src/modules/pedidos/components/TomaPedido.jsx` | `test/pedido.service.test.js`, `test/socket.test.js` |
 
 ### Cómo ejecutar
 ``` bash 
@@ -244,18 +244,19 @@ Esta sección explica dónde tocar el código para las extensiones más comunes.
 
 ### Agregar un componente nuevo
 
-1. Crear `src/componentes/MiComponente.jsx` con `export default MiComponente`.
-2. Escribir `src/componentes/MiComponente.test.jsx` usando `@testing-library/react`.
+1. Si pertenece a una funcionalidad, crear `src/modules/mi-funcionalidad/components/MiComponente.jsx` con `export default MiComponente`; colocar junto a él su prueba.
+2. Si el componente se comparte entre funcionalidades, ubicarlo en `src/shared/components/`.
+3. Escribir la prueba con `@testing-library/react`.
    - Mockear `socket.io-client` y `fetch` con `vi.mock` si el componente los necesita (ver `App.test.jsx` como ejemplo).
-3. Importar el componente desde donde corresponda (normalmente `App.jsx` o `DetalleMesa.jsx`).
+4. Exportar la interfaz pública del módulo en `src/modules/mi-funcionalidad/index.js` e importarla desde `App.jsx` o desde otro módulo consumidor.
 
 ### Agregar una función de utilidad
 
-1. Crear `src/utils/mi-utilidad.js` (módulo ES: `export function …`).
-2. Escribir `src/utils/mi-utilidad.test.js` con casos válidos, límites y errores.
-3. Importar desde los componentes que la necesiten.
+1. Crear la utilidad dentro de `src/modules/mi-funcionalidad/` si sus reglas son propias de esa funcionalidad, o en `src/utils/` / `src/shared/` si realmente es común.
+2. Escribir pruebas con casos válidos, límites y errores junto al módulo.
+3. Importarla desde la interfaz pública del módulo o desde los consumidores que correspondan.
 
-**Regla de dependencias:** `componentes/` puede importar de `servicios/`, `utils/` y `validaciones/`, pero no al revés. `utils/`, `servicios/` y `validaciones/` no importan entre sí ni desde `componentes/`.
+**Regla de dependencias:** los módulos pueden consumir servicios compartidos (`servicios/`, `validaciones/`, `utils/` y `shared/`), pero las piezas compartidas no deben importar componentes o lógica privada de un módulo.
 
 ### Agregar una operación al cliente REST
 

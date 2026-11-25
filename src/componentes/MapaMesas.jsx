@@ -8,8 +8,8 @@
 //   mesaSeleccionada  {object|null} - Mesa actualmente seleccionada
 //   onSeleccionar     {Function}    - Callback al tocar una mesa
 
-import { estadoVisualMesa, contarEstados } from '../utils/estadoMesa';
-import Icono from './Icono';
+import { estadoVisualMesa, contarEstados } from '../shared/utils/estadoMesa.js';
+import Icono from '../shared/components/Icono.jsx';
 
 const plural = (cantidad, singular, pluralizado) => (cantidad === 1 ? singular : pluralizado);
 

@@ -1,14 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { validarMesaExistente, validarTraslado } from '../validaciones/validaciones';
-import { FLUJO_PEDIDO } from '../utils/flujoPedido';
+import { FLUJO_PEDIDO, TomaPedido, RielComandas, comandasActivas } from '../modules/pedidos';
 import { obtenerMesas, SOCKET_NO_AUTORIZADO } from '../servicios/api';
 import MapaMesas from './MapaMesas';
 import DetalleMesa from './DetalleMesa';
-import TomaPedido from './TomaPedido';
 import AdminMesas from './AdminMesas';
 import Encabezado from './Encabezado';
-import RielComandas from './RielComandas';
-import { comandasActivas } from '../utils/tiempoComanda';
 import AvisoConexionLocal from './AvisoConexionLocal';
 import { textoRechazo } from '../utils/rechazo';
 

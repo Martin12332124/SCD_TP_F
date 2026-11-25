@@ -10,7 +10,7 @@
 //   onTrasladar {Function} - (origen, destino) => void, con los números de mesa
 
 import { useState } from 'react';
-import Icono from './Icono';
+import Icono from '../shared/components/Icono.jsx';
 
 function TrasladoMesa({ mesaOrigen, mesas, conectado, onTrasladar }) {
   // Destino elegido. Se guarda con la mesa de origen para no arrastrarlo a otro panel.

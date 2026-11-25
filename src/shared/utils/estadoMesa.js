@@ -1,13 +1,12 @@
-// src/utils/estadoMesa.js
 // Estado visual de una mesa: combina si está libre u ocupada con el estado de su pedido.
 // Un solo lugar define, para cada estado, su texto, su ícono y la clave de sus colores.
 // Los colores viven en index.css como --mesa-<clave> (fondo) y --mesa-<clave>-texto.
 
-import { ESTADO_RECIBIDO, ESTADO_EN_COCINA, ESTADO_LISTO } from './flujoPedido';
+import { ESTADO_RECIBIDO, ESTADO_EN_COCINA, ESTADO_LISTO } from './estadosPedido.js';
 
 /**
- * Los cinco estados que puede mostrar una mesa. El ícono (nombre de un trazo de
- * componentes/Icono.jsx) acompaña al color, para no depender solo del color (REF-05).
+ * Los cinco estados que puede mostrar una mesa. El ícono acompaña al color,
+ * para no depender solo del color (REF-05).
  */
 export const ESTADOS_MESA = {
   libre: { clave: 'libre', etiqueta: 'Libre', icono: 'silla' },
@@ -26,7 +25,7 @@ const CLAVE_POR_PEDIDO = {
 /**
  * Estado visual que corresponde a un estado de pedido.
  * @param {string|null|undefined} estadoPedido
- * @returns {{ clave: string, etiqueta: string, icono: string } | null} null si no es un estado conocido
+ * @returns {{ clave: string, etiqueta: string, icono: string } | null}
  */
 export function estadoVisualPedido(estadoPedido) {
   const clave = CLAVE_POR_PEDIDO[estadoPedido];
@@ -35,8 +34,7 @@ export function estadoVisualPedido(estadoPedido) {
 
 /**
  * Estado visual de una mesa { estado, estadoPedido? }.
- * Si el backend no envía estadoPedido (versión anterior), una mesa ocupada se muestra "Ocupada".
- * @returns {{ clave: string, etiqueta: string, icono: string }}
+ * Si el backend no envía estadoPedido, una mesa ocupada se muestra "Ocupada".
  */
 export function estadoVisualMesa(mesa) {
   if (!mesa || mesa.estado !== 'ocupada') return ESTADOS_MESA.libre;
@@ -44,8 +42,7 @@ export function estadoVisualMesa(mesa) {
 }
 
 /**
- * Cuenta las mesas por estado visual.
- * `ocupada` cuenta TODAS las que no están libres (con o sin pedido).
+ * Cuenta las mesas por estado visual. `ocupada` cuenta todas las no libres.
  * @returns {{ libre: number, ocupada: number, recibido: number, cocina: number, listo: number }}
  */
 export function contarEstados(mesas) {

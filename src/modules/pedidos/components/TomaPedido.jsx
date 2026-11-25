@@ -1,4 +1,4 @@
-// src/TomaPedido.jsx
+// src/modules/pedidos/components/TomaPedido.jsx
 // Vista de toma de pedido — Paso 4: confirmar el pedido y enviarlo al backend por socket.
 //
 // Muestra todos los ítems del menú obtenidos de GET /api/menu-items.
@@ -15,10 +15,10 @@
 //   conectado {boolean}  - true si el socket está conectado al backend
 
 import { useState, useEffect } from 'react';
-import { validarCantidad } from '../validaciones/validaciones';
-import { formatearPrecio } from '../utils/formato';
-import { obtenerMenu } from '../servicios/api';
-import Icono from './Icono';
+import { validarCantidad } from '../../../validaciones/validaciones';
+import { formatearPrecio } from '../../../utils/formato';
+import { obtenerMenu } from '../../../servicios/api';
+import Icono from '../../../shared/components/Icono.jsx';
 
 function TomaPedido({ mesa, onCerrar, socket, conectado }) {
   // Lista de ítems del menú cargados desde el backend

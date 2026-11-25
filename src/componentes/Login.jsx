@@ -8,7 +8,7 @@
 //   aviso    {string}   - Mensaje previo, por ejemplo "Tu sesión terminó..." (opcional)
 
 import { useState } from 'react';
-import Icono from './Icono';
+import Icono from '../shared/components/Icono.jsx';
 
 function Login({ onEntrar, aviso = '' }) {
   const [usuario, setUsuario] = useState('');

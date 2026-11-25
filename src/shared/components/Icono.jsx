@@ -1,4 +1,4 @@
-// src/componentes/Icono.jsx
+// src/shared/components/Icono.jsx
 // Íconos de línea propios (SVG en el código, sin depender de internet ni de emojis).
 // Toman el color del texto que los rodea (currentColor), así sirven igual en tema claro
 // y oscuro y sobre cualquier color de estado.

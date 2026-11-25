@@ -10,7 +10,7 @@
 //                                    undefined = todavía no se sabe (no se muestra nada)
 
 import { useState, useEffect } from 'react';
-import Icono from './Icono';
+import Icono from '../shared/components/Icono.jsx';
 import { localConectado, horaDeUltima } from '../utils/conexionLocal';
 
 export const REEVALUAR_MS = 15000;

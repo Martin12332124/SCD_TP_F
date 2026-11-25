@@ -99,44 +99,71 @@ src/
 
 Problemas identificados: la URL `http://localhost:3000` aparecía 4 veces en 3 archivos, `formatearPrecio` estaba definida en dos componentes, y no había separación entre lógica de red, presentación y utilidades.
 
-**Después** (PR #81, #80, #82): ahora:
+**Después de Hito 3** (PR #81, #80, #82), y tras aplicar la modularización por funcionalidad:
 
 ```
 src/
-├── componentes/    Vistas React y sus pruebas: App, MapaMesas, DetalleMesa, TomaPedido, SelectorTema
-├── servicios/      Comunicación con el backend: api.js
-├── utils/          Funciones puras reutilizables: formato.js
-├── validaciones/   Reglas de entrada: validaciones.js
-├── test/setup.js   Configuración global de pruebas
-├── main.jsx        Punto de entrada
-└── index.css
+├── modules/pedidos/
+│   ├── components/ TomaPedido, AvancePedido, RielComandas y pruebas
+│   ├── flujoPedido.js, tiempoComanda.js
+│   ├── pedidos.api.js
+│   └── index.js    Interfaz pública del módulo
+├── shared/
+│   ├── components/Icono.jsx
+│   └── utils/      estadoMesa.js, estadosPedido.js
+├── componentes/    App, MapaMesas, DetalleMesa y otras funcionalidades
+├── servicios/      Transporte común REST/nube: api.js
+├── utils/          Utilidades compartidas: formato.js
+├── validaciones/   Reglas de entrada compartidas
+└── main.jsx        Punto de entrada
 ```
 
-Regla de dependencias: `componentes/` usa `servicios/`, `utils/` y `validaciones/`. Estos tres no importan componentes.
+El módulo `pedidos` agrupa sus vistas, reglas de estados, temporizadores y consulta del resumen.
+El transporte REST/nube, validaciones y formato siguen compartidos porque los consumen otras
+funcionalidades. `shared/` contiene piezas visuales y vocabulario de estados usados por más de un
+módulo.
 
 ### Backend (SCD_TP_B)
 
 | Carpeta | Responsabilidad | Archivos principales |
 |---|---|---|
-| `src/presentacion/` | Entrada HTTP y socket: traducir peticiones y respuestas | `mesas.router.js`, `menu-items.router.js`, `socket.handlers.js` *(nuevo)* |
-| `src/dominio/` | Reglas de negocio e invariantes | `pedido.service.js`, `mesa.service.js`, `mesa-estado.service.js`, `menu-item.service.js`, `consistencia*.js` |
-| `src/infraestructura/` | Datos y notificaciones | `repositorios.js`, `notificador.js` |
+| `src/modules/pedidos/` | Funcionalidad de pedidos: reglas, persistencia SQLite y controlador Socket.IO | `pedido.service.js`, `pedido.repository.sqlite.js`, `pedido.socket.handlers.js`, `index.js` |
+| `src/presentacion/` | Entrada HTTP y composición transversal de Socket.IO | `mesas.router.js`, `menu-items.router.js`, `socket.handlers.js` |
+| `src/dominio/` | Reglas compartidas entre funcionalidades | `mesa.service.js`, `mesa-estado.service.js`, `menu-item.service.js`, `consistencia*.js` |
+| `src/infraestructura/` | Persistencia compartida, autenticación y notificaciones | repositorios de mesas/menú, `notificador.js`, SQLite |
 | `src/app.js` | Composición: crea servicios y monta rutas y socket | — |
 
 ### Operaciones que ofrece cada módulo
 
 | Repo | Módulo | Operaciones públicas | Quién lo usa |
 |---|---|---|---|
-| F | `servicios/api.js` | `API_URL`, `obtenerMesas()`, `obtenerPedidoMesa(n)`, `abrirMesa(n)`, `cerrarMesa(n)`, `obtenerMenu()` | `App`, `DetalleMesa`, `TomaPedido`, `scripts/probar-api.mjs` |
-| F | `utils/formato.js` | `formatearPrecio(precio)`, `formatearTiempo(segundos)` | `App`, `DetalleMesa`, `TomaPedido` |
-| F | `validaciones/validaciones.js` | `validarNumeroMesa(valor)`, `validarCantidad(valor)`, `CANTIDAD_MINIMA`, `CANTIDAD_MAXIMA` | `App`, `TomaPedido` |
-| F | `componentes/` | Un componente React por archivo (`export default`): `App`, `MapaMesas`, `DetalleMesa`, `TomaPedido`, `SelectorTema` | `main.jsx` monta `App`; `App` compone al resto |
-| B | `presentacion/` | `crearMesasRouter(deps)`, `crearMenuItemsRouter(deps)`, `registrarHandlersSocket(io, deps)`, `responderSeguro(socket, opciones)` | `app.js` |
-| B | `dominio/` | `PedidoService` (`actualizarEstado`, `confirmarPedido`, `obtenerResumen`) · `MesaService` (`trasladarPedido`) · `MesaEstadoService` (`abrirMesa`, `cerrarMesa`) · `MenuItemService` (`crearItem`, `editarItem`, `cambiarDisponibilidad`, `obtenerItem`, `listarItems`) | `presentacion/` |
-| B | `infraestructura/` | `PedidosEnMemoria`, `MesasEnMemoria`, `MenuItemsEnMemoria` (repositorios) · `SocketNotificador` | Servicios de `dominio/`, inyectados desde `app.js` |
+| F | `modules/pedidos/` | `TomaPedido`, `AvancePedido`, `RielComandas`, `FLUJO_PEDIDO`, `comandasActivas()`, `crearApiPedidos()` | `App`, `DetalleMesa`; `api.js` inyecta el transporte local/nube |
+| F | `shared/` | `Icono`, estados visuales y constantes de estado compartidas | Módulos de pedidos, mesas, sesión y navegación |
+| F | `servicios/api.js` | Sesión, transporte REST/nube, `obtenerPedidoMesa(n)`, `obtenerMenu()` | Módulos que consumen backend o Supabase |
+| F | `validaciones/`, `utils/` | Reglas de entrada y formato compartidos | `App`, `DetalleMesa` y módulos consumidores |
+| B | `modules/pedidos/` | `PedidoService` (`actualizarEstado`, `confirmarPedido`, `obtenerResumen`), `PedidosSQLite`, `registrarHandlersPedido(socket, deps)` | `app.js`, composición Socket.IO y otros servicios inyectados |
+| B | `presentacion/` | Routers HTTP y `registrarHandlersSocket(io, deps)` con `responderSeguro` | `app.js`; delega eventos de pedido al módulo |
+| B | `infraestructura/` | Repositorios compartidos de mesas/menú, `PedidosEnMemoria`, notificador y conexión SQLite | Inyectados desde `app.js` y pruebas |
 | B | `app.js` | `crearApp()`: crea los repositorios y servicios, monta las rutas y registra el socket | `index.js` y las pruebas |
 
-Las reglas compartidas viven en un solo lugar: el formato de moneda en `utils/formato.js`, los rangos de entrada en `validaciones/validaciones.js` y la URL del servidor en `servicios/api.js`.
+Las dependencias compartidas se inyectan en los módulos: el backend conserva una conexión SQLite
+única para las transacciones; el frontend construye la API del módulo de pedidos con el transporte
+común para conservar el mismo contrato en modo local y nube.
+
+### Modularización por funcionalidad: pedidos (Unidad 3, clase 3.4)
+
+Se eligió el flujo de pedidos porque ya funcionaba y cruza ambos repositorios.
+
+| Antes | Después |
+|---|---|
+| Backend: `dominio/pedido.service.js`, handlers de pedido mezclados en `presentacion/socket.handlers.js` y `PedidosSQLite` junto a los repositorios de mesas y menú. | Backend: `modules/pedidos/` reúne `pedido.service.js`, `pedido.socket.handlers.js`, `pedido.repository.sqlite.js` y su interfaz `index.js`. El compositor sigue inyectando la conexión y los repositorios compartidos. |
+| Frontend: `TomaPedido`, `AvancePedido`, `RielComandas` y reglas de pedido repartidos entre `componentes/` y `utils/`. | Frontend: `modules/pedidos/` agrupa componentes, flujo, temporizadores, API de resumen y pruebas; `shared/` contiene íconos y estados visuales usados por mesas y pedidos. |
+
+El recorrido queda explícito: `App` consume la interfaz React del módulo; `TomaPedido` envía
+`confirmar_pedido` por el socket compartido; el controlador del módulo llama a `PedidoService`;
+el servicio valida y persiste mediante `PedidosSQLite`, y la respuesta/eventos conservan el
+contrato existente. `DetalleMesa` usa la API pública para consultar el resumen. Se mantuvieron
+las pruebas en ambos repositorios y se agregó cobertura del controlador y de la API local/nube.
 
 ---
 
