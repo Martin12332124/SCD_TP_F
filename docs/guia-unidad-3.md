@@ -2,7 +2,7 @@
 
 Taller de Programación Avanzada ISF224 · Proyecto POS + KDS
 
-> **Estado:** terminado. Las tres intervenciones, la modularización, el uso del componente reutilizable y la revisión de la dependencia están en `dev` (frontend: PR #80, #81, #82 y #83 · backend: PR #47). La prueba "después" da el mismo resultado que la prueba "antes".
+> **Estado de entrega:** esta candidata local integra los cambios aprobados por el equipo, incluida la modularización de pedidos y sus pruebas. El paquete se identifica con etiquetas locales `v3.0.0` en ambos repositorios. La publicación del paquete y la revisión independiente en entorno limpio siguen pendientes.
 
 Repositorios: [SCD_TP_F (frontend)](https://github.com/Martin12332124/SCD_TP_F) · [SCD_TP_B (backend)](https://github.com/Martin12332124/SCD_TP_B)
 
@@ -127,7 +127,7 @@ módulo.
 
 | Carpeta | Responsabilidad | Archivos principales |
 |---|---|---|
-| `src/modules/pedidos/` | Funcionalidad de pedidos: reglas, persistencia SQLite y controlador Socket.IO | `pedido.service.js`, `pedido.repository.sqlite.js`, `pedido.socket.handlers.js`, `index.js` |
+| `src/modules/pedidos/` | Funcionalidad de pedidos: reglas, persistencia SQLite y controladores REST/Socket.IO | `pedido.service.js`, `pedido.repository.sqlite.js`, `pedido.router.js`, `pedido.socket.handlers.js`, `index.js` |
 | `src/presentacion/` | Entrada HTTP y composición transversal de Socket.IO | `mesas.router.js`, `menu-items.router.js`, `socket.handlers.js` |
 | `src/dominio/` | Reglas compartidas entre funcionalidades | `mesa.service.js`, `mesa-estado.service.js`, `menu-item.service.js`, `consistencia*.js` |
 | `src/infraestructura/` | Persistencia compartida, autenticación y notificaciones | repositorios de mesas/menú, `notificador.js`, SQLite |
@@ -141,7 +141,7 @@ módulo.
 | F | `shared/` | `Icono`, estados visuales y constantes de estado compartidas | Módulos de pedidos, mesas, sesión y navegación |
 | F | `servicios/api.js` | Sesión, transporte REST/nube, `obtenerPedidoMesa(n)`, `obtenerMenu()` | Módulos que consumen backend o Supabase |
 | F | `validaciones/`, `utils/` | Reglas de entrada y formato compartidos | `App`, `DetalleMesa` y módulos consumidores |
-| B | `modules/pedidos/` | `PedidoService` (`actualizarEstado`, `confirmarPedido`, `obtenerResumen`), `PedidosSQLite`, `registrarHandlersPedido(socket, deps)` | `app.js`, composición Socket.IO y otros servicios inyectados |
+| B | `modules/pedidos/` | `PedidoService` (`actualizarEstado`, `confirmarPedido`, `obtenerResumen`), `PedidosSQLite`, router REST y `registrarHandlersPedido(socket, deps)` | `app.js`, composición Socket.IO y otros servicios inyectados |
 | B | `presentacion/` | Routers HTTP y `registrarHandlersSocket(io, deps)` con `responderSeguro` | `app.js`; delega eventos de pedido al módulo |
 | B | `infraestructura/` | Repositorios compartidos de mesas/menú, `PedidosEnMemoria`, notificador y conexión SQLite | Inyectados desde `app.js` y pruebas |
 | B | `app.js` | `crearApp()`: crea los repositorios y servicios, monta las rutas y registra el socket | `index.js` y las pruebas |
@@ -156,7 +156,7 @@ Se eligió el flujo de pedidos porque ya funcionaba y cruza ambos repositorios.
 
 | Antes | Después |
 |---|---|
-| Backend: `dominio/pedido.service.js`, handlers de pedido mezclados en `presentacion/socket.handlers.js` y `PedidosSQLite` junto a los repositorios de mesas y menú. | Backend: `modules/pedidos/` reúne `pedido.service.js`, `pedido.socket.handlers.js`, `pedido.repository.sqlite.js` y su interfaz `index.js`. El compositor sigue inyectando la conexión y los repositorios compartidos. |
+| Backend: `dominio/pedido.service.js`, handlers de pedido mezclados en `presentacion/socket.handlers.js` y `PedidosSQLite` junto a los repositorios de mesas y menú. | Backend: `modules/pedidos/` reúne `pedido.service.js`, `pedido.socket.handlers.js`, `pedido.repository.sqlite.js`, el router REST y su interfaz `index.js`. El compositor sigue inyectando la conexión y los repositorios compartidos. |
 | Frontend: `TomaPedido`, `AvancePedido`, `RielComandas` y reglas de pedido repartidos entre `componentes/` y `utils/`. | Frontend: `modules/pedidos/` agrupa componentes, flujo, temporizadores, API de resumen y pruebas; `shared/` contiene íconos y estados visuales usados por mesas y pedidos. |
 
 El recorrido queda explícito: `App` consume la interfaz React del módulo; `TomaPedido` envía
@@ -291,7 +291,7 @@ cd SCD_TP_F && npm ci && npm run dev
 npm run lint && npm run build && npm run test:ci
 ```
 
-Cada PR corre el CI de GitHub Actions (lint, pruebas y cobertura) y requiere una aprobación antes del merge.
+Cada PR ejecuta el CI de GitHub Actions (lint, pruebas y cobertura). En la configuración actual de GitHub no hay una aprobación obligatoria para estos PR.
 
 | Repo | PR | Checks del CI |
 |---|---|---|
@@ -300,11 +300,13 @@ Cada PR corre el CI de GitHub Actions (lint, pruebas y cobertura) y requiere una
 | SCD_TP_F | #82 modularización + ficha | [checks](https://github.com/Martin12332124/SCD_TP_F/pull/82/checks) |
 | SCD_TP_F | #83 uso de api.js | [checks](https://github.com/Martin12332124/SCD_TP_F/pull/83/checks) |
 | SCD_TP_B | #47 handlers de socket | [checks](https://github.com/Martin12332124/SCD_TP_B/pull/47/checks) |
+| SCD_TP_F | #105 módulo de pedidos | [checks](https://github.com/Martin12332124/SCD_TP_F/pull/105/checks) |
+| SCD_TP_B | #53 módulo de pedidos | [checks](https://github.com/Martin12332124/SCD_TP_B/pull/53/checks) |
 | Ambos | Historial completo | [Actions F](https://github.com/Martin12332124/SCD_TP_F/actions) · [Actions B](https://github.com/Martin12332124/SCD_TP_B/actions) |
 
-Resultado local sobre `dev` final: frontend **611/611 pruebas** (26 archivos), cobertura **98,28 % sentencias / 95,73 % ramas** · backend **435/435 pruebas** (17 archivos), cobertura **97,71 % sentencias / 90,75 % ramas** · integración extremo a extremo (`npm run test:integracion` contra `SCD_TP_B`) aprobada.
+Resultado de la versión candidata: frontend **613/613 pruebas** (27 archivos), cobertura **98,28 % sentencias / 95,73 % ramas** · backend **438/438 pruebas** (18 suites), cobertura **97,91 % sentencias / 91,39 % ramas**. También pasó `npm run test:integracion` y se verificó en navegador el flujo de login, toma, confirmación, avance y liberación de un pedido. La prueba independiente por otra persona en instalación limpia sigue pendiente.
 
-Paquete entregable etiquetado como **`v3.0.0`** en ambos repositorios, con notas de versión en `CHANGELOG.md` e instrucciones de extensión en cada `README.md`.
+**Versión de entrega:** `v3.0.0` para ambos repositorios. Las etiquetas locales se deben actualizar sobre los commits finales incluidos en el ZIP. La release de GitHub y la revisión independiente siguen pendientes.
 
 ---
 
@@ -312,18 +314,19 @@ Paquete entregable etiquetado como **`v3.0.0`** en ambos repositorios, con notas
 
 | Deuda | Motivo para dejarla | Responsable | Condición de revisión |
 |---|---|---|---|
-| `mesas.router.js` llama a `mesaEstadoService._validarNumero`, un método privado, desde fuera del servicio | Cambiarlo toca el contrato del servicio y sus pruebas; queda fuera del alcance de esta guía | Francisca Hernández | Al agregar otra ruta que valide número de mesa |
 | La tabla `HTTP_STATUS` está repetida en `mesas.router.js` y `menu-items.router.js` | Son tablas distintas (cada una mapea sus propios tipos de error) | Francisca Hernández | Si aparece un tercer router |
 | `App.jsx` y `TomaPedido.jsx` siguen siendo extensos, sobre todo por los estilos en línea | Separar estilos y subcomponentes es un cambio grande que no aporta a las intervenciones elegidas | Martín Saldívar | Antes de agregar una vista nueva |
-| 18 vulnerabilidades moderadas en dependencias de desarrollo (`jest` → `glob`/`minimatch`) que requieren `--force` (degradaría `jest` a 29.x) | Son solo de herramientas de desarrollo (no se empaquetan en producción; `npm audit --omit=dev` da 0 vulnerabilidades). La vulnerabilidad alta de `engine.io@6.6.9` ya fue corregida a `6.6.13` con `npm audit fix` | Francisca Hernández | Cuando `jest` publique actualización sin breaking changes |
+| Vulnerabilidades en herramientas de desarrollo: 4 moderadas en frontend (`c8` → `test-exclude`/`glob`/`minimatch`) y 18 moderadas en backend (Jest → `glob`/`minimatch`). Las altas de desarrollo del frontend se corrigieron con `npm audit fix`; `npm audit --omit=dev` da 0 en ambos repositorios. | No afectan los paquetes de producción. Resolver las restantes con `--force` degradaría `c8` o Jest y requiere revisar compatibilidad de las pruebas. La vulnerabilidad alta de `engine.io@6.6.9` ya fue corregida a `6.6.13`. | Francisca Hernández | Cuando las herramientas publiquen actualizaciones compatibles; volver a ejecutar pruebas y auditoría |
 
 ---
 
 ## 8. Informe breve de cierre y empaquetado (`v3.0.0`)
 
-- **Versión y etiqueta Git:** `v3.0.0` en ambos repositorios (`SCD_TP_F` y `SCD_TP_B`), con notas de versión en `CHANGELOG.md`. Se asigna `v3.0.0` (salto desde `v0.1.0-alpha` del Hito 2) por el cierre de la Unidad 3 (refactorizaciones, modularización completa de `src/`, documentación de contratos y mitigación de seguridad), manteniendo compatibilidad en los endpoints REST y eventos Socket.IO.
-- **Alcance entregado:** Tres intervenciones verificadas (`api.js`, `formato.js`, `socket.handlers.js`), estructura modular por responsabilidades en frontend y por capas en backend, contrato reutilizable de `api.js`, revisión y mitigación de `socket.io` / `engine.io@6.6.13`, diagramas y casos de integración.
-- **Decisiones y efectos:** Se priorizó extraer la capa de comunicación (`api.js`) y los handlers de socket (`socket.handlers.js`) con commits pequeños protegidos por pruebas previas, elevando la cobertura global a **98,28 %** en frontend y **97,71 %** en backend sin alterar el comportamiento visible.
+- **Versión y etiqueta Git:** `v3.0.0` es la versión acordada para el producto integrado. Aún no se publica: las etiquetas locales no identifican los commits de los PR #105/#53. Tras integrar ambos repositorios, mover/publicar la etiqueta en cada uno y enlazar la release o paquete aquí.
+- **Alcance entregado:** Intervenciones de API, formato, handlers Socket.IO y modularización por funcionalidad de pedidos en ambos repositorios; contrato de API, revisión y mitigación de `socket.io` / `engine.io`, diagramas y casos de integración. El endpoint de resumen de pedido queda en `modules/pedidos`, mientras la composición y el transporte común siguen compartidos.
+- **Decisiones y efectos:** Se conservaron los contratos REST y Socket.IO y se protegieron las reorganizaciones con pruebas. La versión candidata pasa **613 pruebas frontend** y **438 backend**, además del flujo integrado en navegador descrito en §6.
 - **Pendientes priorizados:**
-  1. **Revisión por otro equipo en entorno limpio (Alta):** Pendiente que un integrante de otro equipo clone la etiqueta `v3.0.0` siguiendo ambos `README.md` y registre el resultado.
-  2. **Deuda técnica documentada en §7 (Media/Baja):** Refactorización de estilos en `App.jsx`/`TomaPedido.jsx`, uso de `_validarNumero` en `mesas.router.js` y actualización de `jest` cuando no requiera `--force`.
+  1. **Publicación del paquete (Alta):** compartir el ZIP final mediante un enlace accesible para el docente y registrar su referencia aquí.
+  2. **Revisión externa en entorno limpio (Alta):** una persona de otro equipo debe instalar el ZIP usando solo la documentación, ejecutar el flujo principal y registrar entorno, pasos, resultados y dificultades. La verificación automatizada del equipo no sustituye esta revisión.
+  3. **Trazabilidad de aportes (Alta):** enlazar los commits o PR de cada integrante que formen parte de los commits etiquetados de la entrega.
+  4. **Deuda técnica documentada en §7 (Media/Baja):** refactorización de estilos en `App.jsx`/`TomaPedido.jsx` y actualización de `jest` cuando no requiera `--force`.
