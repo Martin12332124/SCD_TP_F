@@ -12,7 +12,7 @@
 import { useState } from 'react';
 import { agregarMesa, quitarMesa } from '../servicios/api';
 import { validarNumeroMesaNueva, NUMERO_MESA_MAXIMO } from '../validaciones/validaciones';
-import { estadoVisualMesa } from '../utils/estadoMesa';
+import { estadoVisualMesa } from '../shared/utils/estadoMesa.js';
 import { textoRechazo } from '../utils/rechazo';
 
 function AdminMesas({ mesas, conectado, onCerrar }) {

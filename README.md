@@ -5,6 +5,7 @@
 ## Enlaces
  
 - **Sitio desplegado (modo nube):** https://scd-tp-pos-kds.netlify.app
+- **Hito 3 — Refactorización, modularización, pruebas y cierre (`v3.0.0`):** [docs/guia-unidad-3.md](docs/guia-unidad-3.md) · [CHANGELOG.md](CHANGELOG.md)
 - **Modelado (Entrega 3):** [docs/modelado/](docs/modelado/README.md): casos de uso, clases, secuencia y componentes, con su nota de lectura.
 - **Despliegue:** [docs/despliegue.md](docs/despliegue.md): modo local (offline) y modo nube (Netlify + Supabase), paso a paso, y plan de escalamiento a varias sucursales.
 
@@ -103,7 +104,7 @@ A continuación están las instrucciones para descargar, instalar y ejecutar est
 | 2 | Mapa de mesas en tiempo real | US-08 | `GET /api/mesas`, evento `estado_mesas` en `src/app.js` | `src/componentes/MapaMesas.jsx`, `src/componentes/App.jsx` | `test/api.test.js`, `test/socket.test.js` |
 | 3 | Traslado de pedido entre mesas | US-05 | `src/dominio/mesa.service.js`, evento `trasladar_pedido` | panel de la mesa: `src/componentes/TrasladoMesa.jsx` | `test/mesa.service.test.js`, `test/socket.test.js` |
 | 4 | Precio base de productos (crear/editar) | US-07 | `src/dominio/menu-item.service.js`, `src/presentacion/menu-items.router.js` | — | `test/menu-item.service.test.js`, `test/api.test.js` |
-| 5 | Toma de pedido, confirmación y disponibilidad | US-04 (parcial) | `src/dominio/pedido.service.js` (`confirmarPedido`), `PATCH /api/menu-items/:id` | `src/componentes/TomaPedido.jsx` | `test/pedido.service.test.js`, `test/socket.test.js` |
+| 5 | Toma de pedido, confirmación y disponibilidad | US-04 (parcial) | `src/modules/pedidos/pedido.service.js` (`confirmarPedido`), `PATCH /api/menu-items/:id` | `src/modules/pedidos/components/TomaPedido.jsx` | `test/pedido.service.test.js`, `test/socket.test.js` |
 
 ### Cómo ejecutar
 ``` bash 
@@ -116,11 +117,19 @@ npm run test:coverage
 
 ### REQUISITOS PREVIOS
 
-Para que esta pantalla funcione, la computadora externa necesita cumplir con dos condiciones:
-1. Tener **Node.js** instalado (versión LTS recomendada).
+Para que esta pantalla funcione, la computadora externa necesita cumplir con estas condiciones:
+1. Tener **Node.js 22 LTS** (o superior compatible) y **npm** instalados.
 2. Tener el servidor **Backend (`SCD_TP_B`) ya encendido y corriendo** en el puerto 3000, de la misma PC o en red.
 3. Un **usuario y una API key** del backend: el usuario sale de `USUARIOS_INICIALES` y la llave de `API_KEYS`, ambos en el `.env` del backend.
 El modo nube (sin backend local) se explica en [docs/despliegue.md](docs/despliegue.md).
+
+> **Versión empaquetada (`v3.0.0`):** para probar la entrega exacta del Hito 3 tras clonar, ejecuta `git checkout v3.0.0`.
+
+### Problemas frecuentes
+
+- **"Desconectado ✖" o error de red en el login:** verifica que el backend esté encendido en `VITE_API_URL` (por defecto `http://localhost:3000`).
+- **Error `API_KEY_INVALIDA`:** la variable `VITE_API_KEY` del `.env` del frontend no coincide con ninguna llave configurada en `API_KEYS` del backend.
+- **Falla `npm run build` o `npm run dev` por dependencias:** ejecuta `npm ci` para reinstalar exactamente las versiones de `package-lock.json`.
 
 ---
 
@@ -226,3 +235,49 @@ Cuando quieras cerrar el entorno de desarrollo:
 3. Si te pregunta *"¿Desea terminar el trabajo por lotes (S/N)?"*, escribe **`S`** y presiona `Enter`.
 
 Actividades de clase previas: ver [docs/actividades-clase.md](./docs/actividades-clase.md).
+
+---
+
+## Cómo extender el sistema
+
+Esta sección explica dónde tocar el código para las extensiones más comunes.
+
+### Agregar un componente nuevo
+
+1. Si pertenece a una funcionalidad, crear `src/modules/mi-funcionalidad/components/MiComponente.jsx` con `export default MiComponente`; colocar junto a él su prueba.
+2. Si el componente se comparte entre funcionalidades, ubicarlo en `src/shared/components/`.
+3. Escribir la prueba con `@testing-library/react`.
+   - Mockear `socket.io-client` y `fetch` con `vi.mock` si el componente los necesita (ver `App.test.jsx` como ejemplo).
+4. Exportar la interfaz pública del módulo en `src/modules/mi-funcionalidad/index.js` e importarla desde `App.jsx` o desde otro módulo consumidor.
+
+### Agregar una función de utilidad
+
+1. Crear la utilidad dentro de `src/modules/mi-funcionalidad/` si sus reglas son propias de esa funcionalidad, o en `src/utils/` / `src/shared/` si realmente es común.
+2. Escribir pruebas con casos válidos, límites y errores junto al módulo.
+3. Importarla desde la interfaz pública del módulo o desde los consumidores que correspondan.
+
+**Regla de dependencias:** los módulos pueden consumir servicios compartidos (`servicios/`, `validaciones/`, `utils/` y `shared/`), pero las piezas compartidas no deben importar componentes o lógica privada de un módulo.
+
+### Agregar una operación al cliente REST
+
+En `src/servicios/api.js`, al final del archivo, exportar la nueva función siguiendo el patrón existente:
+
+```js
+/**
+ * Descripción de la operación.
+ * @param {number} id
+ * @returns {Promise<{ ok: boolean, … }>}
+ */
+export const miOperacion = (id) =>
+  nube ? nube.miOperacion(id) : pedirJson(`/api/mi-ruta/${id}`, { method: 'POST' });
+```
+
+Luego agregar el test correspondiente en `src/servicios/api.test.js`.
+
+### Cambiar el modo local ↔ nube
+
+Solo se necesita el archivo `.env`:
+- **Modo local:** `VITE_MODO=local`, `VITE_API_URL=http://…`, `VITE_API_KEY=…`
+- **Modo nube:** `VITE_MODO=nube`, `VITE_SUPABASE_URL=…`, `VITE_SUPABASE_PUBLISHABLE_KEY=…`
+
+Ver [docs/despliegue.md](docs/despliegue.md) para los pasos completos.

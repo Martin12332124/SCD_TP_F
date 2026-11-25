@@ -11,7 +11,7 @@
 //   onCerrarSesion    {Function} - Si viene, se muestra el botón "Cerrar sesión"
 
 import SelectorTema from './SelectorTema';
-import Icono from './Icono';
+import Icono from '../shared/components/Icono.jsx';
 
 function Encabezado({ conectado, onConfigurarMesas, usuario, onCerrarSesion }) {
   return (

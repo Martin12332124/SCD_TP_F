@@ -4,7 +4,7 @@
 // La elección se aplica como data-theme en <html>, que index.css usa para cambiar los tokens.
 
 import { useState, useEffect } from 'react';
-import Icono from './Icono';
+import Icono from '../shared/components/Icono.jsx';
 
 const CLAVE_TEMA = 'monitor-pedidos:tema';
 

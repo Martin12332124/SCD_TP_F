@@ -3,7 +3,7 @@ import { describe, test, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MapaMesas from './MapaMesas';
-import { ESTADOS_MESA } from '../utils/estadoMesa';
+import { ESTADOS_MESA } from '../shared/utils/estadoMesa.js';
 
 const mesas = [
   { id: 'Mesa 1', numero: 1, estado: 'libre' },

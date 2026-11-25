@@ -1,8 +1,8 @@
-// src/utils/tiempoComanda.js
+// src/modules/pedidos/tiempoComanda.js
 // Tiempo de las comandas: cuánto lleva cada pedido en su estado actual y si está atrasado.
 // Umbrales de REF-04: alertas a los 15 y a los 20 minutos.
 
-import { estadoVisualPedido } from './estadoMesa';
+import { estadoVisualPedido } from '../../shared/utils/estadoMesa.js';
 
 /** Pasados estos minutos en el mismo estado, la comanda pide atención. */
 export const MINUTOS_ATENCION = 15;

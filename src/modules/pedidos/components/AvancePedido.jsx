@@ -1,4 +1,4 @@
-// src/componentes/AvancePedido.jsx
+// src/modules/pedidos/components/AvancePedido.jsx
 // Bloque "Pedido" del panel de una mesa ocupada: muestra en qué paso va el pedido
 // (Recibido → En cocina → Listo) y ofrece un solo botón grande con el siguiente paso válido.
 //
@@ -18,9 +18,9 @@ import {
   ESTADO_EN_COCINA,
   ESTADO_LISTO,
   siguienteEstado
-} from '../utils/flujoPedido';
-import { estadoVisualPedido } from '../utils/estadoMesa';
-import Icono from './Icono';
+} from '../flujoPedido.js';
+import { estadoVisualPedido } from '../../../shared/utils/estadoMesa.js';
+import Icono from '../../../shared/components/Icono.jsx';
 
 /** Nombre corto de cada paso en la barra de progreso. */
 const PASOS = [

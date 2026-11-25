@@ -4,7 +4,7 @@
 // y los dos bloques del tema oscuro (preferencia del sistema y elección manual) son iguales.
 import { describe, test, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { ESTADOS_MESA } from '../utils/estadoMesa';
+import { ESTADOS_MESA } from '../shared/utils/estadoMesa.js';
 
 // Se lee el archivo del disco (por eso este test corre en entorno node, no jsdom):
 // al importar un .css, Vitest no entrega su contenido.

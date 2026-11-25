@@ -18,15 +18,14 @@
 
 import { useState, useEffect } from 'react';
 import { formatearPrecio } from '../utils/formato';
-import { estadoVisualMesa } from '../utils/estadoMesa';
-import { ESTADO_LISTO } from '../utils/flujoPedido';
+import { estadoVisualMesa } from '../shared/utils/estadoMesa.js';
+import { AvancePedido, ESTADO_LISTO } from '../modules/pedidos';
 import {
   obtenerPedidoMesa,
   abrirMesa as abrirMesaApi,
   cerrarMesa as cerrarMesaApi
 } from '../servicios/api';
-import AvancePedido from './AvancePedido';
-import Icono from './Icono';
+import Icono from '../shared/components/Icono.jsx';
 import TrasladoMesa from './TrasladoMesa';
 import { textoRechazo } from '../utils/rechazo';
 

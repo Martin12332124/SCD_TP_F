@@ -75,44 +75,144 @@ Revisó: Claudia Medina, 14-11-2026, en macOS, ramas `dev` de ambos repos (front
 
 ### Frontend (SCD_TP_F)
 
-Antes, todos los archivos estaban sueltos en `src/`. Ahora:
+**Antes** (commit `5dbfac8`, línea base): todos los archivos vivían sueltos en `src/`:
 
 ```
 src/
-├── componentes/    Vistas React y sus pruebas: App, MapaMesas, DetalleMesa, TomaPedido, SelectorTema
-├── servicios/      Comunicación con el backend: api.js
-├── utils/          Funciones puras reutilizables: formato.js
-├── validaciones/   Reglas de entrada: validaciones.js
-├── test/setup.js   Configuración global de pruebas
-├── main.jsx        Punto de entrada
-└── index.css
+├── App.jsx               ← componente raíz + toda la lógica de socket
+├── App.test.jsx
+├── DetalleMesa.jsx       ← llamaba a fetch con URL escrita a mano
+├── DetalleMesa.test.jsx
+├── MapaMesas.jsx
+├── MapaMesas.test.jsx
+├── TomaPedido.jsx        ← llamaba a fetch con URL escrita a mano
+├── TomaPedido.test.jsx
+├── SelectorTema.jsx
+├── SelectorTema.test.jsx
+├── Sesion.jsx
+├── Sesion.test.jsx
+├── Login.jsx
+├── Login.test.jsx
+├── index.css
+└── main.jsx
 ```
 
-Regla de dependencias: `componentes/` usa `servicios/`, `utils/` y `validaciones/`. Estos tres no importan componentes.
+Problemas identificados: la URL `http://localhost:3000` aparecía 4 veces en 3 archivos, `formatearPrecio` estaba definida en dos componentes, y no había separación entre lógica de red, presentación y utilidades.
+
+**Después de Hito 3** (PR #81, #80, #82), y tras aplicar la modularización por funcionalidad:
+
+```
+src/
+├── modules/pedidos/
+│   ├── components/ TomaPedido, AvancePedido, RielComandas y pruebas
+│   ├── flujoPedido.js, tiempoComanda.js
+│   ├── pedidos.api.js
+│   └── index.js    Interfaz pública del módulo
+├── shared/
+│   ├── components/Icono.jsx
+│   └── utils/      estadoMesa.js, estadosPedido.js
+├── componentes/    App, MapaMesas, DetalleMesa y otras funcionalidades
+├── servicios/      Transporte común REST/nube: api.js
+├── utils/          Utilidades compartidas: formato.js
+├── validaciones/   Reglas de entrada compartidas
+└── main.jsx        Punto de entrada
+```
+
+El módulo `pedidos` agrupa sus vistas, reglas de estados, temporizadores y consulta del resumen.
+El transporte REST/nube, validaciones y formato siguen compartidos porque los consumen otras
+funcionalidades. `shared/` contiene piezas visuales y vocabulario de estados usados por más de un
+módulo.
 
 ### Backend (SCD_TP_B)
 
 | Carpeta | Responsabilidad | Archivos principales |
 |---|---|---|
-| `src/presentacion/` | Entrada HTTP y socket: traducir peticiones y respuestas | `mesas.router.js`, `menu-items.router.js`, `socket.handlers.js` *(nuevo)* |
-| `src/dominio/` | Reglas de negocio e invariantes | `pedido.service.js`, `mesa.service.js`, `mesa-estado.service.js`, `menu-item.service.js`, `consistencia*.js` |
-| `src/infraestructura/` | Datos y notificaciones | `repositorios.js`, `notificador.js` |
+| `src/modules/pedidos/` | Funcionalidad de pedidos: reglas, persistencia SQLite y controlador Socket.IO | `pedido.service.js`, `pedido.repository.sqlite.js`, `pedido.socket.handlers.js`, `index.js` |
+| `src/presentacion/` | Entrada HTTP y composición transversal de Socket.IO | `mesas.router.js`, `menu-items.router.js`, `socket.handlers.js` |
+| `src/dominio/` | Reglas compartidas entre funcionalidades | `mesa.service.js`, `mesa-estado.service.js`, `menu-item.service.js`, `consistencia*.js` |
+| `src/infraestructura/` | Persistencia compartida, autenticación y notificaciones | repositorios de mesas/menú, `notificador.js`, SQLite |
 | `src/app.js` | Composición: crea servicios y monta rutas y socket | — |
 
 ### Operaciones que ofrece cada módulo
 
 | Repo | Módulo | Operaciones públicas | Quién lo usa |
 |---|---|---|---|
-| F | `servicios/api.js` | `API_URL`, `obtenerMesas()`, `obtenerPedidoMesa(n)`, `abrirMesa(n)`, `cerrarMesa(n)`, `obtenerMenu()` | `App`, `DetalleMesa`, `TomaPedido`, `scripts/probar-api.mjs` |
-| F | `utils/formato.js` | `formatearPrecio(precio)`, `formatearTiempo(segundos)` | `App`, `DetalleMesa`, `TomaPedido` |
-| F | `validaciones/validaciones.js` | `validarNumeroMesa(valor)`, `validarCantidad(valor)`, `CANTIDAD_MINIMA`, `CANTIDAD_MAXIMA` | `App`, `TomaPedido` |
-| F | `componentes/` | Un componente React por archivo (`export default`): `App`, `MapaMesas`, `DetalleMesa`, `TomaPedido`, `SelectorTema` | `main.jsx` monta `App`; `App` compone al resto |
-| B | `presentacion/` | `crearMesasRouter(deps)`, `crearMenuItemsRouter(deps)`, `registrarHandlersSocket(io, deps)`, `responderSeguro(socket, opciones)` | `app.js` |
-| B | `dominio/` | `PedidoService` (`actualizarEstado`, `confirmarPedido`, `obtenerResumen`) · `MesaService` (`trasladarPedido`) · `MesaEstadoService` (`abrirMesa`, `cerrarMesa`) · `MenuItemService` (`crearItem`, `editarItem`, `cambiarDisponibilidad`, `obtenerItem`, `listarItems`) | `presentacion/` |
-| B | `infraestructura/` | `PedidosEnMemoria`, `MesasEnMemoria`, `MenuItemsEnMemoria` (repositorios) · `SocketNotificador` | Servicios de `dominio/`, inyectados desde `app.js` |
+| F | `modules/pedidos/` | `TomaPedido`, `AvancePedido`, `RielComandas`, `FLUJO_PEDIDO`, `comandasActivas()`, `crearApiPedidos()` | `App`, `DetalleMesa`; `api.js` inyecta el transporte local/nube |
+| F | `shared/` | `Icono`, estados visuales y constantes de estado compartidas | Módulos de pedidos, mesas, sesión y navegación |
+| F | `servicios/api.js` | Sesión, transporte REST/nube, `obtenerPedidoMesa(n)`, `obtenerMenu()` | Módulos que consumen backend o Supabase |
+| F | `validaciones/`, `utils/` | Reglas de entrada y formato compartidos | `App`, `DetalleMesa` y módulos consumidores |
+| B | `modules/pedidos/` | `PedidoService` (`actualizarEstado`, `confirmarPedido`, `obtenerResumen`), `PedidosSQLite`, `registrarHandlersPedido(socket, deps)` | `app.js`, composición Socket.IO y otros servicios inyectados |
+| B | `presentacion/` | Routers HTTP y `registrarHandlersSocket(io, deps)` con `responderSeguro` | `app.js`; delega eventos de pedido al módulo |
+| B | `infraestructura/` | Repositorios compartidos de mesas/menú, `PedidosEnMemoria`, notificador y conexión SQLite | Inyectados desde `app.js` y pruebas |
 | B | `app.js` | `crearApp()`: crea los repositorios y servicios, monta las rutas y registra el socket | `index.js` y las pruebas |
 
-Las reglas compartidas viven en un solo lugar: el formato de moneda en `utils/formato.js`, los rangos de entrada en `validaciones/validaciones.js` y la URL del servidor en `servicios/api.js`.
+Las dependencias compartidas se inyectan en los módulos: el backend conserva una conexión SQLite
+única para las transacciones; el frontend construye la API del módulo de pedidos con el transporte
+común para conservar el mismo contrato en modo local y nube.
+
+### Modularización por funcionalidad: pedidos (Unidad 3, clase 3.4)
+
+Se eligió el flujo de pedidos porque ya funcionaba y cruza ambos repositorios.
+
+| Antes | Después |
+|---|---|
+| Backend: `dominio/pedido.service.js`, handlers de pedido mezclados en `presentacion/socket.handlers.js` y `PedidosSQLite` junto a los repositorios de mesas y menú. | Backend: `modules/pedidos/` reúne `pedido.service.js`, `pedido.socket.handlers.js`, `pedido.repository.sqlite.js` y su interfaz `index.js`. El compositor sigue inyectando la conexión y los repositorios compartidos. |
+| Frontend: `TomaPedido`, `AvancePedido`, `RielComandas` y reglas de pedido repartidos entre `componentes/` y `utils/`. | Frontend: `modules/pedidos/` agrupa componentes, flujo, temporizadores, API de resumen y pruebas; `shared/` contiene íconos y estados visuales usados por mesas y pedidos. |
+
+El recorrido queda explícito: `App` consume la interfaz React del módulo; `TomaPedido` envía
+`confirmar_pedido` por el socket compartido; el controlador del módulo llama a `PedidoService`;
+el servicio valida y persiste mediante `PedidosSQLite`, y la respuesta/eventos conservan el
+contrato existente. `DetalleMesa` usa la API pública para consultar el resumen. Se mantuvieron
+las pruebas en ambos repositorios y se agregó cobertura del controlador y de la API local/nube.
+
+---
+
+## 2b. Diagrama de secuencia del flujo revisado
+
+Flujo revisado por Claudia Medina: **confirmar pedido** (abrir mesa → tomar pedido → confirmar → ver cuenta → intentar liberar).
+
+```mermaid
+sequenceDiagram
+    actor Mesero
+    participant FE as Frontend (React)
+    participant SK as Socket.IO
+    participant PS as PedidoService
+    participant DB as SQLite
+
+    Mesero->>FE: Abre mesa (botón "Abrir")
+    FE->>FE: POST /api/mesas/3/abrir
+    FE-->>Mesero: Mesa 3 ocupada ✔
+
+    Mesero->>FE: Abre carta (botón "Tomar pedido")
+    FE->>FE: GET /api/menu-items
+    FE-->>Mesero: Lista de productos con precios
+
+    Mesero->>FE: Agrega ítems al carrito y confirma
+    FE->>SK: emit('confirmar_pedido', {mesa:'Mesa 3', items:[…]})
+    SK->>PS: pedidoService.confirmarPedido(datos)
+    PS->>DB: guardar pedido (estado:'En Cocina 🍳')
+    DB-->>PS: ok
+    PS-->>SK: {ok:true, mesa:'Mesa 3', estado:'En Cocina 🍳', total:19000}
+    SK-->>FE: emit('respuesta_pedido', resultado)
+    SK-->>FE: emit('pedido_items_actualizado', {mesa:'Mesa 3'})
+    FE-->>Mesero: Vista se cierra, mesa muestra "En Cocina 🍳" / total $19.000
+
+    Mesero->>FE: Intenta liberar mesa con pedido activo
+    FE->>FE: POST /api/mesas/3/cerrar
+    FE-->>Mesero: Error PEDIDO_ACTIVO — "Debe servirse antes de cerrar"
+```
+
+> El diagrama corresponde exactamente a los 3 pasos registrados en §0, con los valores observados ($19.000, estado "En Cocina 🍳", error PEDIDO_ACTIVO).
+
+### Casos de integración ejecutados
+
+Entorno de ejecución: Windows 11, Node.js 22, backend local (`SCD_TP_B` en `http://localhost:3000` con SQLite en memoria) + cliente Socket.IO / `fetch` (`npm run test:integracion` y suite `api.test.js` / `App.test.jsx`).
+
+| Caso | Escenario | Pasos | Resultado esperado | Resultado obtenido |
+|---|---|---|---|---|
+| **1. Datos válidos** | Confirmar pedido válido (`Mesa 1` / `Mesa 3`) | 1. Login `POST /api/auth/login` con `x-api-key`.<br>2. Emitir `actualizar_pedido` / `confirmar_pedido` para `Mesa 1` con `'Recibido 📝'`. | Respuesta `{ ok: true }`, mesa pasa a `'ocupada'` y se emite `cambio_estado_pedido`. | `✅ VALIDADO: Mesa 1 → Recibido 📝` (`npm run test:integracion` OK). |
+| **2. Datos inválidos** | Número de mesa inválido (`Mesa 0`, `Mesa -1`) | Emitir `actualizar_pedido` con `{ mesa: 'Mesa 0', estado: 'Recibido 📝' }` y `{ mesa: 'Mesa -1', ... }`. | Rechazo con `tipo: 'ENTRADA_INVALIDA'` en `respuesta_pedido`; el estado de las mesas no cambia. | `❌ RECHAZADO [ENTRADA_INVALIDA]: mesa no tiene un formato válido` (frontend y backend consistentes). |
+| **3. Recurso ausente** | Mesa inexistente o backend apagado | 1. `POST /api/mesas/11/abrir` (solo existen 10 mesas).<br>2. `iniciarSesion` con servidor apagado. | 1. HTTP `404` con `tipo: 'NO_ENCONTRADO'`.<br>2. `{ ok: false, tipo: 'SIN_CONEXION' }` sin caída de la UI. | 1. HTTP `404` verificado en `test/api.test.js`.<br>2. `{ ok: false, tipo: 'SIN_CONEXION' }` verificado en `api.sesion.test.js`. |
 
 ---
 
@@ -160,8 +260,8 @@ Coincide con lo que dice el contrato: `obtenerMesas` y `obtenerMenu` devuelven e
 | **Mantenimiento** | La versión 4.8.3 se publicó en diciembre de 2025 ([notas de versión](https://github.com/socketio/socket.io/releases), [docs de instalación](https://socket.io/docs/v4/client-installation/)). |
 | **Licencia y condiciones** | MIT (campo `license` del `package.json` instalado). Obligación: conservar el aviso de copyright y la licencia al redistribuir el código de la librería. |
 | **Riesgo** | **Vulnerabilidad conocida.** `npm audit` (14-11-2026) reporta en el backend una vulnerabilidad **alta** en `engine.io@6.6.9`, dependencia interna de `socket.io`: denegación de servicio por diferencia de revisión del protocolo ([GHSA-2gc4-cqfq-p2gv](https://github.com/advisories/GHSA-2gc4-cqfq-p2gv), afecta `>=6.6.0 <6.6.10`). Probabilidad: baja en un entorno de clase, media si se expone a internet. Impacto: alto (si el servidor de socket cae, los pedidos no llegan a cocina). Riesgo secundario: un cambio incompatible en una versión mayor (5.x), mitigado porque el rango `^4.8.3` no la instala. |
-| **Medida de mitigación** | Ejecutar `npm audit fix` en SCD_TP_B, que actualiza `engine.io` a 6.6.10 sin salir del rango `^4` de `socket.io` (no requiere `--force`). Mantener el rango `^4` en ambos repos y actualizar cliente y servidor juntos. |
-| **Cómo se comprueba** | Después de la actualización: `npm ls engine.io` debe mostrar 6.6.10 o superior, `npm audit` ya no debe listar `engine.io`, y `test/socket.test.js` (que corre en el CI en cada PR) debe seguir pasando. Estado actual: **pendiente de aplicar** (ver sección 7). |
+| **Medida de mitigación** | Ejecutar `npm audit fix` en SCD_TP_B, que actualiza `engine.io` a 6.6.10 o superior sin salir del rango `^4` de `socket.io` (no requiere `--force`). Mantener el rango `^4` en ambos repos y actualizar cliente y servidor juntos. |
+| **Cómo se comprueba** | Aplicado en SCD_TP_B (`npm audit fix`): `npm ls engine.io` muestra `engine.io@6.6.13`, `npm audit --omit=dev` reporta `0 vulnerabilities` (eliminando GHSA-2gc4-cqfq-p2gv en producción), y la suite completa de SCD_TP_B (incluido `test/socket.test.js`) sigue pasando. |
 
 ---
 
@@ -202,7 +302,9 @@ Cada PR corre el CI de GitHub Actions (lint, pruebas y cobertura) y requiere una
 | SCD_TP_B | #47 handlers de socket | [checks](https://github.com/Martin12332124/SCD_TP_B/pull/47/checks) |
 | Ambos | Historial completo | [Actions F](https://github.com/Martin12332124/SCD_TP_F/actions) · [Actions B](https://github.com/Martin12332124/SCD_TP_B/actions) |
 
-Resultado local sobre `dev` final: frontend 163/163 pruebas, cobertura 97,55 % · backend 145/145 pruebas, cobertura 93,45 %.
+Resultado local sobre `dev` final: frontend **611/611 pruebas** (26 archivos), cobertura **98,28 % sentencias / 95,73 % ramas** · backend **435/435 pruebas** (17 archivos), cobertura **97,71 % sentencias / 90,75 % ramas** · integración extremo a extremo (`npm run test:integracion` contra `SCD_TP_B`) aprobada.
+
+Paquete entregable etiquetado como **`v3.0.0`** en ambos repositorios, con notas de versión en `CHANGELOG.md` e instrucciones de extensión en cada `README.md`.
 
 ---
 
@@ -212,5 +314,16 @@ Resultado local sobre `dev` final: frontend 163/163 pruebas, cobertura 97,55 % �
 |---|---|---|---|
 | `mesas.router.js` llama a `mesaEstadoService._validarNumero`, un método privado, desde fuera del servicio | Cambiarlo toca el contrato del servicio y sus pruebas; queda fuera del alcance de esta guía | Francisca Hernández | Al agregar otra ruta que valide número de mesa |
 | La tabla `HTTP_STATUS` está repetida en `mesas.router.js` y `menu-items.router.js` | Son tablas distintas (cada una mapea sus propios tipos de error) | Francisca Hernández | Si aparece un tercer router |
-| `App.jsx` (≈745 líneas) y `TomaPedido.jsx` (≈725 líneas) siguen siendo extensos, sobre todo por los estilos en línea | Separar estilos y subcomponentes es un cambio grande que no aporta a las intervenciones elegidas | Martín Saldívar | Antes de agregar una vista nueva |
-| `engine.io@6.6.9` con vulnerabilidad alta (GHSA-2gc4-cqfq-p2gv), y otras 24 alertas de `npm audit` en el backend y 10 en el frontend, todas en dependencias indirectas | Actualizar dependencias es un cambio aparte de la refactorización y debe ir en su propio PR con las pruebas de socket | Francisca Hernández | Antes de la entrega final o de exponer el backend fuera de la red local |
+| `App.jsx` y `TomaPedido.jsx` siguen siendo extensos, sobre todo por los estilos en línea | Separar estilos y subcomponentes es un cambio grande que no aporta a las intervenciones elegidas | Martín Saldívar | Antes de agregar una vista nueva |
+| 18 vulnerabilidades moderadas en dependencias de desarrollo (`jest` → `glob`/`minimatch`) que requieren `--force` (degradaría `jest` a 29.x) | Son solo de herramientas de desarrollo (no se empaquetan en producción; `npm audit --omit=dev` da 0 vulnerabilidades). La vulnerabilidad alta de `engine.io@6.6.9` ya fue corregida a `6.6.13` con `npm audit fix` | Francisca Hernández | Cuando `jest` publique actualización sin breaking changes |
+
+---
+
+## 8. Informe breve de cierre y empaquetado (`v3.0.0`)
+
+- **Versión y etiqueta Git:** `v3.0.0` en ambos repositorios (`SCD_TP_F` y `SCD_TP_B`), con notas de versión en `CHANGELOG.md`. Se asigna `v3.0.0` (salto desde `v0.1.0-alpha` del Hito 2) por el cierre de la Unidad 3 (refactorizaciones, modularización completa de `src/`, documentación de contratos y mitigación de seguridad), manteniendo compatibilidad en los endpoints REST y eventos Socket.IO.
+- **Alcance entregado:** Tres intervenciones verificadas (`api.js`, `formato.js`, `socket.handlers.js`), estructura modular por responsabilidades en frontend y por capas en backend, contrato reutilizable de `api.js`, revisión y mitigación de `socket.io` / `engine.io@6.6.13`, diagramas y casos de integración.
+- **Decisiones y efectos:** Se priorizó extraer la capa de comunicación (`api.js`) y los handlers de socket (`socket.handlers.js`) con commits pequeños protegidos por pruebas previas, elevando la cobertura global a **98,28 %** en frontend y **97,71 %** en backend sin alterar el comportamiento visible.
+- **Pendientes priorizados:**
+  1. **Revisión por otro equipo en entorno limpio (Alta):** Pendiente que un integrante de otro equipo clone la etiqueta `v3.0.0` siguiendo ambos `README.md` y registre el resultado.
+  2. **Deuda técnica documentada en §7 (Media/Baja):** Refactorización de estilos en `App.jsx`/`TomaPedido.jsx`, uso de `_validarNumero` en `mesas.router.js` y actualización de `jest` cuando no requiera `--force`.

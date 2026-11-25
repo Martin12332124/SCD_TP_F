@@ -5,7 +5,7 @@
 // - puntitos de color con texto (🟢/🔴 o círculos con radio 50%),
 // - texto muy chico (menos de 14px) o con el gris tenue que casi se pierde con el fondo,
 // - etiquetas numeradas tipo 01/02/03,
-// - emojis como íconos decorativos (se usan íconos SVG propios: componentes/Icono.jsx).
+// - emojis como íconos decorativos (se usan íconos SVG propios: shared/components/Icono.jsx).
 //   Los estados que llegan del backend ('En Cocina 🍳') y los avisos ✅/⚠️ son datos y
 //   mensajes, no decoración: se muestran con su etiqueta o se mantienen por contrato.
 // Revisa el código de los componentes, así que es un control aproximado: la revisión
@@ -13,10 +13,19 @@
 import { describe, test, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 
-const carpeta = new URL('../componentes/', import.meta.url);
-const componentes = readdirSync(carpeta).filter((f) => f.endsWith('.jsx') && !f.includes('.test.'));
+const carpetas = [
+  new URL('../componentes/', import.meta.url),
+  new URL('../modules/pedidos/components/', import.meta.url),
+  new URL('../shared/components/', import.meta.url)
+];
+const archivos = carpetas.flatMap((carpeta) =>
+  readdirSync(carpeta)
+    .filter((f) => f.endsWith('.jsx') && !f.includes('.test.'))
+    .map((archivo) => ({ archivo, ruta: new URL(archivo, carpeta) }))
+);
+const componentes = archivos.map(({ archivo }) => archivo);
 const fuente = Object.fromEntries(
-  componentes.map((f) => [f, readFileSync(new URL(f, carpeta), 'utf8')])
+  archivos.map(({ archivo, ruta }) => [archivo, readFileSync(ruta, 'utf8')])
 );
 
 const PROHIBIDOS = [
