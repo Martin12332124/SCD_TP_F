@@ -5,7 +5,7 @@
 ## Enlaces
  
 - **Sitio desplegado (modo nube):** https://scd-tp-pos-kds.netlify.app
-- **Hito 3 — Refactorización, modularización, pruebas y cierre (`v3.0.0`):** [docs/guia-unidad-3.md](docs/guia-unidad-3.md) · [CHANGELOG.md](CHANGELOG.md)
+- **Hito 3 — Entrega local `v3.0.0`:** [docs/guia-unidad-3.md](docs/guia-unidad-3.md) · [CHANGELOG.md](CHANGELOG.md). La revisión independiente y la publicación del paquete siguen pendientes.
 - **Modelado (Entrega 3):** [docs/modelado/](docs/modelado/README.md): casos de uso, clases, secuencia y componentes, con su nota de lectura.
 - **Despliegue:** [docs/despliegue.md](docs/despliegue.md): modo local (offline) y modo nube (Netlify + Supabase), paso a paso, y plan de escalamiento a varias sucursales.
 
@@ -123,7 +123,7 @@ Para que esta pantalla funcione, la computadora externa necesita cumplir con est
 3. Un **usuario y una API key** del backend: el usuario sale de `USUARIOS_INICIALES` y la llave de `API_KEYS`, ambos en el `.env` del backend.
 El modo nube (sin backend local) se explica en [docs/despliegue.md](docs/despliegue.md).
 
-> **Versión empaquetada (`v3.0.0`):** para probar la entrega exacta del Hito 3 tras clonar, ejecuta `git checkout v3.0.0`.
+> **Entrega local `v3.0.0`:** esta candidata integra los cambios aprobados por el equipo en ambos repositorios. La etiqueta identifica los commits incluidos en el ZIP de entrega; la revisión independiente y la publicación del paquete en un enlace accesible siguen pendientes.
 
 ### Problemas frecuentes
 
@@ -170,7 +170,7 @@ cd SCD_TP_F
 Ejecuta el siguiente comando para descargar las herramientas visuales y de conexión necesarias:
  
 ```bash
-npm install
+npm ci
 ```
  
 _Espera a que termine: sabrás que acabó cuando la terminal te permita escribir comandos otra vez._
